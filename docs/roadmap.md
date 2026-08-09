@@ -32,7 +32,7 @@ Permitir que o Usuario mantenha as Contas financeiras usadas por Transacoes, sal
 #### Escopo
 
 - Cadastrar Conta financeira.
-- Listar Contas financeiras ativas e inativas, com filtro opcional por situacao e sem paginacao.
+- Listar Contas financeiras ativas e inativas, com filtro opcional por `ativo` e sem paginacao.
 - Editar Conta financeira.
 - Ativar e inativar Conta financeira.
 - Nao inclui consulta individual, exclusao ou calculo de saldo.
