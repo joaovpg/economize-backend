@@ -1,7 +1,6 @@
 package com.joaovpg.economize.usuario.application;
 
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -33,7 +32,7 @@ public class CadastrarUsuario {
     usuario.setNome(comando.nome().strip());
     usuario.setEmail(email);
     usuario.setTimezone(comando.timezone());
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
 
     var argon2 = Argon2Factory.create();
     var senha = comando.senha().toCharArray();

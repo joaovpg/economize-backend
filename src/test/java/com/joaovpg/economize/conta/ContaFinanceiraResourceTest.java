@@ -6,7 +6,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -35,7 +34,7 @@ class ContaFinanceiraResourceTest {
     usuario.setEmail(email);
     usuario.setSenhaHash(Argon2Factory.create().hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone("America/Sao_Paulo");
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
     outroEmail = "outra-conta-" + UUID.randomUUID() + "@example.com";
     criarUsuario(outroEmail);
@@ -65,7 +64,7 @@ class ContaFinanceiraResourceTest {
             .body("nome", equalTo("Conta principal"))
             .body("moeda", equalTo("BRL"))
             .body("dataSaldoInicial", equalTo("2026-01-01"))
-            .body("situacao", equalTo("ATIVA"))
+            .body("ativo", equalTo(true))
             .extract()
             .response();
     assertEquals(
@@ -107,7 +106,7 @@ class ContaFinanceiraResourceTest {
                   "moeda":"BRL",
                   "saldoInicial":100.5000,
                   "dataSaldoInicial":"2026-02-01",
-                  "situacao":"INATIVA"
+                  "ativo":false
                 }
                 """)
             .when()
@@ -116,7 +115,7 @@ class ContaFinanceiraResourceTest {
             .statusCode(200)
             .body("nome", equalTo("Reserva"))
             .body("dataSaldoInicial", equalTo("2026-02-01"))
-            .body("situacao", equalTo("INATIVA"))
+            .body("ativo", equalTo(false))
             .extract()
             .response();
     assertEquals(
@@ -126,16 +125,16 @@ class ContaFinanceiraResourceTest {
   }
 
   @Test
-  void filtraListagemPorSituacao() {
+  void filtraListagemPorAtivo() {
     var token = autenticar();
     cadastrar(token, "Ativa");
     var inativaId = cadastrar(token, "Inativa");
-    editar(token, inativaId, "Inativa", "INATIVA").statusCode(200);
+    editar(token, inativaId, "Inativa", false).statusCode(200);
 
     given()
         .auth()
         .oauth2(token)
-        .queryParam("situacao", "INATIVA")
+        .queryParam("ativo", false)
         .when()
         .get("/api/contas")
         .then()
@@ -144,10 +143,45 @@ class ContaFinanceiraResourceTest {
   }
 
   @Test
+  void reativaContaComAtivoVerdadeiro() {
+    var token = autenticar();
+    var contaId = cadastrar(token, "Conta reativada");
+    editar(token, contaId, "Conta reativada", false).statusCode(200);
+
+    editar(token, contaId, "Conta reativada", true).statusCode(200).body("ativo", equalTo(true));
+  }
+
+  @Test
+  void rejeitaEdicaoSemAtivo() {
+    var token = autenticar();
+    var contaId = cadastrar(token, "Conta sem ativo");
+
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(
+            """
+            {
+              "nome":"Conta sem ativo",
+              "moeda":"BRL",
+              "saldoInicial":0,
+              "dataSaldoInicial":"2026-01-01"
+            }
+            """)
+        .when()
+        .put("/api/contas/{id}", contaId)
+        .then()
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"))
+        .body("errors.find { it.field == 'ativo' }.detail", notNullValue());
+  }
+
+  @Test
   void rejeitaNomeDuplicadoInclusiveComContaInativa() {
     var token = autenticar();
     var contaId = cadastrar(token, "Reserva");
-    editar(token, contaId, "Reserva", "INATIVA").statusCode(200);
+    editar(token, contaId, "Reserva", false).statusCode(200);
 
     given()
         .auth()
@@ -212,7 +246,7 @@ class ContaFinanceiraResourceTest {
     email = outroEmail;
     var tokenOutroUsuario = autenticar();
 
-    editar(tokenOutroUsuario, contaId, "Invadida", "ATIVA")
+    editar(tokenOutroUsuario, contaId, "Invadida", true)
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
     given()
@@ -247,7 +281,7 @@ class ContaFinanceiraResourceTest {
   }
 
   private io.restassured.response.ValidatableResponse editar(
-      String token, String contaId, String nome, String situacao) {
+      String token, String contaId, String nome, boolean ativo) {
     return given()
         .auth()
         .oauth2(token)
@@ -259,10 +293,10 @@ class ContaFinanceiraResourceTest {
               "moeda":"BRL",
               "saldoInicial":0,
               "dataSaldoInicial":"2026-01-01",
-              "situacao":"%s"
+              "ativo":%s
             }
             """
-                .formatted(nome, situacao))
+                .formatted(nome, ativo))
         .when()
         .put("/api/contas/{id}", contaId)
         .then();
@@ -313,7 +347,7 @@ class ContaFinanceiraResourceTest {
     usuario.setEmail(emailUsuario);
     usuario.setSenhaHash(Argon2Factory.create().hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone("America/Sao_Paulo");
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
   }
 }

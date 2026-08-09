@@ -23,7 +23,6 @@ import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -72,7 +71,7 @@ class TransacaoResourceTest {
     usuario.setEmail(email);
     usuario.setSenhaHash(argon2.hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone(FUSO_USUARIO.getId());
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
 
     var conta = new ContaFinanceira();
@@ -115,7 +114,7 @@ class TransacaoResourceTest {
     outroUsuario.setEmail(emailOutroUsuario);
     outroUsuario.setSenhaHash(argon2.hash(2, 19_456, 1, "outra-senha".toCharArray()));
     outroUsuario.setTimezone(FUSO_OUTRO_USUARIO.getId());
-    outroUsuario.setStatus(StatusUsuario.ATIVO);
+    outroUsuario.setAtivo(true);
     usuarioRepository.persist(outroUsuario);
     var contaOutroUsuario = new ContaFinanceira();
     contaOutroUsuario.setUsuario(outroUsuario);
@@ -416,7 +415,7 @@ class TransacaoResourceTest {
               "moeda":"BRL",
               "saldoInicial":1,
               "dataSaldoInicial":"2026-01-01",
-              "situacao":"ATIVA"
+              "ativo":true
             }
             """)
         .when()
@@ -434,7 +433,7 @@ class TransacaoResourceTest {
   }
 
   @Test
-  void permiteAlterarNomeESituacaoPreservandoDadosIniciaisBloqueados() {
+  void permiteAlterarNomeEAtivoPreservandoDadosIniciaisBloqueados() {
     var token = autenticar();
     criarTransacao(token, "2026-07-26").statusCode(201);
 
@@ -449,7 +448,7 @@ class TransacaoResourceTest {
               "moeda":"BRL",
               "saldoInicial":0.000,
               "dataSaldoInicial":"2026-01-01",
-              "situacao":"INATIVA"
+              "ativo":false
             }
             """)
         .when()
@@ -457,7 +456,7 @@ class TransacaoResourceTest {
         .then()
         .statusCode(200)
         .body("nome", equalTo("Reserva"))
-        .body("situacao", equalTo("INATIVA"));
+        .body("ativo", equalTo(false));
   }
 
   @Test

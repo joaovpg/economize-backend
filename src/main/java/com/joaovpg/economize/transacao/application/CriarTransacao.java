@@ -9,7 +9,6 @@ import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -42,8 +41,7 @@ public class CriarTransacao {
     validar(comando);
     var usuario =
         usuarioRepository
-            .findByIdOptional(comando.usuarioId())
-            .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO)
+            .buscarAtivo(comando.usuarioId())
             .orElseThrow(() -> recursoNaoEncontrado("Usuario"));
     if (comando.situacao() == SituacaoTransacao.EFETIVADA
         && comando.dataFinanceira().isAfter(LocalDate.now(ZoneId.of(usuario.getTimezone())))) {

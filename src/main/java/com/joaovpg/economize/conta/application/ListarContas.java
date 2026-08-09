@@ -2,7 +2,6 @@ package com.joaovpg.economize.conta.application;
 
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
-import com.joaovpg.economize.conta.SituacaoConta;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -21,8 +20,9 @@ public class ListarContas {
     return resultados(contaRepository.listarDoUsuario(usuarioId));
   }
 
-  public List<ContaResultado> executar(UUID usuarioId, SituacaoConta situacao) {
-    return resultados(contaRepository.listarDoUsuario(usuarioId, situacao));
+  @Transactional
+  public List<ContaResultado> executar(UUID usuarioId, Boolean ativo) {
+    return resultados(contaRepository.listarDoUsuario(usuarioId, ativo));
   }
 
   private List<ContaResultado> resultados(List<ContaFinanceira> contas) {

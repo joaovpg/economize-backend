@@ -1,7 +1,6 @@
 package com.joaovpg.economize.conta.application;
 
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
-import com.joaovpg.economize.conta.SituacaoConta;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -25,8 +24,8 @@ public class EditarConta {
             .buscarDoUsuarioParaEdicao(comando.contaId(), comando.usuarioId())
             .orElseThrow(CadastrarConta::naoEncontrada);
 
-    if (comando.situacao() == null) {
-      throw new RegraNegocioException("SITUACAO_CONTA_INVALIDA", "Situacao da conta invalida");
+    if (comando.ativo() == null) {
+      throw new RegraNegocioException("ATIVO_CONTA_INVALIDO", "Flag ativo da conta invalida");
     }
 
     var nome = ContaValidation.nome(comando.nome());
@@ -42,7 +41,7 @@ public class EditarConta {
     conta.setMoeda(moeda);
     conta.setSaldoInicial(saldoInicial);
     conta.setDataSaldoInicial(dataSaldoInicial);
-    conta.setAtivo(comando.situacao() == SituacaoConta.ATIVA);
+    conta.setAtivo(comando.ativo());
     ContaValidation.flush(contaRepository);
     return ContaValidation.resultado(conta);
   }
@@ -54,5 +53,5 @@ public class EditarConta {
       String moeda,
       BigDecimal saldoInicial,
       LocalDate dataSaldoInicial,
-      SituacaoConta situacao) {}
+      Boolean ativo) {}
 }

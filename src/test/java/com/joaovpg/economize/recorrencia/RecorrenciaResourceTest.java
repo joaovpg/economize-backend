@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -45,7 +44,7 @@ class RecorrenciaResourceTest {
     usuario.setEmail(email);
     usuario.setSenhaHash(argon2.hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone(FUSO.getId());
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
 
     var conta = new ContaFinanceira();

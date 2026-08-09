@@ -9,7 +9,6 @@ import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.TipoTransacao;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import java.math.BigDecimal;
@@ -22,10 +21,7 @@ final class RecorrenciaValidacao {
   private RecorrenciaValidacao() {}
 
   static Usuario usuario(UsuarioRepository repository, UUID usuarioId) {
-    return repository
-        .findByIdOptional(usuarioId)
-        .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO)
-        .orElseThrow(() -> naoEncontrado("Usuario"));
+    return repository.buscarAtivo(usuarioId).orElseThrow(() -> naoEncontrado("Usuario"));
   }
 
   static ContaFinanceira conta(

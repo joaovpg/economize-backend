@@ -2,7 +2,6 @@ package com.joaovpg.economize.conta.application;
 
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
-import com.joaovpg.economize.conta.SituacaoConta;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -86,6 +85,6 @@ final class ContaValidation {
         conta.getMoeda(),
         conta.getSaldoInicial(),
         conta.getDataSaldoInicial(),
-        conta.isAtivo() ? SituacaoConta.ATIVA : SituacaoConta.INATIVA);
+        conta.isAtivo());
   }
 }

@@ -8,12 +8,17 @@ import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import java.sql.SQLException;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class CadastrarUsuarioResourceTest {
+  @Inject AgroalDataSource dataSource;
+
   @Test
   void cadastraUsuarioEIniciaSessao() {
     var email = " Pessoa-" + UUID.randomUUID() + "@Exemplo.com ";
@@ -53,6 +58,49 @@ class CadastrarUsuarioResourceTest {
         .then()
         .statusCode(200)
         .body("token", notNullValue());
+  }
+
+  @Test
+  void usuarioInativoNaoAutentica() throws SQLException {
+    var email = "inativo-" + UUID.randomUUID() + "@example.com";
+
+    given()
+        .contentType("application/json")
+        .body(
+            """
+            {
+              "nome":"Maria da Silva",
+              "email":"%s",
+              "senha":"senha segura",
+              "timezone":"America/Sao_Paulo"
+            }
+            """
+                .formatted(email))
+        .when()
+        .post("/api/autenticacao/cadastro")
+        .then()
+        .statusCode(201);
+
+    try (var connection = dataSource.getConnection();
+        var statement =
+            connection.prepareStatement(
+                "UPDATE TB001_USUARIO SET BOL_ATIVO = FALSE WHERE STR_EMAIL = ?")) {
+      statement.setString(1, email);
+      statement.executeUpdate();
+    }
+
+    given()
+        .contentType("application/json")
+        .body(
+            """
+            {"email":"%s","senha":"senha segura"}
+            """
+                .formatted(email))
+        .when()
+        .post("/api/autenticacao/login")
+        .then()
+        .statusCode(401)
+        .body("type", equalTo("urn:economize:problem:CREDENCIAIS_INVALIDAS"));
   }
 
   @Test

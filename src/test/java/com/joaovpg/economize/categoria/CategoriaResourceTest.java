@@ -5,7 +5,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -32,7 +31,7 @@ class CategoriaResourceTest {
     usuario.setEmail(email);
     usuario.setSenhaHash(Argon2Factory.create().hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone("America/Sao_Paulo");
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
     outroEmail = "outro-" + UUID.randomUUID() + "@example.com";
     criarUsuario(outroEmail);
@@ -244,7 +243,7 @@ class CategoriaResourceTest {
     usuario.setEmail(emailUsuario);
     usuario.setSenhaHash(Argon2Factory.create().hash(2, 19_456, 1, "senha-segura".toCharArray()));
     usuario.setTimezone("America/Sao_Paulo");
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     usuarioRepository.persist(usuario);
   }
 

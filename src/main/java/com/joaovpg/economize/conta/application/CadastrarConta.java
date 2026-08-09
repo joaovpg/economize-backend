@@ -3,7 +3,6 @@ package com.joaovpg.economize.conta.application;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -30,9 +29,9 @@ public class CadastrarConta {
     var saldoInicial = ContaValidation.saldoInicial(comando.saldoInicial());
     var usuario =
         usuarioRepository
-            .findByIdOptional(comando.usuarioId())
-            .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO)
+            .buscarAtivo(comando.usuarioId())
             .orElseThrow(CadastrarConta::naoEncontrada);
+
     var dataSaldoInicial =
         ContaValidation.dataSaldoInicial(
             comando.dataSaldoInicial(), LocalDate.now(ZoneId.of(usuario.getTimezone())));

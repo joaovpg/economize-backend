@@ -1,5 +1,7 @@
 package com.joaovpg.economize.persistencia;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.agroal.api.AgroalDataSource;
@@ -41,6 +43,60 @@ class ContaFinanceiraMigrationTest {
             assertTrue(resultado.next());
             assertTrue(resultado.getBoolean(1));
           }
+        } finally {
+          statement.execute("SET search_path TO public");
+        }
+      }
+    } finally {
+      try (var connection = dataSource.getConnection();
+          var statement = connection.createStatement()) {
+        statement.execute("DROP SCHEMA IF EXISTS \"" + schema + "\" CASCADE");
+        statement.execute("SET search_path TO public");
+      }
+    }
+  }
+
+  @Test
+  void migraStatusUsuarioParaFlagBooleano() throws SQLException {
+    var schema = "usuario_" + UUID.randomUUID().toString().replace("-", "");
+    var usuarioAtivoId = UUID.randomUUID();
+    var usuarioBloqueadoId = UUID.randomUUID();
+
+    try {
+      flyway(schema, "1").migrate();
+      inserirUsuariosLegados(schema, usuarioAtivoId, usuarioBloqueadoId);
+      flyway(schema, null).migrate();
+
+      try (var connection = dataSource.getConnection();
+          var statement = connection.createStatement()) {
+        try {
+          statement.execute("SET search_path TO \"" + schema + "\"");
+          try (var coluna =
+              statement.executeQuery(
+                  """
+                  SELECT DATA_TYPE
+                  FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = '%s'
+                    AND TABLE_NAME = 'tb001_usuario'
+                    AND COLUMN_NAME = 'bol_ativo'
+                  """
+                      .formatted(schema))) {
+            assertTrue(coluna.next());
+            assertEquals("boolean", coluna.getString(1));
+          }
+          assertFalse(existeColuna(statement, schema, "tb001_usuario", "str_status"));
+          assertTrue(
+              booleano(
+                  statement,
+                  "SELECT BOL_ATIVO FROM TB001_USUARIO WHERE ID_REGISTRO = '"
+                      + usuarioAtivoId
+                      + "'"));
+          assertFalse(
+              booleano(
+                  statement,
+                  "SELECT BOL_ATIVO FROM TB001_USUARIO WHERE ID_REGISTRO = '"
+                      + usuarioBloqueadoId
+                      + "'"));
         } finally {
           statement.execute("SET search_path TO public");
         }
@@ -101,6 +157,50 @@ class ContaFinanceiraMigrationTest {
       } finally {
         statement.execute("SET search_path TO public");
       }
+    }
+  }
+
+  private void inserirUsuariosLegados(String schema, UUID usuarioAtivoId, UUID usuarioBloqueadoId)
+      throws SQLException {
+    try (var connection = dataSource.getConnection();
+        var statement = connection.createStatement()) {
+      try {
+        statement.execute("SET search_path TO \"" + schema + "\"");
+        statement.execute(
+            """
+            INSERT INTO TB001_USUARIO (
+                ID_REGISTRO, STR_NOME, STR_EMAIL, STR_SENHA_HASH, STR_TIMEZONE, STR_STATUS
+            ) VALUES
+                ('%s', 'Ativo', 'ativo-%s@example.com', 'hash', 'America/Sao_Paulo', 'ATIVO'),
+                ('%s', 'Bloqueado', 'bloqueado-%s@example.com', 'hash', 'America/Sao_Paulo', 'BLOQUEADO')
+            """
+                .formatted(usuarioAtivoId, usuarioAtivoId, usuarioBloqueadoId, usuarioBloqueadoId));
+      } finally {
+        statement.execute("SET search_path TO public");
+      }
+    }
+  }
+
+  private boolean existeColuna(
+      java.sql.Statement statement, String schema, String tabela, String coluna)
+      throws SQLException {
+    try (var resultado =
+        statement.executeQuery(
+            """
+            SELECT COUNT(*)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME = '%s'
+            """
+                .formatted(schema, tabela, coluna))) {
+      resultado.next();
+      return resultado.getInt(1) > 0;
+    }
+  }
+
+  private boolean booleano(java.sql.Statement statement, String sql) throws SQLException {
+    try (var resultado = statement.executeQuery(sql)) {
+      resultado.next();
+      return resultado.getBoolean(1);
     }
   }
 }

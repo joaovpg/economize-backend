@@ -23,7 +23,6 @@ import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transferencia.SituacaoTransferencia;
 import com.joaovpg.economize.transferencia.Transferencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import io.quarkus.test.TestTransaction;
@@ -419,7 +418,7 @@ class NucleoFinanceiroRepositoryTest {
     usuario.setEmail(email);
     usuario.setSenhaHash("$argon2id$hash-de-teste");
     usuario.setTimezone("America/Sao_Paulo");
-    usuario.setStatus(StatusUsuario.ATIVO);
+    usuario.setAtivo(true);
     return usuario;
   }
 
