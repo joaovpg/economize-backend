@@ -34,7 +34,7 @@ public class ContaResource {
   private final ContaHttpMapper mapper;
   private final JsonWebToken token;
 
-  public ContaResource(
+  ContaResource(
       CadastrarConta cadastrarConta,
       EditarConta editarConta,
       ListarContas listarContas,

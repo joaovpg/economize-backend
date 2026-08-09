@@ -1,6 +1,5 @@
 package com.joaovpg.economize.categoria.http.dto.request;
 
-import com.joaovpg.economize.categoria.SituacaoCategoria;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -10,4 +9,4 @@ public record EditarCategoriaRequest(
     @NotBlank String nome,
     @Pattern(regexp = "^\\s*(#[0-9A-Fa-f]{6})?\\s*$") String cor,
     UUID categoriaPaiId,
-    @NotNull SituacaoCategoria situacao) {}
+    @NotNull Boolean ativo) {}

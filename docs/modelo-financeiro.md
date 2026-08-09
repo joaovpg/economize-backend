@@ -45,6 +45,8 @@ A data de uma Transacao ou o inicio de um Segmento nao pode anteceder a data do 
 
 Categorias sao cadastradas ativas. Nome e unico sem diferenciar caixa entre categorias irmas, inclusive entre categorias raiz e independentemente da situacao. Uma categoria so pode ser cadastrada ou movida para um pai ativo. A ativacao exige todos os ancestrais ativos, enquanto a inativacao exige que nao existam descendentes ativos. Edicoes podem alterar dados, posicao e situacao atomicamente e nunca podem formar ciclos.
 
+No contrato HTTP de Categorias, a Situacao e representada pelo campo booleano `ativo`: `true` significa ativa e `false` significa inativa. O filtro opcional da listagem tambem usa `ativo`, sem alterar o conceito de Situacao no dominio.
+
 ## Recorrencia
 
 Um grupo preserva a origem comum e seu tipo, `RECORRENCIA` ou `PARCELAMENTO`. Cada segmento possui dados financeiros proprios, DTSTART, periodo opcional e uma RRULE canonica sem o prefixo `RRULE:`. O motor aceita `DAILY`, `WEEKLY`, `MONTHLY` e `YEARLY`, alem de `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY` e `BYMONTHDAY` no subconjunto definido pela aplicacao.

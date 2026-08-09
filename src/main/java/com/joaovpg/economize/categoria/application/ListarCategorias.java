@@ -1,7 +1,7 @@
 package com.joaovpg.economize.categoria.application;
 
+import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
-import com.joaovpg.economize.categoria.SituacaoCategoria;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -16,9 +16,7 @@ public class ListarCategorias {
   }
 
   @Transactional
-  public List<CategoriaResultado> executar(UUID usuarioId, SituacaoCategoria situacao) {
-    return categoriaRepository.listarDoUsuario(usuarioId, situacao).stream()
-        .map(CategoriaValidation::resultado)
-        .toList();
+  public List<Categoria> executar(UUID usuarioId, Boolean ativo) {
+    return categoriaRepository.listarDoUsuario(usuarioId, ativo).stream().toList();
   }
 }

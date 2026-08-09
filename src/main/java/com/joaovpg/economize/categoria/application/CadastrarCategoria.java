@@ -3,7 +3,6 @@ package com.joaovpg.economize.categoria.application;
 import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -21,34 +20,37 @@ public class CadastrarCategoria {
   }
 
   @Transactional
-  public CategoriaResultado executar(Comando comando) {
+  public Categoria executar(Comando comando) {
     var nome = CategoriaValidation.nome(comando.nome());
     var cor = CategoriaValidation.cor(comando.cor());
+    var categoriaPai = comando.categoriaPaiId();
+    var usuarioId = comando.usuarioId();
 
     var usuario =
-        usuarioRepository
-            .findByIdOptional(comando.usuarioId())
-            .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO)
-            .orElseThrow(CadastrarCategoria::naoEncontrada);
+        usuarioRepository.buscarAtivo(usuarioId).orElseThrow(CadastrarCategoria::naoEncontrada);
 
-    Categoria pai =
-        comando.categoriaPaiId() == null
+    var pai =
+        categoriaPai == null
             ? null
             : categoriaRepository
-                .buscarAtivaDoUsuario(comando.categoriaPaiId(), comando.usuarioId())
+                .buscarAtivaDoUsuario(categoriaPai, usuarioId)
                 .orElseThrow(CadastrarCategoria::naoEncontrada);
 
-    CategoriaValidation.nomeDisponivel(
-        categoriaRepository, comando.usuarioId(), comando.categoriaPaiId(), nome, null);
+    if (categoriaRepository.existeComNomeNoMesmoNivel(usuarioId, categoriaPai, nome, null)) {
+      throw CategoriaValidation.nomeDuplicado();
+    }
 
     var categoria = new Categoria();
+
     categoria.setUsuario(usuario);
     categoria.setCategoriaPai(pai);
     categoria.setNome(nome);
     categoria.setCor(cor);
+
     categoriaRepository.persist(categoria);
-    CategoriaValidation.flush(categoriaRepository);
-    return CategoriaValidation.resultado(categoria);
+    CategoriaConstraintHandler.flush(categoriaRepository);
+
+    return categoria;
   }
 
   static RecursoNaoEncontradoException naoEncontrada() {
