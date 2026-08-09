@@ -39,7 +39,7 @@ public class ResolverOcorrenciasRecorrentes {
         transacoes.stream()
             .collect(
                 Collectors.toMap(
-                    this::chaveTransacao, Function.identity(), (primeira, segunda) -> primeira));
+                    this::chaveTransacao, Function.identity(), (primeira, _) -> primeira));
     var supridas =
         supressoes.stream()
             .map(

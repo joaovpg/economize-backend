@@ -5,7 +5,7 @@
 - Persistencia inicial do nucleo financeiro com PostgreSQL, Flyway, entidades JPA, repositories Panache e testes de integracao.
 - Cadastro de Usuario com inicio imediato de sessao autenticada.
 - Login por e-mail e senha com Argon2 e token JWT.
-- Gestao de Categorias com cadastro, edicao, alteracao de situacao e listagem.
+- Gestao de Categorias com cadastro, edicao, alteracao de situacao e listagem; na API HTTP, a situacao e representada por `ativo` booleano e o filtro da listagem usa o mesmo campo.
 - Gestao de Contas financeiras com cadastro, edicao, alteracao de situacao e listagem.
 - Gestao de Transacoes simples, com criacao planejada ou efetivada, alteracao, transicoes e exclusao definitiva.
 - Transferencias simples atomicas, com escrita propria e lados incorporados a consulta unificada de Transacoes.

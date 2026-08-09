@@ -32,7 +32,7 @@ public class TransferenciaResource {
   private final TransferenciaHttpMapper mapper;
   private final JsonWebToken token;
 
-  public TransferenciaResource(
+  TransferenciaResource(
       CriarTransferencia criarTransferencia,
       AlterarTransferencia alterarTransferencia,
       ExcluirTransferencia excluirTransferencia,

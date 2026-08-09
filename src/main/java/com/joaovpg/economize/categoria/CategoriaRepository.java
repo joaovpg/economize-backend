@@ -24,31 +24,15 @@ public class CategoriaRepository implements PanacheRepositoryBase<Categoria, UUI
 
   public boolean existeComNomeNoMesmoNivel(
       UUID usuarioId, UUID categoriaPaiId, String nome, UUID ignorarId) {
-    if (categoriaPaiId == null) {
-      if (ignorarId == null) {
-        return count(
-                "usuario.id = ?1 and categoriaPai is null and lower(nome) = lower(?2)",
-                usuarioId,
-                nome)
-            > 0;
-      }
-      return count(
-              "usuario.id = ?1 and categoriaPai is null and lower(nome) = lower(?2) and id <> ?3",
-              usuarioId,
-              nome,
-              ignorarId)
-          > 0;
-    }
-    if (ignorarId == null) {
-      return count(
-              "usuario.id = ?1 and categoriaPai.id = ?2 and lower(nome) = lower(?3)",
-              usuarioId,
-              categoriaPaiId,
-              nome)
-          > 0;
-    }
     return count(
-            "usuario.id = ?1 and categoriaPai.id = ?2 and lower(nome) = lower(?3) and id <> ?4",
+            """
+            usuario.id = ?1
+            and (
+              (?2 is null and categoriaPai is null)
+              or categoriaPai.id = ?2)
+            and lower(nome) = lower(?3)
+            and (?4 is null or id <> ?4)
+            """,
             usuarioId,
             categoriaPaiId,
             nome,
@@ -56,14 +40,16 @@ public class CategoriaRepository implements PanacheRepositoryBase<Categoria, UUI
         > 0;
   }
 
-  public List<Categoria> listarDoUsuario(UUID usuarioId, SituacaoCategoria situacao) {
-    if (situacao == null) {
-      return list("usuario.id = ?1 order by lower(nome), id", usuarioId);
-    }
+  public List<Categoria> listarDoUsuario(UUID usuarioId, Boolean ativo) {
     return list(
-        "usuario.id = ?1 and ativo = ?2 order by lower(nome), id",
+        """
+             select c from Categoria c left join fetch c.categoriaPai
+             where c.usuario.id = ?1
+             and (?2 is null or c.ativo = ?2)
+             order by lower(c.nome), c.id
+        """,
         usuarioId,
-        situacao == SituacaoCategoria.ATIVA);
+        ativo);
   }
 
   public boolean existeDescendenteAtiva(UUID categoriaId) {

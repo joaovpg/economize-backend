@@ -42,7 +42,7 @@ public class TransacaoResource {
   private final TransacaoHttpMapper mapper;
   private final JsonWebToken token;
 
-  public TransacaoResource(
+  TransacaoResource(
       CriarTransacao criarTransacao,
       AlterarTransacao alterarTransacao,
       ExcluirTransacao excluirTransacao,

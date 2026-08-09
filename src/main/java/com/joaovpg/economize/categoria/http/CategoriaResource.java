@@ -1,6 +1,5 @@
 package com.joaovpg.economize.categoria.http;
 
-import com.joaovpg.economize.categoria.SituacaoCategoria;
 import com.joaovpg.economize.categoria.application.CadastrarCategoria;
 import com.joaovpg.economize.categoria.application.EditarCategoria;
 import com.joaovpg.economize.categoria.application.ListarCategorias;
@@ -34,7 +33,7 @@ public class CategoriaResource {
   private final CategoriaHttpMapper mapper;
   private final JsonWebToken token;
 
-  public CategoriaResource(
+  CategoriaResource(
       CadastrarCategoria cadastrarCategoria,
       EditarCategoria editarCategoria,
       ListarCategorias listarCategorias,
@@ -49,23 +48,29 @@ public class CategoriaResource {
 
   @POST
   public Response cadastrar(@Valid CadastrarCategoriaRequest request) {
-    var resultado = cadastrarCategoria.executar(mapper.toCommand(usuarioId(), request));
+    var comando = mapper.toCommand(usuarioId(), request);
+    var resultado = cadastrarCategoria.executar(comando);
+    var resposta = mapper.toResponse(resultado);
 
-    return Response.status(Response.Status.CREATED).entity(mapper.toResponse(resultado)).build();
+    return Response.status(Response.Status.CREATED).entity(resposta).build();
   }
 
   @PUT
   @Path("/{categoriaId}")
   public Response editar(
       @PathParam("categoriaId") UUID categoriaId, @Valid EditarCategoriaRequest request) {
-    var resultado = editarCategoria.executar(mapper.toCommand(usuarioId(), categoriaId, request));
-    return Response.ok(mapper.toResponse(resultado)).build();
+    var comando = mapper.toCommand(usuarioId(), categoriaId, request);
+    var resultado = editarCategoria.executar(comando);
+    var resposta = mapper.toResponse(resultado);
+
+    return Response.ok(resposta).build();
   }
 
   @GET
-  public Response listar(@QueryParam("situacao") SituacaoCategoria situacao) {
-    var resposta =
-        listarCategorias.executar(usuarioId(), situacao).stream().map(mapper::toResponse).toList();
+  public Response listar(@QueryParam("ativo") Boolean ativo) {
+    var resultado = listarCategorias.executar(usuarioId(), ativo);
+    var resposta = mapper.toResponse(resultado);
+
     return Response.ok(resposta).build();
   }
 

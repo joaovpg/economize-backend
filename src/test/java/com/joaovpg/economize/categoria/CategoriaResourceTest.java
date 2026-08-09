@@ -59,7 +59,7 @@ class CategoriaResourceTest {
         .body("id", notNullValue())
         .body("nome", equalTo("Moradia"))
         .body("cor", equalTo("#33AAFF"))
-        .body("situacao", equalTo("ATIVA"));
+        .body("ativo", equalTo(true));
   }
 
   @Test
@@ -91,6 +91,16 @@ class CategoriaResourceTest {
     given()
         .auth()
         .oauth2(token)
+        .when()
+        .get("/api/categorias")
+        .then()
+        .statusCode(200)
+        .body("[1].id", equalTo(moveisId))
+        .body("[1].categoriaPaiId", equalTo(moradiaId));
+
+    given()
+        .auth()
+        .oauth2(token)
         .contentType("application/json")
         .body(
             """
@@ -98,7 +108,7 @@ class CategoriaResourceTest {
               "nome":" Decoracao ",
               "cor":"#abcdef",
               "categoriaPaiId":null,
-              "situacao":"INATIVA"
+              "ativo":false
             }
             """)
         .when()
@@ -108,12 +118,12 @@ class CategoriaResourceTest {
         .body("nome", equalTo("Decoracao"))
         .body("cor", equalTo("#ABCDEF"))
         .body("categoriaPaiId", equalTo(null))
-        .body("situacao", equalTo("INATIVA"));
+        .body("ativo", equalTo(false));
 
     given()
         .auth()
         .oauth2(token)
-        .queryParam("situacao", "ATIVA")
+        .queryParam("ativo", true)
         .when()
         .get("/api/categorias")
         .then()
@@ -129,6 +139,17 @@ class CategoriaResourceTest {
         .then()
         .statusCode(200)
         .body("nome", equalTo(java.util.List.of("Decoracao", "Moradia")));
+
+    given()
+        .auth()
+        .oauth2(token)
+        .queryParam("ativo", false)
+        .when()
+        .get("/api/categorias")
+        .then()
+        .statusCode(200)
+        .body("", hasSize(1))
+        .body("[0].id", equalTo(moveisId));
   }
 
   @Test
@@ -137,7 +158,7 @@ class CategoriaResourceTest {
     var moradiaId = cadastrar(token, "Moradia", null);
     var moveisId = cadastrar(token, "Moveis", moradiaId);
 
-    editar(token, moradiaId, "Moradia", moveisId, "ATIVA")
+    editar(token, moradiaId, "Moradia", moveisId, true)
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:HIERARQUIA_CATEGORIA_CICLICA"));
   }
@@ -148,12 +169,12 @@ class CategoriaResourceTest {
     var moradiaId = cadastrar(token, "Moradia", null);
     var moveisId = cadastrar(token, "Moveis", moradiaId);
 
-    editar(token, moradiaId, "Moradia", null, "INATIVA")
+    editar(token, moradiaId, "Moradia", null, false)
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:CATEGORIA_POSSUI_DESCENDENTE_ATIVA"));
-    editar(token, moveisId, "Moveis", moradiaId, "INATIVA").statusCode(200);
-    editar(token, moradiaId, "Moradia", null, "INATIVA").statusCode(200);
-    editar(token, moveisId, "Moveis", moradiaId, "ATIVA")
+    editar(token, moveisId, "Moveis", moradiaId, false).statusCode(200);
+    editar(token, moradiaId, "Moradia", null, false).statusCode(200);
+    editar(token, moveisId, "Moveis", moradiaId, true)
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:CATEGORIA_POSSUI_ANCESTRAL_INATIVA"));
   }
@@ -164,13 +185,13 @@ class CategoriaResourceTest {
     var paiInativoId = cadastrar(token, "Arquivadas", null);
     var paiAtivoId = cadastrar(token, "Despesas", null);
     var filhaId = cadastrar(token, "Moradia", paiInativoId);
-    editar(token, filhaId, "Moradia", paiInativoId, "INATIVA").statusCode(200);
-    editar(token, paiInativoId, "Arquivadas", null, "INATIVA").statusCode(200);
+    editar(token, filhaId, "Moradia", paiInativoId, false).statusCode(200);
+    editar(token, paiInativoId, "Arquivadas", null, false).statusCode(200);
 
-    editar(token, filhaId, "Moradia", paiAtivoId, "ATIVA")
+    editar(token, filhaId, "Moradia", paiAtivoId, true)
         .statusCode(200)
         .body("categoriaPaiId", equalTo(paiAtivoId))
-        .body("situacao", equalTo("ATIVA"));
+        .body("ativo", equalTo(true));
   }
 
   @Test
@@ -178,7 +199,7 @@ class CategoriaResourceTest {
     var categoriaId = cadastrar(autenticar(), "Moradia", null);
     email = outroEmail;
 
-    editar(autenticar(), categoriaId, "Invadida", null, "ATIVA")
+    editar(autenticar(), categoriaId, "Invadida", null, true)
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
   }
@@ -202,16 +223,16 @@ class CategoriaResourceTest {
   }
 
   private io.restassured.response.ValidatableResponse editar(
-      String token, String categoriaId, String nome, String paiId, String situacao) {
+      String token, String categoriaId, String nome, String paiId, boolean ativo) {
     return given()
         .auth()
         .oauth2(token)
         .contentType("application/json")
         .body(
             """
-            {"nome":"%s","cor":null,"categoriaPaiId":%s,"situacao":"%s"}
+            {"nome":"%s","cor":null,"categoriaPaiId":%s,"ativo":%s}
             """
-                .formatted(nome, paiId == null ? "null" : "\"" + paiId + "\"", situacao))
+                .formatted(nome, paiId == null ? "null" : "\"" + paiId + "\"", ativo))
         .when()
         .put("/api/categorias/{id}", categoriaId)
         .then();

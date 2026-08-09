@@ -2,7 +2,6 @@ package com.joaovpg.economize.categoria.application;
 
 import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
-import com.joaovpg.economize.categoria.SituacaoCategoria;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -17,32 +16,33 @@ public class EditarCategoria {
   }
 
   @Transactional
-  public CategoriaResultado executar(Comando comando) {
+  public Categoria executar(Comando comando) {
     var categoria =
         categoriaRepository
             .buscarDoUsuario(comando.categoriaId(), comando.usuarioId())
             .orElseThrow(CadastrarCategoria::naoEncontrada);
-    if (comando.situacao() == null) {
-      throw new RegraNegocioException(
-          "SITUACAO_CATEGORIA_INVALIDA", "Situacao da categoria invalida");
+    if (comando.ativo() == null) {
+      throw new RegraNegocioException("ATIVO_CATEGORIA_INVALIDO", "Ativo da categoria invalido");
     }
     var nome = CategoriaValidation.nome(comando.nome());
     var cor = CategoriaValidation.cor(comando.cor());
     var pai = buscarEValidarPai(comando, categoria);
-    CategoriaValidation.nomeDisponivel(
-        categoriaRepository,
-        comando.usuarioId(),
-        comando.categoriaPaiId(),
-        nome,
-        categoria.getId());
-    validarSituacao(categoria, pai, comando.situacao());
+
+    if (categoriaRepository.existeComNomeNoMesmoNivel(
+        comando.usuarioId(), comando.categoriaPaiId(), nome, categoria.getId())) {
+      throw CategoriaValidation.nomeDuplicado();
+    }
+
+    validarAtivo(categoria, pai, comando.ativo());
 
     categoria.setNome(nome);
     categoria.setCor(cor);
     categoria.setCategoriaPai(pai);
-    categoria.setAtivo(comando.situacao() == SituacaoCategoria.ATIVA);
-    CategoriaValidation.flush(categoriaRepository);
-    return CategoriaValidation.resultado(categoria);
+    categoria.setAtivo(comando.ativo());
+
+    CategoriaConstraintHandler.flush(categoriaRepository);
+
+    return categoria;
   }
 
   private Categoria buscarEValidarPai(Comando comando, Categoria categoria) {
@@ -59,7 +59,7 @@ public class EditarCategoria {
     boolean mesmoPai =
         categoria.getCategoriaPai() != null
             && categoria.getCategoriaPai().getId().equals(pai.getId());
-    if (CategoriaValidation.situacao(pai) == SituacaoCategoria.INATIVA && !mesmoPai) {
+    if (!pai.isAtivo() && !mesmoPai) {
       throw new RegraNegocioException("CATEGORIA_PAI_INATIVA", "A categoria pai deve estar ativa");
     }
     for (var ancestral = pai; ancestral != null; ancestral = ancestral.getCategoriaPai()) {
@@ -70,18 +70,17 @@ public class EditarCategoria {
     return pai;
   }
 
-  private void validarSituacao(Categoria categoria, Categoria novoPai, SituacaoCategoria situacao) {
-    if (situacao == CategoriaValidation.situacao(categoria)) {
+  private void validarAtivo(Categoria categoria, Categoria novoPai, boolean ativo) {
+    if (ativo == categoria.isAtivo()) {
       return;
     }
-    if (situacao == SituacaoCategoria.INATIVA
-        && categoriaRepository.existeDescendenteAtiva(categoria.getId())) {
+    if (!ativo && categoriaRepository.existeDescendenteAtiva(categoria.getId())) {
       throw new RegraNegocioException(
           "CATEGORIA_POSSUI_DESCENDENTE_ATIVA", "A categoria possui descendente ativa");
     }
-    if (situacao == SituacaoCategoria.ATIVA) {
+    if (ativo) {
       for (var ancestral = novoPai; ancestral != null; ancestral = ancestral.getCategoriaPai()) {
-        if (CategoriaValidation.situacao(ancestral) == SituacaoCategoria.INATIVA) {
+        if (!ancestral.isAtivo()) {
           throw new RegraNegocioException(
               "CATEGORIA_POSSUI_ANCESTRAL_INATIVA", "Todos os ancestrais devem estar ativos");
         }
@@ -100,5 +99,5 @@ public class EditarCategoria {
       String nome,
       String cor,
       UUID categoriaPaiId,
-      SituacaoCategoria situacao) {}
+      Boolean ativo) {}
 }

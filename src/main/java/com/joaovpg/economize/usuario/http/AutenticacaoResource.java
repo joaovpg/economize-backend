@@ -23,7 +23,7 @@ public class AutenticacaoResource {
   private final CadastrarUsuario cadastrarUsuario;
   private final AutenticacaoHttpMapper mapper;
 
-  public AutenticacaoResource(
+  AutenticacaoResource(
       AutenticarUsuario autenticarUsuario,
       CadastrarUsuario cadastrarUsuario,
       AutenticacaoHttpMapper mapper) {

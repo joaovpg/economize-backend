@@ -36,7 +36,7 @@ public class RecorrenciaResource {
   private final RecorrenciaHttpMapper mapper;
   private final JsonWebToken token;
 
-  public RecorrenciaResource(
+  RecorrenciaResource(
       CriarRecorrencia criarRecorrencia,
       CriarParcelamento criarParcelamento,
       GerenciarOcorrenciaRecorrente gerenciarOcorrencia,
