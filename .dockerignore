@@ -1,5 +1,10 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+target/
+.git/
+.github/
+.idea/
+.vscode/
+.scratch/
+docs/
+
+.env
+*.log
