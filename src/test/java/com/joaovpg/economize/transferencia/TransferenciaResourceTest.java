@@ -178,7 +178,7 @@ class TransferenciaResourceTest {
     var data = LocalDate.now();
     var transferenciaId =
         criarTransferencia("PLANEJADA", data).statusCode(201).extract().jsonPath().getUUID("id");
-    editarConta(token, contaOrigemId, "Conta origem", "INATIVA");
+    editarConta(token, contaOrigemId, "Conta origem", false);
 
     alterarTransferencia(transferenciaId, "PLANEJADA", data, "Corrigida")
         .statusCode(200)
@@ -347,7 +347,7 @@ class TransferenciaResourceTest {
         .getUUID("id");
   }
 
-  private void editarConta(String tokenUsuario, UUID contaId, String nome, String situacao) {
+  private void editarConta(String tokenUsuario, UUID contaId, String nome, boolean ativo) {
     given()
         .auth()
         .oauth2(tokenUsuario)
@@ -359,10 +359,10 @@ class TransferenciaResourceTest {
               "moeda":"BRL",
               "saldoInicial":0.0000,
               "dataSaldoInicial":"2026-01-01",
-              "situacao":"%s"
+              "ativo":%s
             }
             """
-                .formatted(nome, situacao))
+                .formatted(nome, ativo))
         .when()
         .put("/api/contas/{id}", contaId)
         .then()

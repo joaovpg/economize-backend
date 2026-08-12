@@ -1,6 +1,5 @@
 package com.joaovpg.economize.conta.http;
 
-import com.joaovpg.economize.conta.SituacaoConta;
 import com.joaovpg.economize.conta.application.CadastrarConta;
 import com.joaovpg.economize.conta.application.EditarConta;
 import com.joaovpg.economize.conta.application.ListarContas;
@@ -54,11 +53,11 @@ public class ContaResource {
   }
 
   @GET
-  public Response listar(@QueryParam("situacao") SituacaoConta situacao) {
+  public Response listar(@QueryParam("ativo") Boolean ativo) {
     var resultados =
-        situacao == null
+        ativo == null
             ? listarContas.executar(usuarioId())
-            : listarContas.executar(usuarioId(), situacao);
+            : listarContas.executar(usuarioId(), ativo);
     var resposta = resultados.stream().map(mapper::toResponse).toList();
     return Response.ok(resposta).build();
   }

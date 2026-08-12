@@ -11,7 +11,6 @@ import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transferencia.SituacaoTransferencia;
 import com.joaovpg.economize.transferencia.Transferencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -45,10 +44,7 @@ public class CriarTransferencia {
   public TransferenciaResultado executar(Comando comando) {
     validar(comando);
     var usuario =
-        usuarioRepository
-            .findByIdOptional(comando.usuarioId())
-            .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO)
-            .orElseThrow(this::naoEncontrada);
+        usuarioRepository.buscarAtivo(comando.usuarioId()).orElseThrow(this::naoEncontrada);
     var origem =
         contaRepository
             .buscarAtivaDoUsuario(comando.contaOrigemId(), comando.usuarioId())

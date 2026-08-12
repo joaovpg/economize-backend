@@ -39,10 +39,7 @@ public class ContaFinanceiraRepository implements PanacheRepositoryBase<ContaFin
     return list("usuario.id = ?1 and id in ?2 order by lower(nome), id", usuarioId, contaIds);
   }
 
-  public List<ContaFinanceira> listarDoUsuario(UUID usuarioId, SituacaoConta situacao) {
-    return list(
-        "usuario.id = ?1 and ativo = ?2 order by lower(nome), id",
-        usuarioId,
-        situacao == SituacaoConta.ATIVA);
+  public List<ContaFinanceira> listarDoUsuario(UUID usuarioId, Boolean ativo) {
+    return list("usuario.id = ?1 and ativo = ?2 order by lower(nome), id", usuarioId, ativo);
   }
 }

@@ -67,7 +67,7 @@ public class ConsultarTransacoes {
 
   @Transactional(Transactional.TxType.SUPPORTS)
   public Resultado executar(Comando comando) {
-    usuarioRepository.findByIdOptional(comando.usuarioId()).orElseThrow(this::recursoNaoEncontrado);
+    usuarioRepository.buscarAtivo(comando.usuarioId()).orElseThrow(this::recursoNaoEncontrado);
     var periodo = resolverPeriodo(comando.inicio(), comando.fim());
     var contaIds = conjunto(comando.contaIds());
     var categoriaIds = conjunto(comando.categoriaIds());

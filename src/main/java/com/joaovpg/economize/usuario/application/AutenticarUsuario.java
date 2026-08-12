@@ -1,7 +1,6 @@
 package com.joaovpg.economize.usuario.application;
 
 import com.joaovpg.economize.shared.exception.AutenticacaoException;
-import com.joaovpg.economize.usuario.StatusUsuario;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -20,10 +19,7 @@ public class AutenticarUsuario {
   }
 
   public Resultado executar(Comando comando) {
-    var usuario =
-        usuarioRepository
-            .buscarPorEmail(comando.email())
-            .filter(candidato -> candidato.getStatus() == StatusUsuario.ATIVO);
+    var usuario = usuarioRepository.buscarPorEmail(comando.email()).filter(Usuario::isAtivo);
     var argon2 = Argon2Factory.create();
     var senha = comando.senha().toCharArray();
     try {

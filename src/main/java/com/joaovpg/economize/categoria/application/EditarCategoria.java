@@ -21,9 +21,11 @@ public class EditarCategoria {
         categoriaRepository
             .buscarDoUsuario(comando.categoriaId(), comando.usuarioId())
             .orElseThrow(CadastrarCategoria::naoEncontrada);
+
     if (comando.ativo() == null) {
       throw new RegraNegocioException("ATIVO_CATEGORIA_INVALIDO", "Ativo da categoria invalido");
     }
+
     var nome = CategoriaValidation.nome(comando.nome());
     var cor = CategoriaValidation.cor(comando.cor());
     var pai = buscarEValidarPai(comando, categoria);
@@ -56,17 +58,21 @@ public class EditarCategoria {
         categoriaRepository
             .buscarDoUsuario(comando.categoriaPaiId(), comando.usuarioId())
             .orElseThrow(CadastrarCategoria::naoEncontrada);
+
     boolean mesmoPai =
         categoria.getCategoriaPai() != null
             && categoria.getCategoriaPai().getId().equals(pai.getId());
+
     if (!pai.isAtivo() && !mesmoPai) {
       throw new RegraNegocioException("CATEGORIA_PAI_INATIVA", "A categoria pai deve estar ativa");
     }
+
     for (var ancestral = pai; ancestral != null; ancestral = ancestral.getCategoriaPai()) {
       if (ancestral.getId().equals(categoria.getId())) {
         throw ciclo();
       }
     }
+
     return pai;
   }
 

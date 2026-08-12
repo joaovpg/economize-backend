@@ -12,6 +12,6 @@ public class UsuarioRepository implements PanacheRepositoryBase<Usuario, UUID> {
   }
 
   public Optional<Usuario> buscarAtivo(UUID usuarioId) {
-    return find("id = ?1 and status = ?2", usuarioId, StatusUsuario.ATIVO).firstResultOptional();
+    return find("id = ?1 and ativo = true", usuarioId).firstResultOptional();
   }
 }
