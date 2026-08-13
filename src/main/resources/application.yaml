@@ -73,10 +73,9 @@ economize:
   mp:
     jwt:
       verify:
-        publickey:
-          location: ${JWT_CHAVE_PUBLICA}
+        publickey: ${JWT_CHAVE_PUBLICA}
+
   smallrye:
     jwt:
       sign:
-        key:
-          location: ${JWT_CHAVE_PRIVADA}
+        key: ${JWT_CHAVE_PRIVADA}
