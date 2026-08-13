@@ -69,7 +69,7 @@ economize:
       username: ${DB_USERNAME}
       password: ${DB_PASSWORD}
       jdbc:
-        url: ${DB_URL}
+        url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_DB}
   mp:
     jwt:
       verify:
