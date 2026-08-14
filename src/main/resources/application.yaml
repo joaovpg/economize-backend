@@ -71,6 +71,13 @@ economize:
       password: ${DB_PASSWORD}
       jdbc:
         url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_DB}
+    http:
+      cors:
+        origins: https://${RAILWAY_PUBLIC_DOMAIN}
+      proxy:
+        proxy-address-forwarding: true
+        allow-x-forwarded: true
+        enable-forwarded-host: true
   mp:
     jwt:
       verify:
