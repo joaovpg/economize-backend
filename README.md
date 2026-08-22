@@ -243,6 +243,11 @@ Nos profiles `dev` e `prod`, configure o datasource pelas variáveis abaixo. O p
 | `JWT_CHAVE_PUBLICA` | Localização da chave pública RSA usada para validar tokens | `/run/secrets/jwt-public.pem` |
 | `JWT_CHAVE_PRIVADA` | Localização da chave privada RSA usada para assinar tokens | `/run/secrets/jwt-private.pem` |
 | `JWT_EXPIRACAO_SEGUNDOS` | Validade do token de acesso | `900` |
+| `COOKIE_SAME_SITE` | Política SameSite dos cookies de sessão e CSRF | `Lax` localmente; `None` na homologação; `Strict` quando frontend e API forem same-site |
+| `COOKIE_SECURE` | Exige HTTPS nos cookies | `true` na homologação e produção |
+| `CORS_ORIGINS` | Origens explícitas autorizadas pelo CORS | `http://localhost:3000` |
+
+O login e o cadastro criam os cookies HttpOnly `economize_token` e legível `economize_csrf`; o JWT não é devolvido no corpo da resposta. Requisições do frontend devem usar credenciais (`credentials: 'include'`) e enviar o valor de `economize_csrf` no header `X-CSRF-Token` em operações que alteram dados. O Swagger pode ser autenticado executando o endpoint de login pelo próprio `Try it out`.
 
 O Flyway aplica as migrations na inicialização e o Hibernate apenas valida o schema. Em execução local, o Quarkus carrega automaticamente o arquivo `.env` localizado na raiz do projeto. O `.env` é ignorado pelo Git. Em outros ambientes, forneça as variáveis e as chaves RSA pela plataforma de execução.
 

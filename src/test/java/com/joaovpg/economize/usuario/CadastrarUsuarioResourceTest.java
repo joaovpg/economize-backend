@@ -40,11 +40,12 @@ class CadastrarUsuarioResourceTest {
         .post("/api/autenticacao/cadastro")
         .then()
         .statusCode(201)
-        .body("token", notNullValue())
-        .body("usuario.id", notNullValue())
-        .body("usuario.nome", equalTo("Maria da Silva"))
-        .body("usuario.email", equalTo(emailNormalizado))
-        .body("usuario.timezone", equalTo("America/Sao_Paulo"));
+        .cookie("economize_token", notNullValue())
+        .cookie("economize_csrf", notNullValue())
+        .body("id", notNullValue())
+        .body("nome", equalTo("Maria da Silva"))
+        .body("email", equalTo(emailNormalizado))
+        .body("timezone", equalTo("America/Sao_Paulo"));
 
     given()
         .contentType("application/json")
@@ -57,7 +58,8 @@ class CadastrarUsuarioResourceTest {
         .post("/api/autenticacao/login")
         .then()
         .statusCode(200)
-        .body("token", notNullValue());
+        .cookie("economize_token", notNullValue())
+        .cookie("economize_csrf", notNullValue());
   }
 
   @Test
@@ -104,9 +106,9 @@ class CadastrarUsuarioResourceTest {
   }
 
   @Test
-  void naoCriaCategoriaAutomatica() {
-    var email = "categoria-transferencia-" + UUID.randomUUID() + "@example.com";
-    String token =
+  void exigeTokenCsrfEmOperacaoMutavel() {
+    var email = "csrf-" + UUID.randomUUID() + "@example.com";
+    var sessao =
         given()
             .contentType("application/json")
             .body(
@@ -124,11 +126,46 @@ class CadastrarUsuarioResourceTest {
             .then()
             .statusCode(201)
             .extract()
-            .path("token");
+            .response();
 
     given()
-        .auth()
-        .oauth2(token)
+        .cookie("economize_token", sessao.getCookie("economize_token"))
+        .contentType("application/json")
+        .body("{\"nome\":\"Sem CSRF\"}")
+        .when()
+        .post("/api/categorias")
+        .then()
+        .statusCode(403)
+        .body("type", equalTo("urn:economize:problem:CSRF_TOKEN_INVALIDO"));
+  }
+
+  @Test
+  void naoCriaCategoriaAutomatica() {
+    var email = "categoria-transferencia-" + UUID.randomUUID() + "@example.com";
+    var resposta =
+        given()
+            .contentType("application/json")
+            .body(
+                """
+                {
+                  "nome":"Maria da Silva",
+                  "email":"%s",
+                  "senha":"senha segura",
+                  "timezone":"America/Sao_Paulo"
+                }
+                """
+                    .formatted(email))
+            .when()
+            .post("/api/autenticacao/cadastro")
+            .then()
+            .statusCode(201)
+            .extract()
+            .response();
+
+    given()
+        .cookie("economize_token", resposta.getCookie("economize_token"))
+        .cookie("economize_csrf", resposta.getCookie("economize_csrf"))
+        .header("X-CSRF-Token", resposta.getCookie("economize_csrf"))
         .when()
         .get("/api/categorias")
         .then()

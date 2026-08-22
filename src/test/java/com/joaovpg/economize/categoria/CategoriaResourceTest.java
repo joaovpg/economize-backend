@@ -260,6 +260,7 @@ class CategoriaResourceTest {
         .then()
         .statusCode(200)
         .extract()
-        .path("token");
+        .response()
+        .getCookie("economize_token");
   }
 }
