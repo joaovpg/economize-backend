@@ -296,7 +296,8 @@ class TransferenciaResourceTest {
         .then()
         .statusCode(201)
         .extract()
-        .path("token");
+        .response()
+        .getCookie("economize_token");
   }
 
   private UUID cadastrarConta(String tokenUsuario, String nome) {

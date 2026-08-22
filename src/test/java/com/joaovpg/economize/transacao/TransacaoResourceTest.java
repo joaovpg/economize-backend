@@ -334,7 +334,7 @@ class TransacaoResourceTest {
   }
 
   @Test
-  void autenticaComTokenBearer() {
+  void autenticaComCookie() {
     given()
         .contentType("application/json")
         .body(
@@ -346,8 +346,8 @@ class TransacaoResourceTest {
         .post("/api/autenticacao/login")
         .then()
         .statusCode(200)
-        .body("token", notNullValue())
-        .body("tipo", equalTo("Bearer"));
+        .cookie("economize_token", notNullValue())
+        .cookie("economize_csrf", notNullValue());
   }
 
   @Test
@@ -1533,7 +1533,8 @@ class TransacaoResourceTest {
         .then()
         .statusCode(200)
         .extract()
-        .path("token");
+        .response()
+        .getCookie("economize_token");
   }
 
   private String autenticarOutroUsuario() {
@@ -1549,6 +1550,7 @@ class TransacaoResourceTest {
         .then()
         .statusCode(200)
         .extract()
-        .path("token");
+        .response()
+        .getCookie("economize_token");
   }
 }

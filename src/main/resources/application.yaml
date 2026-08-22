@@ -27,6 +27,7 @@ quarkus:
     port: ${PORT:8080}
     cors:
       enabled: true
+      access-control-allow-credentials: true
 
 mp:
   jwt:
@@ -42,6 +43,10 @@ smallrye:
 economize:
   logging:
     threshold-millis: ${LOG_LIMITE_REQUISICAO_LENTA:1000}
+  auth:
+    cookie:
+      same-site: ${COOKIE_SAME_SITE:Lax}
+      secure: ${COOKIE_SECURE:false}
 
 "%test":
   quarkus:
@@ -61,6 +66,11 @@ economize:
         url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_DB}
 
 "%prod":
+  economize:
+    auth:
+      cookie:
+        same-site: ${COOKIE_SAME_SITE:None}
+        secure: ${COOKIE_SECURE:true}
   quarkus:
     log:
       console:

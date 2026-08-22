@@ -22,14 +22,17 @@ public class AutenticacaoResource {
   private final AutenticarUsuario autenticarUsuario;
   private final CadastrarUsuario cadastrarUsuario;
   private final AutenticacaoHttpMapper mapper;
+  private final CookiesAutenticacao cookies;
 
   AutenticacaoResource(
       AutenticarUsuario autenticarUsuario,
       CadastrarUsuario cadastrarUsuario,
-      AutenticacaoHttpMapper mapper) {
+      AutenticacaoHttpMapper mapper,
+      CookiesAutenticacao cookies) {
     this.autenticarUsuario = autenticarUsuario;
     this.cadastrarUsuario = cadastrarUsuario;
     this.mapper = mapper;
+    this.cookies = cookies;
   }
 
   @POST
@@ -38,7 +41,12 @@ public class AutenticacaoResource {
   public Response cadastrar(@Valid CadastroRequest request) {
     var comando = mapper.toCommand(request);
     var resultado = cadastrarUsuario.executar(comando);
-    return Response.status(Response.Status.CREATED).entity(mapper.toResponse(resultado)).build();
+    var resposta = mapper.toResponse(resultado.usuario());
+    var cookiesSessao = cookies.criar(resultado.token());
+    return Response.status(Response.Status.CREATED)
+        .entity(resposta)
+        .cookie(cookiesSessao.token(), cookiesSessao.csrf())
+        .build();
   }
 
   @POST
@@ -47,7 +55,15 @@ public class AutenticacaoResource {
   public Response login(@Valid LoginRequest request) {
     var comando = mapper.toCommand(request);
     var resultado = autenticarUsuario.executar(comando);
-    var response = mapper.toResponse(resultado);
-    return Response.ok(response).build();
+    var cookiesSessao = cookies.criar(resultado.token());
+    return Response.ok().cookie(cookiesSessao.token(), cookiesSessao.csrf()).build();
+  }
+
+  @POST
+  @Path("/logout")
+  @PermitAll
+  public Response logout() {
+    var cookiesExpirados = cookies.expirar();
+    return Response.noContent().cookie(cookiesExpirados.token(), cookiesExpirados.csrf()).build();
   }
 }
