@@ -203,7 +203,7 @@ No Windows:
 A validação usada pela CI é:
 
 ```shell
-./mvnw verify -B
+./mvnw test -B
 ```
 
 Os testes permanecem isolados do banco local. Eles dependem de um runtime de contêiner disponível para o Quarkus Dev Services iniciar um PostgreSQL temporário.
