@@ -17,8 +17,8 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Compile
-        run: ./mvnw compile -DskipTests -B
-
       - name: Check formatting
         run: ./mvnw spotless:check -B
+
+      - name: Run tests
+        run: ./mvnw test -B
