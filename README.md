@@ -95,7 +95,7 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-O `.env.example` já corresponde ao PostgreSQL definido no Compose e usa as mesmas variáveis disponibilizadas pelo Railway:
+O `.env.example` é intencionalmente neutro e não contém nomes nem valores de variáveis. Preencha o `.env` local conforme a configuração abaixo:
 
 | Variável | Valor local |
 | --- | --- |
