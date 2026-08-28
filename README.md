@@ -280,7 +280,7 @@ O build nativo é opcional e requer uma distribuição GraalVM/Mandrel compatív
 ./mvnw package -Dnative -Dquarkus.native.container-build=true
 ```
 
-Consulte a [documentação de build nativo do Quarkus](https://quarkus.io/guides/building-native_image) para os requisitos adicionais.
+Consulte a [documentação de build nativo do Quarkus](https://quarkus.io/guides/building-native-image) para os requisitos adicionais.
 
 ## Documentação
 
