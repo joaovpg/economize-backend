@@ -16,6 +16,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @Priority(Priorities.AUTHENTICATION)
 public class ProtecaoCsrfFilter implements ContainerRequestFilter {
   private static final Set<String> METODOS_MUTAVEIS = Set.of("POST", "PUT", "PATCH", "DELETE");
+  private static final String SEC_FETCH_SITE = "Sec-Fetch-Site";
+  private static final String SAME_ORIGIN = "same-origin";
+
   private final boolean testCompatibility;
 
   public ProtecaoCsrfFilter(
@@ -26,7 +29,9 @@ public class ProtecaoCsrfFilter implements ContainerRequestFilter {
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws IOException {
-    if (!METODOS_MUTAVEIS.contains(requestContext.getMethod()) || endpointPublico(requestContext)) {
+    if (!METODOS_MUTAVEIS.contains(requestContext.getMethod())
+        || endpointPublico(requestContext)
+        || requisicaoSameOrigin(requestContext)) {
       return;
     }
     if (testCompatibility && "true".equals(requestContext.getHeaderString("X-Test-Auth"))) {
@@ -42,6 +47,10 @@ public class ProtecaoCsrfFilter implements ContainerRequestFilter {
         || !csrfHeader.equals(csrfCookie.getValue())) {
       throw new CsrfException();
     }
+  }
+
+  private boolean requisicaoSameOrigin(ContainerRequestContext requestContext) {
+    return SAME_ORIGIN.equals(requestContext.getHeaderString(SEC_FETCH_SITE));
   }
 
   private boolean endpointPublico(ContainerRequestContext requestContext) {

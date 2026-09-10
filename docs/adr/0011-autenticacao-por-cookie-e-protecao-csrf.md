@@ -14,18 +14,18 @@ A autenticacao de navegador usa o cookie host-only `economize_token`, com `HttpO
 
 O mecanismo de autenticacao Quarkus le exclusivamente o cookie e delega a validacao ao provedor SmallRye JWT existente. O header `Authorization` nao e aceito.
 
-O login e o cadastro tambem criam `economize_csrf`, que nao e HttpOnly e usa `Path=/`, para que clientes JavaScript da mesma origem, incluindo o Swagger UI em `/q/swagger-ui`, consigam le-lo. Operacoes mutaveis exigem que seu valor seja repetido no header `X-CSRF-Token`. O logout expira os cookies de sessao.
+O login e o cadastro tambem criam `economize_csrf`, que nao e HttpOnly e usa `Path=/api`. Em operacoes mutaveis iniciadas de outro origin, seu valor deve ser repetido no header `X-CSRF-Token`.
 
-Para evitar conflito com versoes anteriores, login, cadastro e logout tambem expiram explicitamente um eventual `economize_csrf` legado com `Path=/api`.
+Requisicoes mutaveis que o navegador identifica como `Sec-Fetch-Site: same-origin` nao exigem o token CSRF adicional. `Sec-Fetch-Site` e um Fetch Metadata Request Header controlado pelo navegador, portanto nao pode ser definido ou alterado por JavaScript da pagina. Requisicoes sem esse sinal, inclusive clientes HTTP e navegadores legados, continuam seguindo a validacao por cookie + header CSRF.
 
 O CORS aceita credenciais e somente origens explicitamente configuradas em `CORS_ORIGINS`.
 
-O Swagger usa o login por `Try it out` para estabelecer a sessao no navegador. O `request-interceptor` le `economize_csrf` de `document.cookie` e o envia automaticamente em `X-CSRF-Token`. `show-mutated-request` fica habilitado para que o curl exibido pelo Swagger mostre o header adicionado pelo interceptor.
+O Swagger usa o login por `Try it out` para estabelecer a sessao no navegador. Como o Swagger UI e servido no mesmo origin da API, suas chamadas recebem `Sec-Fetch-Site: same-origin` do navegador e nao precisam copiar o token CSRF nem usar o botao `Authorize`.
 
 ## Consequencias
 
 - O JWT deixa de ser exposto no corpo das respostas HTTP.
-- O frontend precisa usar credenciais e enviar o header CSRF em escritas.
+- O frontend cross-site precisa usar credenciais e enviar o header CSRF em escritas.
 - Clientes que usavam Bearer precisam migrar para cookies.
-- O Swagger nao depende do botao `Authorize` para autenticar ou propagar o token CSRF.
-- O token CSRF pode ser lido por JavaScript em qualquer caminho da mesma origem, o que e esperado no padrao double-submit cookie; o JWT continua protegido por `HttpOnly`.
+- O Swagger permanece autenticado pelo cookie `HttpOnly` e nao precisa de logica JavaScript especifica para CSRF.
+- Requisicoes cross-site continuam protegidas pelo mecanismo double-submit cookie.
