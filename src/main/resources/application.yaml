@@ -19,15 +19,27 @@ quarkus:
     with-credentials: true
     request-interceptor: |
       (request) => {
-        const csrfCookie = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('economize_csrf='));
+        const csrfToken = sessionStorage.getItem('economize_csrf');
 
-        if (csrfCookie) {
-          request.headers['X-CSRF-Token'] = csrfCookie.substring('economize_csrf='.length);
+        if (csrfToken) {
+          request.headers['X-CSRF-Token'] = csrfToken;
         }
 
         return request;
+      }
+    response-interceptor: |
+      (response) => {
+        const csrfToken = response.headers?.['x-csrf-token'] ?? response.headers?.['X-CSRF-Token'];
+
+        if (csrfToken) {
+          sessionStorage.setItem('economize_csrf', csrfToken);
+        }
+
+        if (response.url?.endsWith('/api/autenticacao/logout')) {
+          sessionStorage.removeItem('economize_csrf');
+        }
+
+        return response;
       }
   log:
     console:
@@ -41,6 +53,7 @@ quarkus:
     cors:
       enabled: true
       access-control-allow-credentials: true
+      exposed-headers: X-CSRF-Token
 
 mp:
   jwt:
