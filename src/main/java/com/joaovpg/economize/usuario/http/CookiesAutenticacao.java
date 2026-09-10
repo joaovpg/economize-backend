@@ -49,8 +49,7 @@ public class CookiesAutenticacao {
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
-  private NewCookie cookie(
-      String name, String value, boolean httpOnly, int maxAge, String path) {
+  private NewCookie cookie(String name, String value, boolean httpOnly, int maxAge, String path) {
     return new NewCookie.Builder(name)
         .value(value)
         .path(path)
