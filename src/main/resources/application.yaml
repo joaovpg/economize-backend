@@ -16,6 +16,19 @@ quarkus:
   swagger-ui:
     path: /q/swagger-ui
     always-include: true
+    with-credentials: true
+    request-interceptor: |
+      (request) => {
+        const csrfCookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('economize_csrf='));
+
+        if (csrfCookie) {
+          request.headers['X-CSRF-Token'] = csrfCookie.substring('economize_csrf='.length);
+        }
+
+        return request;
+      }
   log:
     console:
       format: "%d{HH:mm:ss} %-5p [%c] (traceId=%X{traceId} usuarioId=%X{usuarioId}) %s%e%n"
