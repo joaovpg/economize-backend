@@ -17,29 +17,20 @@ quarkus:
     path: /q/swagger-ui
     always-include: true
     with-credentials: true
+    show-mutated-request: true
     request-interceptor: |
       (request) => {
-        const csrfToken = sessionStorage.getItem('economize_csrf');
+        const csrfCookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('economize_csrf='));
 
-        if (csrfToken) {
-          request.headers['X-CSRF-Token'] = csrfToken;
+        if (csrfCookie) {
+          request.headers['X-CSRF-Token'] = decodeURIComponent(
+            csrfCookie.substring('economize_csrf='.length)
+          );
         }
 
         return request;
-      }
-    response-interceptor: |
-      (response) => {
-        const csrfToken = response.headers?.['x-csrf-token'] ?? response.headers?.['X-CSRF-Token'];
-
-        if (csrfToken) {
-          sessionStorage.setItem('economize_csrf', csrfToken);
-        }
-
-        if (response.url?.endsWith('/api/autenticacao/logout')) {
-          sessionStorage.removeItem('economize_csrf');
-        }
-
-        return response;
       }
   log:
     console:
@@ -53,7 +44,6 @@ quarkus:
     cors:
       enabled: true
       access-control-allow-credentials: true
-      exposed-headers: X-CSRF-Token
 
 mp:
   jwt:
