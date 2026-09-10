@@ -95,11 +95,13 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-O `.env.example` já corresponde ao PostgreSQL definido no Compose:
+O `.env.example` é intencionalmente neutro e não contém nomes nem valores de variáveis. Preencha o `.env` local conforme a configuração abaixo:
 
 | Variável | Valor local |
 | --- | --- |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/economize_db` |
+| `DB_HOST` | `localhost` |
+| `DB_PORT` | `5432` |
+| `DB_DB` | `economize_db` |
 | `DB_USERNAME` | `postgres` |
 | `DB_PASSWORD` | `rootpassword` |
 
@@ -200,10 +202,11 @@ No Windows:
 .\mvnw.cmd test
 ```
 
-A validação usada pela CI é:
+A CI executa os testes e a verificação de formatação em pull requests para `main`:
 
 ```shell
-./mvnw verify -B
+./mvnw test -B
+./mvnw spotless:check -B
 ```
 
 Os testes permanecem isolados do banco local. Eles dependem de um runtime de contêiner disponível para o Quarkus Dev Services iniciar um PostgreSQL temporário.
@@ -237,7 +240,9 @@ Nos profiles `dev` e `prod`, configure o datasource pelas variáveis abaixo. O p
 
 | Variável | Descrição | Exemplo |
 | --- | --- | --- |
-| `DB_URL` | URL JDBC do PostgreSQL | `jdbc:postgresql://localhost:5432/economize_db` |
+| `DB_HOST` | Host do PostgreSQL | `localhost` |
+| `DB_PORT` | Porta do PostgreSQL | `5432` |
+| `DB_DB` | Nome do banco PostgreSQL | `economize_db` |
 | `DB_USERNAME` | Usuário do banco | `postgres` |
 | `DB_PASSWORD` | Senha do banco | Não versionar este valor |
 | `JWT_CHAVE_PUBLICA` | Localização da chave pública RSA usada para validar tokens | `/run/secrets/jwt-public.pem` |
