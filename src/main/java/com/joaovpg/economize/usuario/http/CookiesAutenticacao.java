@@ -12,7 +12,8 @@ public class CookiesAutenticacao {
   public static final String TOKEN_COOKIE = "economize_token";
   public static final String CSRF_COOKIE = "economize_csrf";
   public static final String CSRF_HEADER = "X-CSRF-Token";
-  public static final String COOKIE_PATH = "/api";
+  public static final String TOKEN_COOKIE_PATH = "/api";
+  public static final String CSRF_COOKIE_PATH = "/";
 
   private final SecureRandom secureRandom = new SecureRandom();
   private final int lifespan;
@@ -32,12 +33,16 @@ public class CookiesAutenticacao {
 
   public Cookies criar(String token) {
     return new Cookies(
-        cookie(TOKEN_COOKIE, token, true, lifespan),
-        cookie(CSRF_COOKIE, csrfToken(), false, lifespan));
+        cookie(TOKEN_COOKIE, token, true, lifespan, TOKEN_COOKIE_PATH),
+        cookie(CSRF_COOKIE, csrfToken(), false, lifespan, CSRF_COOKIE_PATH),
+        cookie(CSRF_COOKIE, "", false, 0, TOKEN_COOKIE_PATH));
   }
 
   public Cookies expirar() {
-    return new Cookies(cookie(TOKEN_COOKIE, "", true, 0), cookie(CSRF_COOKIE, "", false, 0));
+    return new Cookies(
+        cookie(TOKEN_COOKIE, "", true, 0, TOKEN_COOKIE_PATH),
+        cookie(CSRF_COOKIE, "", false, 0, CSRF_COOKIE_PATH),
+        cookie(CSRF_COOKIE, "", false, 0, TOKEN_COOKIE_PATH));
   }
 
   private String csrfToken() {
@@ -46,10 +51,10 @@ public class CookiesAutenticacao {
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
-  private NewCookie cookie(String name, String value, boolean httpOnly, int maxAge) {
+  private NewCookie cookie(String name, String value, boolean httpOnly, int maxAge, String path) {
     return new NewCookie.Builder(name)
         .value(value)
-        .path(COOKIE_PATH)
+        .path(path)
         .maxAge(maxAge)
         .secure(secure)
         .httpOnly(httpOnly)
@@ -57,5 +62,5 @@ public class CookiesAutenticacao {
         .build();
   }
 
-  public record Cookies(NewCookie token, NewCookie csrf) {}
+  public record Cookies(NewCookie token, NewCookie csrf, NewCookie csrfLegado) {}
 }

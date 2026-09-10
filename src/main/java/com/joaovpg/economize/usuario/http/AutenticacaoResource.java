@@ -45,8 +45,7 @@ public class AutenticacaoResource {
     var cookiesSessao = cookies.criar(resultado.token());
     return Response.status(Response.Status.CREATED)
         .entity(resposta)
-        .header(CookiesAutenticacao.CSRF_HEADER, cookiesSessao.csrf().getValue())
-        .cookie(cookiesSessao.token(), cookiesSessao.csrf())
+        .cookie(cookiesSessao.token(), cookiesSessao.csrf(), cookiesSessao.csrfLegado())
         .build();
   }
 
@@ -58,8 +57,7 @@ public class AutenticacaoResource {
     var resultado = autenticarUsuario.executar(comando);
     var cookiesSessao = cookies.criar(resultado.token());
     return Response.ok()
-        .header(CookiesAutenticacao.CSRF_HEADER, cookiesSessao.csrf().getValue())
-        .cookie(cookiesSessao.token(), cookiesSessao.csrf())
+        .cookie(cookiesSessao.token(), cookiesSessao.csrf(), cookiesSessao.csrfLegado())
         .build();
   }
 
@@ -68,6 +66,8 @@ public class AutenticacaoResource {
   @PermitAll
   public Response logout() {
     var cookiesExpirados = cookies.expirar();
-    return Response.noContent().cookie(cookiesExpirados.token(), cookiesExpirados.csrf()).build();
+    return Response.noContent()
+        .cookie(cookiesExpirados.token(), cookiesExpirados.csrf(), cookiesExpirados.csrfLegado())
+        .build();
   }
 }
