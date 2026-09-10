@@ -18,7 +18,8 @@ class ProtecaoCsrfSameOriginResourceTest {
         .cookie("economize_token", sessao.token())
         .header("Sec-Fetch-Site", "same-origin")
         .contentType("application/json")
-        .body("""
+        .body(
+            """
             {
               "nome":"Gastos essenciais",
               "cor":"#FFFFFF"
@@ -39,7 +40,8 @@ class ProtecaoCsrfSameOriginResourceTest {
         .cookie("economize_token", sessao.token())
         .header("Sec-Fetch-Site", "cross-site")
         .contentType("application/json")
-        .body("""
+        .body(
+            """
             {
               "nome":"Gastos essenciais",
               "cor":"#FFFFFF"
