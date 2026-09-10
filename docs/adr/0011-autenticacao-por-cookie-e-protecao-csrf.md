@@ -14,13 +14,15 @@ A autenticacao de navegador usa o cookie host-only `economize_token`, com `HttpO
 
 O mecanismo de autenticacao Quarkus le exclusivamente o cookie e delega a validacao ao provedor SmallRye JWT existente. O header `Authorization` nao e aceito.
 
-O login e o cadastro tambem criam `economize_csrf`, que nao e HttpOnly. Operacoes mutaveis exigem que seu valor seja repetido no header `X-CSRF-Token`. O logout expira os dois cookies.
+O login e o cadastro tambem criam `economize_csrf`, que nao e HttpOnly. Operacoes mutaveis exigem que seu valor seja repetido no header `X-CSRF-Token`. O token CSRF tambem e devolvido no header `X-CSRF-Token` das respostas de login e cadastro para clientes que precisam propaga-lo explicitamente. O logout expira os dois cookies.
 
-O CORS aceita credenciais e somente origens explicitamente configuradas em `CORS_ORIGINS`.
+O CORS aceita credenciais e somente origens explicitamente configuradas em `CORS_ORIGINS`. O header `X-CSRF-Token` fica exposto para clientes cross-origin autorizados.
+
+O Swagger usa o login por `Try it out` para estabelecer a sessao no navegador. O `response-interceptor` armazena o valor retornado em `X-CSRF-Token` no `sessionStorage`, e o `request-interceptor` o envia automaticamente nas requisicoes seguintes.
 
 ## Consequencias
 
 - O JWT deixa de ser exposto no corpo das respostas HTTP.
 - O frontend precisa usar credenciais e enviar o header CSRF em escritas.
 - Clientes que usavam Bearer precisam migrar para cookies.
-- O Swagger usa o login por `Try it out` para estabelecer a sessao no navegador.
+- O Swagger nao depende de `document.cookie` nem do botao `Authorize` para propagar o token CSRF.
