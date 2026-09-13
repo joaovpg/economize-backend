@@ -5,6 +5,7 @@ import com.joaovpg.economize.conta.application.EditarConta;
 import com.joaovpg.economize.conta.application.ListarContas;
 import com.joaovpg.economize.conta.http.dto.request.CadastrarContaRequest;
 import com.joaovpg.economize.conta.http.dto.request.EditarContaRequest;
+import com.joaovpg.economize.conta.http.dto.response.ContaResponse;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
@@ -17,9 +18,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/contas")
 @LogHttpErrors
@@ -47,26 +51,38 @@ public class ContaResource {
   }
 
   @POST
-  public Response cadastrar(@Valid CadastrarContaRequest request) {
+  @APIResponseSchema(
+      value = ContaResponse.class,
+      responseCode = "201",
+      responseDescription = "Conta criada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Usuário não encontrado.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<ContaResponse> cadastrar(@Valid CadastrarContaRequest request) {
     var resultado = cadastrarConta.executar(mapper.toCommand(usuarioId(), request));
-    return Response.status(Response.Status.CREATED).entity(mapper.toResponse(resultado)).build();
+    return RestResponse.status(RestResponse.Status.CREATED, mapper.toResponse(resultado));
   }
 
   @GET
-  public Response listar(@QueryParam("ativo") Boolean ativo) {
+  public List<ContaResponse> listar(@QueryParam("ativo") Boolean ativo) {
     var resultados =
         ativo == null
             ? listarContas.executar(usuarioId())
             : listarContas.executar(usuarioId(), ativo);
-    var resposta = resultados.stream().map(mapper::toResponse).toList();
-    return Response.ok(resposta).build();
+    return resultados.stream().map(mapper::toResponse).toList();
   }
 
   @PUT
   @Path("/{contaId}")
-  public Response editar(@PathParam("contaId") UUID contaId, @Valid EditarContaRequest request) {
+  @APIResponseSchema(
+      value = ContaResponse.class,
+      responseCode = "200",
+      responseDescription = "Conta atualizada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Conta não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public ContaResponse editar(
+      @PathParam("contaId") UUID contaId, @Valid EditarContaRequest request) {
     var resultado = editarConta.executar(mapper.toCommand(usuarioId(), contaId, request));
-    return Response.ok(mapper.toResponse(resultado)).build();
+    return mapper.toResponse(resultado);
   }
 
   private UUID usuarioId() {

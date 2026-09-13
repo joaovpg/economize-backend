@@ -5,6 +5,7 @@ import com.joaovpg.economize.categoria.application.EditarCategoria;
 import com.joaovpg.economize.categoria.application.ListarCategorias;
 import com.joaovpg.economize.categoria.http.dto.request.CadastrarCategoriaRequest;
 import com.joaovpg.economize.categoria.http.dto.request.EditarCategoriaRequest;
+import com.joaovpg.economize.categoria.http.dto.response.CategoriaResponse;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
@@ -17,9 +18,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/categorias")
 @LogHttpErrors
@@ -47,31 +51,39 @@ public class CategoriaResource {
   }
 
   @POST
-  public Response cadastrar(@Valid CadastrarCategoriaRequest request) {
+  @APIResponseSchema(
+      value = CategoriaResponse.class,
+      responseCode = "201",
+      responseDescription = "Categoria criada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Categoria pai não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<CategoriaResponse> cadastrar(@Valid CadastrarCategoriaRequest request) {
     var comando = mapper.toCommand(usuarioId(), request);
     var resultado = cadastrarCategoria.executar(comando);
     var resposta = mapper.toResponse(resultado);
 
-    return Response.status(Response.Status.CREATED).entity(resposta).build();
+    return RestResponse.status(RestResponse.Status.CREATED, resposta);
   }
 
   @PUT
   @Path("/{categoriaId}")
-  public Response editar(
+  @APIResponseSchema(
+      value = CategoriaResponse.class,
+      responseCode = "200",
+      responseDescription = "Categoria atualizada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Categoria não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public CategoriaResponse editar(
       @PathParam("categoriaId") UUID categoriaId, @Valid EditarCategoriaRequest request) {
     var comando = mapper.toCommand(usuarioId(), categoriaId, request);
     var resultado = editarCategoria.executar(comando);
-    var resposta = mapper.toResponse(resultado);
-
-    return Response.ok(resposta).build();
+    return mapper.toResponse(resultado);
   }
 
   @GET
-  public Response listar(@QueryParam("ativo") Boolean ativo) {
+  public List<CategoriaResponse> listar(@QueryParam("ativo") Boolean ativo) {
     var resultado = listarCategorias.executar(usuarioId(), ativo);
-    var resposta = mapper.toResponse(resultado);
-
-    return Response.ok(resposta).build();
+    return mapper.toResponse(resultado);
   }
 
   private UUID usuarioId() {

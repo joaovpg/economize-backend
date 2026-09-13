@@ -7,6 +7,8 @@ import com.joaovpg.economize.recorrencia.enums.EscopoOcorrencia;
 import com.joaovpg.economize.recorrencia.http.dto.request.AlterarOcorrenciaRecorrenteRequest;
 import com.joaovpg.economize.recorrencia.http.dto.request.CriarRecorrenciaRequest;
 import com.joaovpg.economize.recorrencia.http.dto.request.EfetivarOcorrenciaRecorrenteRequest;
+import com.joaovpg.economize.recorrencia.http.dto.response.RecorrenciaOperacaoResponse;
+import com.joaovpg.economize.recorrencia.http.dto.response.RecorrenciaResponse;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
@@ -20,9 +22,11 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/recorrencias")
 @LogHttpErrors
@@ -50,36 +54,54 @@ public class RecorrenciaResource {
   }
 
   @POST
-  public Response criar(@Valid CriarRecorrenciaRequest request) {
+  @APIResponseSchema(
+      value = RecorrenciaResponse.class,
+      responseCode = "201",
+      responseDescription = "Recorrência criada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Recurso relacionado não encontrado.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<RecorrenciaResponse> criar(@Valid CriarRecorrenciaRequest request) {
     return switch (request.tipoGrupo()) {
       case RECORRENCIA -> {
         var resultado =
             criarRecorrencia.executar(mapper.toRecorrenciaCommand(usuarioId(), request));
-        yield Response.status(Response.Status.CREATED).entity(mapper.toResponse(resultado)).build();
+        yield RestResponse.status(RestResponse.Status.CREATED, mapper.toResponse(resultado));
       }
       case PARCELAMENTO -> {
         var resultado =
             criarParcelamento.executar(mapper.toParcelamentoCommand(usuarioId(), request));
-        yield Response.status(Response.Status.CREATED).entity(mapper.toResponse(resultado)).build();
+        yield RestResponse.status(RestResponse.Status.CREATED, mapper.toResponse(resultado));
       }
     };
   }
 
   @PUT
   @Path("/{segmentoId}/ocorrencias/{dataOriginal}")
-  public Response editar(
+  @APIResponseSchema(
+      value = RecorrenciaOperacaoResponse.class,
+      responseCode = "200",
+      responseDescription = "Ocorrência alterada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RecorrenciaOperacaoResponse editar(
       @PathParam("segmentoId") UUID segmentoId,
       @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
       @Valid AlterarOcorrenciaRecorrenteRequest request) {
     var resultado =
         gerenciarOcorrencia.editar(
             mapper.toCommand(usuarioId(), segmentoId, dataOriginal, request));
-    return Response.ok(mapper.toResponse(resultado)).build();
+    return mapper.toResponse(resultado);
   }
 
   @POST
   @Path("/{segmentoId}/ocorrencias/{dataOriginal}/efetivar")
-  public Response efetivar(
+  @APIResponseSchema(
+      value = RecorrenciaOperacaoResponse.class,
+      responseCode = "200",
+      responseDescription = "Ocorrência efetivada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RecorrenciaOperacaoResponse efetivar(
       @PathParam("segmentoId") UUID segmentoId,
       @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
       EfetivarOcorrenciaRecorrenteRequest request) {
@@ -90,17 +112,20 @@ public class RecorrenciaResource {
             dataOriginal,
             request == null ? new EfetivarOcorrenciaRecorrenteRequest(null) : request);
     var resultado = gerenciarOcorrencia.efetivar(comando);
-    return Response.ok(mapper.toResponse(resultado)).build();
+    return mapper.toResponse(resultado);
   }
 
   @DELETE
   @Path("/{segmentoId}/ocorrencias/{dataOriginal}")
-  public Response excluir(
+  @APIResponse(responseCode = "204", description = "Ocorrência excluída com sucesso.")
+  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<Void> excluir(
       @PathParam("segmentoId") UUID segmentoId,
       @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
       @QueryParam("escopo") @DefaultValue("ONLY_THIS") EscopoOcorrencia escopo) {
     gerenciarOcorrencia.excluir(usuarioId(), segmentoId, dataOriginal, escopo);
-    return Response.noContent().build();
+    return RestResponse.noContent();
   }
 
   private UUID usuarioId() {
