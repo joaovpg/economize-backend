@@ -252,7 +252,7 @@ Nos profiles `dev` e `prod`, configure o datasource pelas variáveis abaixo. O p
 | `COOKIE_SECURE` | Exige HTTPS nos cookies | `true` na homologação e produção |
 | `CORS_ORIGINS` | Origens explícitas autorizadas pelo CORS | `http://localhost:3000` |
 
-O login e o cadastro criam os cookies HttpOnly `economize_token` e legível `economize_csrf`; o JWT não é devolvido no corpo da resposta. Requisições do frontend devem usar credenciais (`credentials: 'include'`) e enviar o valor de `economize_csrf` no header `X-CSRF-Token` em operações que alteram dados. O Swagger pode ser autenticado executando o endpoint de login pelo próprio `Try it out`.
+O login e o cadastro criam os cookies HttpOnly `economize_token` e legível `economize_csrf`; o JWT não é devolvido no corpo da resposta. A resposta do login também contém o campo `csrfToken`; um frontend cross-origin deve guardar esse valor e repeti-lo no header `X-CSRF-Token` em requisições que alteram dados, sempre usando credenciais (`credentials: 'include'`). O Swagger pode ser autenticado executando o endpoint de login pelo próprio `Try it out`.
 
 O Flyway aplica as migrations na inicialização e o Hibernate apenas valida o schema. Em execução local, o Quarkus carrega automaticamente o arquivo `.env` localizado na raiz do projeto. O `.env` é ignorado pelo Git. Em outros ambientes, forneça as variáveis e as chaves RSA pela plataforma de execução.
 
