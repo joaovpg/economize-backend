@@ -1,6 +1,7 @@
 package com.joaovpg.economize.usuario;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
@@ -47,19 +48,24 @@ class CadastrarUsuarioResourceTest {
         .body("email", equalTo(emailNormalizado))
         .body("timezone", equalTo("America/Sao_Paulo"));
 
-    given()
-        .contentType("application/json")
-        .body(
-            """
-            {"email":"%s","senha":"  senha segura  "}
-            """
-                .formatted(emailNormalizado))
-        .when()
-        .post("/api/autenticacao/login")
-        .then()
-        .statusCode(200)
-        .cookie("economize_token", notNullValue())
-        .cookie("economize_csrf", notNullValue());
+    var login =
+        given()
+            .contentType("application/json")
+            .body(
+                """
+                {"email":"%s","senha":"  senha segura  "}
+                """
+                    .formatted(emailNormalizado))
+            .when()
+            .post("/api/autenticacao/login")
+            .then()
+            .statusCode(200)
+            .cookie("economize_token", notNullValue())
+            .cookie("economize_csrf", notNullValue())
+            .extract()
+            .response();
+
+    assertThat(login.jsonPath().getString("csrfToken"), equalTo(login.getCookie("economize_csrf")));
   }
 
   @Test

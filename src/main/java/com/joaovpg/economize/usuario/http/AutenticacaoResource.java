@@ -5,6 +5,7 @@ import com.joaovpg.economize.usuario.application.AutenticarUsuario;
 import com.joaovpg.economize.usuario.application.CadastrarUsuario;
 import com.joaovpg.economize.usuario.http.dto.request.CadastroRequest;
 import com.joaovpg.economize.usuario.http.dto.request.LoginRequest;
+import com.joaovpg.economize.usuario.http.dto.response.CsrfTokenResponse;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -56,7 +57,9 @@ public class AutenticacaoResource {
     var comando = mapper.toCommand(request);
     var resultado = autenticarUsuario.executar(comando);
     var cookiesSessao = cookies.criar(resultado.token());
-    return Response.ok().cookie(cookiesSessao.token(), cookiesSessao.csrf()).build();
+    var resposta = new CsrfTokenResponse(cookiesSessao.csrf().getValue());
+
+    return Response.ok(resposta).cookie(cookiesSessao.token(), cookiesSessao.csrf()).build();
   }
 
   @POST

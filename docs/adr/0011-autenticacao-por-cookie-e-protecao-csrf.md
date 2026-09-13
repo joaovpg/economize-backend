@@ -16,6 +16,8 @@ O mecanismo de autenticacao Quarkus le exclusivamente o cookie e delega a valida
 
 O login e o cadastro tambem criam `economize_csrf`, que nao e HttpOnly e usa `Path=/api`. Em operacoes mutaveis iniciadas de outro origin, seu valor deve ser repetido no header `X-CSRF-Token`.
 
+Para permitir que um frontend cross-origin obtenha esse valor sem expor o JWT, `POST /api/autenticacao/login` devolve `{ "csrfToken": "..." }` junto dos cookies de sessao.
+
 Requisicoes mutaveis que o navegador identifica como `Sec-Fetch-Site: same-origin` nao exigem o token CSRF adicional. `Sec-Fetch-Site` e um Fetch Metadata Request Header controlado pelo navegador, portanto nao pode ser definido ou alterado por JavaScript da pagina. Requisicoes sem esse sinal, inclusive clientes HTTP e navegadores legados, continuam seguindo a validacao por cookie + header CSRF.
 
 O CORS aceita credenciais e somente origens explicitamente configuradas em `CORS_ORIGINS`.
