@@ -9,6 +9,8 @@ import com.joaovpg.economize.transacao.application.ExcluirTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
+import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
+import com.joaovpg.economize.transacao.http.dto.response.TransacaoResponse;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -21,7 +23,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -29,6 +30,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.eclipse.microprofile.openapi.annotations.enums.Explode;
+import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
+import org.eclipse.microprofile.openapi.annotations.enums.ParameterStyle;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/transacoes")
 @LogHttpErrors
@@ -59,11 +69,46 @@ public class TransacaoResource {
 
   @GET
   @RolesAllowed("usuario")
-  public Response consultar(
-      @QueryParam("inicio") String inicio,
-      @QueryParam("fim") String fim,
-      @QueryParam("contaId") List<String> contaIds,
-      @QueryParam("categoriaId") List<String> categoriaIds) {
+  @APIResponseSchema(
+      value = ConsultaTransacoesResponse.class,
+      responseCode = "200",
+      responseDescription = "Transações consultadas com sucesso.")
+  @APIResponse(responseCode = "404", description = "Conta ou categoria não encontrada.")
+  public ConsultaTransacoesResponse consultar(
+      @QueryParam("inicio")
+          @Parameter(
+              name = "inicio",
+              in = ParameterIn.QUERY,
+              description = "Mês inicial no formato AAAA-MM.",
+              required = true,
+              schema = @Schema(type = SchemaType.STRING, pattern = "\\d{4}-(0[1-9]|1[0-2])"))
+          String inicio,
+      @QueryParam("fim")
+          @Parameter(
+              name = "fim",
+              in = ParameterIn.QUERY,
+              description = "Mês final no formato AAAA-MM.",
+              required = true,
+              schema = @Schema(type = SchemaType.STRING, pattern = "\\d{4}-(0[1-9]|1[0-2])"))
+          String fim,
+      @QueryParam("contaId")
+          @Parameter(
+              name = "contaId",
+              in = ParameterIn.QUERY,
+              description = "Pode ser repetido para filtrar por várias contas.",
+              style = ParameterStyle.FORM,
+              explode = Explode.TRUE,
+              schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class))
+          List<String> contaIds,
+      @QueryParam("categoriaId")
+          @Parameter(
+              name = "categoriaId",
+              in = ParameterIn.QUERY,
+              description = "Pode ser repetido para filtrar por várias categorias.",
+              style = ParameterStyle.FORM,
+              explode = Explode.TRUE,
+              schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class))
+          List<String> categoriaIds) {
     var request =
         new ConsultaTransacoesRequest(
             converterOpcional(inicio, YearMonth::parse, "inicio"),
@@ -71,7 +116,7 @@ public class TransacaoResource {
             converterLista(contaIds, UUID::fromString, "contaId"),
             converterLista(categoriaIds, UUID::fromString, "categoriaId"));
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
-    return Response.ok(mapper.toResponse(consultarTransacoes.executar(comando))).build();
+    return mapper.toResponse(consultarTransacoes.executar(comando));
   }
 
   private <T> T converterOpcional(String valor, Function<String, T> conversor, String campo) {
@@ -97,26 +142,44 @@ public class TransacaoResource {
   @PUT
   @Path("/{id}")
   @RolesAllowed("usuario")
-  public Response alterar(@PathParam("id") UUID id, @Valid AlterarTransacaoRequest request) {
+  @APIResponseSchema(
+      value = TransacaoResponse.class,
+      responseCode = "200",
+      responseDescription = "Transação atualizada com sucesso.")
+  @APIResponse(
+      responseCode = "404",
+      description = "Transação ou recurso relacionado não encontrado.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public TransacaoResponse alterar(
+      @PathParam("id") UUID id, @Valid AlterarTransacaoRequest request) {
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
     var resultado = alterarTransacao.executar(id, comando);
-    return Response.ok(mapper.toResponse(resultado)).build();
+    return mapper.toResponse(resultado);
   }
 
   @POST
   @RolesAllowed("usuario")
-  public Response criar(@Valid CriarTransacaoRequest request) {
+  @APIResponseSchema(
+      value = TransacaoResponse.class,
+      responseCode = "201",
+      responseDescription = "Transação criada com sucesso.")
+  @APIResponse(responseCode = "404", description = "Recurso relacionado não encontrado.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<TransacaoResponse> criar(@Valid CriarTransacaoRequest request) {
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
     var resultado = criarTransacao.executar(comando);
     var response = mapper.toResponse(resultado);
-    return Response.status(Response.Status.CREATED).entity(response).build();
+    return RestResponse.status(RestResponse.Status.CREATED, response);
   }
 
   @DELETE
   @Path("/{id}")
   @RolesAllowed("usuario")
-  public Response excluir(@PathParam("id") UUID id) {
+  @APIResponse(responseCode = "204", description = "Transação excluída com sucesso.")
+  @APIResponse(responseCode = "404", description = "Transação não encontrada.")
+  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  public RestResponse<Void> excluir(@PathParam("id") UUID id) {
     excluirTransacao.executar(UUID.fromString(token.getSubject()), id);
-    return Response.noContent().build();
+    return RestResponse.noContent();
   }
 }
