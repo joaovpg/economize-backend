@@ -1,6 +1,6 @@
 # Economize
 
-[![CI](https://github.com/joaovpg/economize/actions/workflows/ci.yml/badge.svg)](https://github.com/joaovpg/economize/actions/workflows/ci.yml)
+[![CI](https://github.com/joaovpg/economize-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/joaovpg/economize-backend/actions/workflows/ci.yml)
 
 Backend de um sistema pessoal para registrar e catalogar receitas, despesas, transferências e recorrências financeiras.
 
