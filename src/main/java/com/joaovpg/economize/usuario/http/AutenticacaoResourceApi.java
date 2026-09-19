@@ -50,10 +50,11 @@ public interface AutenticacaoResourceApi {
           @Content(
               mediaType = MediaType.APPLICATION_JSON,
               schema = @Schema(implementation = UsuarioResponse.class)))
-  @APIResponse(responseCode = "422", description = "E-mail já cadastrado ou outra regra de negócio violada.")
+  @APIResponse(
+      responseCode = "422",
+      description = "E-mail já cadastrado ou outra regra de negócio violada.")
   RestResponse<UsuarioResponse> cadastrar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Dados do novo usuário.",
               required = true,
               content =
@@ -94,8 +95,7 @@ public interface AutenticacaoResourceApi {
               schema = @Schema(implementation = CsrfTokenResponse.class)))
   @APIResponse(responseCode = "401", description = "E-mail ou senha inválidos.")
   RestResponse<CsrfTokenResponse> login(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Credenciais do usuário.",
               required = true,
               content =
@@ -105,7 +105,8 @@ public interface AutenticacaoResourceApi {
                       examples =
                           @ExampleObject(
                               name = "login",
-                              value = "{\"email\":\"maria@example.com\",\"senha\":\"senha-segura\"}")))
+                              value =
+                                  "{\"email\":\"maria@example.com\",\"senha\":\"senha-segura\"}")))
           LoginRequest request);
 
   @POST

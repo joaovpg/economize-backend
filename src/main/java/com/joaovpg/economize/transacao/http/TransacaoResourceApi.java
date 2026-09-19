@@ -65,8 +65,8 @@ public interface TransacaoResourceApi {
                       name = "extratoComItensDeOrigemDiferente",
                       value =
                           "{\"inicio\":\"2026-02\",\"fim\":\"2026-02\",\"saldoAbertura\":1000.0000,"
-                              + "\"itens\":["
-                              + "{\"origem\":\"SALDO_INICIAL_CONTA\",\"operacaoId\":\"00000000-0000-0000-0000-000000000001\",\"situacao\":null,\"descricao\":\"Saldo inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null},"
+                              + "\"itens\":[{\"origem\":\"SALDO_INICIAL_CONTA\",\"operacaoId\":\"00000000-0000-0000-0000-000000000001\",\"situacao\":null,\"descricao\":\"Saldo"
+                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null},"
                               + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null}]}")))
   @APIResponse(
       responseCode = "404",
@@ -104,7 +104,8 @@ public interface TransacaoResourceApi {
               style = ParameterStyle.FORM,
               explode = Explode.TRUE,
               schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class),
-              examples = @ExampleObject(name = "duasContas", value = "contaId=uuid-1&contaId=uuid-2"))
+              examples =
+                  @ExampleObject(name = "duasContas", value = "contaId=uuid-1&contaId=uuid-2"))
           List<String> contaIds,
       @QueryParam("categoriaId")
           @Parameter(
@@ -134,7 +135,9 @@ public interface TransacaoResourceApi {
       value = TransacaoResponse.class,
       responseCode = "200",
       responseDescription = "Transação atualizada com sucesso.")
-  @APIResponse(responseCode = "404", description = "Transação ou recurso relacionado não encontrado.")
+  @APIResponse(
+      responseCode = "404",
+      description = "Transação ou recurso relacionado não encontrado.")
   @APIResponse(
       responseCode = "422",
       description =
@@ -149,8 +152,7 @@ public interface TransacaoResourceApi {
               required = true,
               schema = @Schema(implementation = UUID.class))
           UUID id,
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Novo estado da transação simples.",
               required = true,
               content =
@@ -176,8 +178,7 @@ public interface TransacaoResourceApi {
   @APIResponse(responseCode = "404", description = "Conta ou categoria informada não encontrada.")
   @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
   RestResponse<TransacaoResponse> criar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Dados da transação simples.",
               required = true,
               content =
@@ -203,12 +204,14 @@ public interface TransacaoResourceApi {
       operationId = "excluirTransacao",
       summary = "Exclui uma transação simples",
       description =
-          "Exclui somente uma transação simples pertencente ao usuário autenticado. "
-              + "Transações de transferências, recorrências e parcelamentos não devem ser removidas "
-              + "por esta rota.")
+          "Exclui somente uma transação simples pertencente ao usuário autenticado. Transações de"
+              + " transferências, recorrências e parcelamentos não devem ser removidas por esta"
+              + " rota.")
   @APIResponse(responseCode = "204", description = "Transação excluída com sucesso.")
   @APIResponse(responseCode = "404", description = "Transação não encontrada.")
-  @APIResponse(responseCode = "422", description = "Transação não é simples ou outra regra foi violada.")
+  @APIResponse(
+      responseCode = "422",
+      description = "Transação não é simples ou outra regra foi violada.")
   RestResponse<Void> excluir(
       @PathParam("id")
           @Parameter(

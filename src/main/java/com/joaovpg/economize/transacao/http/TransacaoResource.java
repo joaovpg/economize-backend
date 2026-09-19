@@ -78,8 +78,7 @@ public class TransacaoResource implements TransacaoResourceApi {
   }
 
   @Override
-  public TransacaoResponse alterar(
-      UUID id, AlterarTransacaoRequest request) {
+  public TransacaoResponse alterar(UUID id, AlterarTransacaoRequest request) {
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
     var resultado = alterarTransacao.executar(id, comando);
     return mapper.toResponse(resultado);

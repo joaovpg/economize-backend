@@ -52,8 +52,7 @@ public interface TransferenciaResourceApi {
           "Regra violada; exemplos: CONTAS_TRANSFERENCIA_IGUAIS, "
               + "MOEDAS_TRANSFERENCIA_DIFERENTES ou DATA_FINANCEIRA_FUTURA.")
   RestResponse<TransferenciaResponse> criar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Dados da transferência.",
               required = true,
               content =
@@ -84,7 +83,9 @@ public interface TransferenciaResourceApi {
       value = TransferenciaResponse.class,
       responseCode = "200",
       responseDescription = "Transferência atualizada com sucesso.")
-  @APIResponse(responseCode = "404", description = "Transferência ou conta relacionada não encontrada.")
+  @APIResponse(
+      responseCode = "404",
+      description = "Transferência ou conta relacionada não encontrada.")
   @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
   TransferenciaResponse alterar(
       @PathParam("id")
@@ -95,8 +96,7 @@ public interface TransferenciaResourceApi {
               required = true,
               schema = @Schema(implementation = UUID.class))
           UUID id,
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Novos dados da transferência.",
               required = true,
               content =

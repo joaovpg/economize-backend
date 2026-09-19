@@ -37,7 +37,7 @@ public interface ContaResourceApi {
   @POST
   @Tag(name = "Contas")
   @Operation(
-    operationId = "cadastrarConta",
+      operationId = "cadastrarConta",
       summary = "Cadastra uma conta financeira",
       description =
           "Cria uma conta pertencente ao usuário autenticado. `saldoInicial` passa a compor o "
@@ -52,8 +52,7 @@ public interface ContaResourceApi {
       responseCode = "422",
       description = "Regra de negócio violada, por exemplo moeda ou saldo inicial inválidos.")
   RestResponse<ContaResponse> cadastrar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Dados da conta financeira.",
               required = true,
               content =
@@ -116,8 +115,7 @@ public interface ContaResourceApi {
               required = true,
               schema = @Schema(implementation = UUID.class))
           UUID contaId,
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Novos dados da conta financeira.",
               required = true,
               content =
