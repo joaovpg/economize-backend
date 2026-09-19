@@ -17,6 +17,11 @@ quarkus:
     path: /q/swagger-ui
     always-include: true
     with-credentials: true
+    display-operation-id: true
+    doc-expansion: none
+    deep-linking: true
+    operations-sorter: alpha
+    tags-sorter: alpha
   log:
     console:
       format: "%d{HH:mm:ss} %-5p [%c] (traceId=%X{traceId} usuarioId=%X{usuarioId}) %s%e%n"

@@ -1,6 +1,14 @@
 package com.joaovpg.economize.categoria.http.dto.response;
 
 import java.util.UUID;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public record CategoriaResponse(
-    UUID id, String nome, String cor, UUID categoriaPaiId, boolean ativo) {}
+    @Schema(description = "Identificador da categoria.", example = "00000000-0000-0000-0000-000000000003")
+    UUID id,
+    @Schema(description = "Nome da categoria.", example = "Alimentação") String nome,
+    @Schema(description = "Cor hexadecimal para exibição.", example = "#E67E22", nullable = true)
+    String cor,
+    @Schema(description = "Identificador da categoria pai, quando houver.", nullable = true)
+    UUID categoriaPaiId,
+    @Schema(description = "Indica se a categoria está ativa.", example = "true") boolean ativo) {}
