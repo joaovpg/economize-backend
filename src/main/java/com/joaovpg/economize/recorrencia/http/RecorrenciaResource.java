@@ -10,30 +10,12 @@ import com.joaovpg.economize.recorrencia.http.dto.request.EfetivarOcorrenciaReco
 import com.joaovpg.economize.recorrencia.http.dto.response.RecorrenciaOperacaoResponse;
 import com.joaovpg.economize.recorrencia.http.dto.response.RecorrenciaResponse;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.validation.Valid;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.jboss.resteasy.reactive.RestResponse;
 
-@Path("/recorrencias")
 @LogHttpErrors
-@Consumes(MediaType.APPLICATION_JSON)
-@Produces(MediaType.APPLICATION_JSON)
-@RolesAllowed("usuario")
-public class RecorrenciaResource {
+public class RecorrenciaResource implements RecorrenciaResourceApi {
   private final CriarRecorrencia criarRecorrencia;
   private final CriarParcelamento criarParcelamento;
   private final GerenciarOcorrenciaRecorrente gerenciarOcorrencia;
@@ -53,14 +35,8 @@ public class RecorrenciaResource {
     this.token = token;
   }
 
-  @POST
-  @APIResponseSchema(
-      value = RecorrenciaResponse.class,
-      responseCode = "201",
-      responseDescription = "Recorrência criada com sucesso.")
-  @APIResponse(responseCode = "404", description = "Recurso relacionado não encontrado.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
-  public RestResponse<RecorrenciaResponse> criar(@Valid CriarRecorrenciaRequest request) {
+  @Override
+  public RestResponse<RecorrenciaResponse> criar(CriarRecorrenciaRequest request) {
     return switch (request.tipoGrupo()) {
       case RECORRENCIA -> {
         var resultado =
@@ -75,35 +51,21 @@ public class RecorrenciaResource {
     };
   }
 
-  @PUT
-  @Path("/{segmentoId}/ocorrencias/{dataOriginal}")
-  @APIResponseSchema(
-      value = RecorrenciaOperacaoResponse.class,
-      responseCode = "200",
-      responseDescription = "Ocorrência alterada com sucesso.")
-  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  @Override
   public RecorrenciaOperacaoResponse editar(
-      @PathParam("segmentoId") UUID segmentoId,
-      @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
-      @Valid AlterarOcorrenciaRecorrenteRequest request) {
+      UUID segmentoId,
+      java.time.LocalDate dataOriginal,
+      AlterarOcorrenciaRecorrenteRequest request) {
     var resultado =
         gerenciarOcorrencia.editar(
             mapper.toCommand(usuarioId(), segmentoId, dataOriginal, request));
     return mapper.toResponse(resultado);
   }
 
-  @POST
-  @Path("/{segmentoId}/ocorrencias/{dataOriginal}/efetivar")
-  @APIResponseSchema(
-      value = RecorrenciaOperacaoResponse.class,
-      responseCode = "200",
-      responseDescription = "Ocorrência efetivada com sucesso.")
-  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  @Override
   public RecorrenciaOperacaoResponse efetivar(
-      @PathParam("segmentoId") UUID segmentoId,
-      @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
+      UUID segmentoId,
+      java.time.LocalDate dataOriginal,
       EfetivarOcorrenciaRecorrenteRequest request) {
     var comando =
         mapper.toCommand(
@@ -115,15 +77,9 @@ public class RecorrenciaResource {
     return mapper.toResponse(resultado);
   }
 
-  @DELETE
-  @Path("/{segmentoId}/ocorrencias/{dataOriginal}")
-  @APIResponse(responseCode = "204", description = "Ocorrência excluída com sucesso.")
-  @APIResponse(responseCode = "404", description = "Ocorrência não encontrada.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  @Override
   public RestResponse<Void> excluir(
-      @PathParam("segmentoId") UUID segmentoId,
-      @PathParam("dataOriginal") java.time.LocalDate dataOriginal,
-      @QueryParam("escopo") @DefaultValue("ONLY_THIS") EscopoOcorrencia escopo) {
+      UUID segmentoId, java.time.LocalDate dataOriginal, EscopoOcorrencia escopo) {
     gerenciarOcorrencia.excluir(usuarioId(), segmentoId, dataOriginal, escopo);
     return RestResponse.noContent();
   }
