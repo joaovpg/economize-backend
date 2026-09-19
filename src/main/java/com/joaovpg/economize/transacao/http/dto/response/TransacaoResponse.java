@@ -11,26 +11,42 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record TransacaoResponse(
     @Schema(
             description = "Identificador da transação.",
-            example = "00000000-0000-0000-0000-000000000010")
+            example = "00000000-0000-0000-0000-000000000010",
+            required = true)
         UUID id,
-    @Schema(description = "Natureza financeira.", example = "DESPESA") TipoTransacao tipo,
-    @Schema(description = "Situação atual da transação.", example = "EFETIVADA")
+    @Schema(description = "Natureza financeira.", example = "DESPESA", required = true)
+        TipoTransacao tipo,
+    @Schema(description = "Situação atual da transação.", example = "EFETIVADA", required = true)
         SituacaoTransacao situacao,
-    @Schema(description = "Descrição exibida no extrato.", example = "Mercado") String descricao,
-    @Schema(description = "Observação, quando informada.", nullable = true) String observacoes,
+    @Schema(description = "Descrição exibida no extrato.", example = "Mercado", required = true)
+        String descricao,
+    @Schema(description = "Observação, quando informada.", nullable = true, required = false)
+        String observacoes,
     @Schema(
             description = "Valor positivo da transação; o sinal é aplicado na consulta do extrato.",
             example = "250.75",
-            format = "double")
+            format = "double",
+            required = true)
         BigDecimal valor,
-    @Schema(description = "Data financeira da operação.", example = "2026-02-10", format = "date")
+    @Schema(
+            description = "Data financeira da operação.",
+            example = "2026-02-10",
+            format = "date",
+            required = true)
         LocalDate dataFinanceira,
     @Schema(
             description = "Instante de efetivação; nulo quando a situação é PLANEJADA.",
             nullable = true,
-            format = "date-time")
+            format = "date-time",
+            required = false)
         Instant efetivadoEm,
-    @Schema(description = "Conta da transação.", example = "00000000-0000-0000-0000-000000000001")
+    @Schema(
+            description = "Conta da transação.",
+            example = "00000000-0000-0000-0000-000000000001",
+            required = true)
         UUID contaId,
-    @Schema(description = "Categoria da transação, quando houver.", nullable = true)
+    @Schema(
+            description = "Categoria da transação, quando houver.",
+            nullable = true,
+            required = false)
         UUID categoriaId) {}

@@ -12,7 +12,7 @@ O contrato OpenAPI atual expõe as rotas, mas deixa pouco claro o significado do
 - Preservar o JSON existente nesta etapa. A documentação explicará nulabilidade e significado por contexto, sem remodelar o contrato.
 - Usar `operationId` e tags estáveis em português, alinhados ao vocabulário do domínio.
 - Criar uma interface de contrato para cada Resource. As anotações HTTP e OpenAPI ficam na interface; a classe concreta implementa a interface e concentra a adaptação HTTP e a chamada do caso de uso.
-- Anotar os DTOs HTTP com `@Schema`, incluindo descrição, formato, exemplos, limites e semântica condicional quando aplicável.
+- Anotar os DTOs HTTP com `@Schema`, incluindo descrição, formato, exemplos, limites, nulabilidade e `required=true/false` explícito. Campos condicionais devem permanecer opcionais no schema base e explicar no texto quando se tornam obrigatórios.
 - Manter o filtro OpenAPI para preocupações transversais, como segurança por cookie, CSRF, schemas e respostas de erro comuns. Regras e respostas específicas ficam na operação.
 - Documentar erros comuns e códigos de negócio relevantes nas respostas das operações, sem alterar o payload de erro existente.
 - Ajustar a interface do Swagger UI para exibir `operationId`, iniciar as operações recolhidas e ordenar o contrato de forma previsível.
@@ -21,7 +21,7 @@ O contrato OpenAPI atual expõe as rotas, mas deixa pouco claro o significado do
 
 - `EconomizeApp`: metadados globais e descrições das tags.
 - Interfaces `*ResourceApi`: caminhos, métodos HTTP, parâmetros, corpos, respostas, exemplos e regras de negócio.
-- DTOs HTTP e enums de domínio expostos: descrições semânticas e exemplos.
+- DTOs HTTP e enums de domínio expostos: descrições semânticas, exemplos e distinção explícita entre campos obrigatórios e opcionais.
 - `application.yaml`: opções de legibilidade do Swagger UI.
 - ADR registrando a decisão de separar contrato OpenAPI e implementação.
 
@@ -30,6 +30,7 @@ O contrato OpenAPI atual expõe as rotas, mas deixa pouco claro o significado do
 - Cada operação possui `operationId`, tag, resumo e descrição úteis para o frontend.
 - A consulta de transações explica saldo de abertura, itens sintéticos, valor assinado e campos condicionais por `origem`.
 - Recorrências e parcelamentos explicam escopo de edição, datas, frequência, regras de geração e respostas de operação.
+- Os schemas gerados distinguem campos obrigatórios, opcionais e nulos; regras condicionais de recorrências e parcelamentos aparecem na descrição do campo e da operação.
 - O JSON gerado mantém os nomes e formatos usados atualmente pela API.
 - O OpenAPI gerado não depende de edição manual em `target/`.
 - A compilação e a geração do OpenAPI passam; a verificação completa deve ser repetida quando o Docker estiver disponível para os testes de integração.

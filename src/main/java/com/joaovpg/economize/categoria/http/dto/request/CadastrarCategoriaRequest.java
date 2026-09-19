@@ -6,16 +6,23 @@ import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public record CadastrarCategoriaRequest(
-    @Schema(description = "Nome da categoria.", example = "Alimentação", maxLength = 80) @NotBlank String nome,
+    @Schema(
+            description = "Nome da categoria.",
+            example = "Alimentação",
+            maxLength = 80,
+            required = true)
+        @NotBlank String nome,
     @Schema(
             description = "Cor hexadecimal opcional para exibição no frontend.",
             example = "#E67E22",
             pattern = "^\\s*(#[0-9A-Fa-f]{6})?\\s*$",
-            nullable = true)
+            nullable = true,
+            required = false)
         @Pattern(regexp = "^\\s*(#[0-9A-Fa-f]{6})?\\s*$")
         String cor,
     @Schema(
             description = "Categoria pai opcional; deve pertencer ao mesmo usuário.",
             example = "00000000-0000-0000-0000-000000000003",
-            nullable = true)
+            nullable = true,
+            required = false)
         UUID categoriaPaiId) {}

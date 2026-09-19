@@ -237,6 +237,7 @@ public interface RecorrenciaResourceApi {
               in = ParameterIn.QUERY,
               description = "Escopo da exclusão; o padrão é somente a ocorrência selecionada.",
               schema = @Schema(implementation = EscopoOcorrencia.class),
+              required = false,
               example = "ONLY_THIS")
           EscopoOcorrencia escopo);
 }

@@ -101,6 +101,7 @@ public interface TransacaoResourceApi {
               name = "contaId",
               in = ParameterIn.QUERY,
               description = "Identificador de conta; o parâmetro pode ser repetido.",
+              required = false,
               style = ParameterStyle.FORM,
               explode = Explode.TRUE,
               schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class),
@@ -114,6 +115,7 @@ public interface TransacaoResourceApi {
               description =
                   "Identificador de categoria; o parâmetro pode ser repetido. Quando usado, "
                       + "transferências ficam fora do resultado.",
+              required = false,
               style = ParameterStyle.FORM,
               explode = Explode.TRUE,
               schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class))

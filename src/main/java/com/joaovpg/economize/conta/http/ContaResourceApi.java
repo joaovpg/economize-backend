@@ -88,6 +88,7 @@ public interface ContaResourceApi {
               name = "ativo",
               in = ParameterIn.QUERY,
               description = "Filtra pelo estado ativo da conta.",
+              required = false,
               schema = @Schema(implementation = Boolean.class))
           Boolean ativo);
 

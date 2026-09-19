@@ -14,34 +14,41 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record CriarTransferenciaRequest(
     @Schema(
             description = "Conta que terá a saída financeira.",
-            example = "00000000-0000-0000-0000-000000000001")
+            example = "00000000-0000-0000-0000-000000000001",
+            required = true)
         @NotNull UUID contaOrigemId,
     @Schema(
             description = "Conta que terá a entrada financeira; deve ser diferente da origem.",
-            example = "00000000-0000-0000-0000-000000000002")
+            example = "00000000-0000-0000-0000-000000000002",
+            required = true)
         @NotNull UUID contaDestinoId,
     @Schema(
             description = "Situação aplicada aos dois lados da transferência.",
-            example = "EFETIVADA")
+            example = "EFETIVADA",
+            required = true)
         @NotNull SituacaoTransferencia situacao,
     @Schema(
             description = "Descrição exibida nos dois lados do extrato.",
             example = "Reserva",
-            maxLength = 255)
+            maxLength = 255,
+            required = true)
         @NotBlank @Size(max = 255) String descricao,
     @Schema(
             description = "Observação opcional copiada para os dois lados.",
             maxLength = 2000,
-            nullable = true)
+            nullable = true,
+            required = false)
         @Size(max = 2000) String observacoes,
     @Schema(
             description = "Valor positivo movimentado entre as contas, com até 4 casas decimais.",
             example = "500.00",
             minimum = "0.0001",
-            format = "double")
+            format = "double",
+            required = true)
         @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 15, fraction = 4) BigDecimal valor,
     @Schema(
             description = "Data financeira aplicada aos dois lados.",
             example = "2026-03-01",
-            format = "date")
+            format = "date",
+            required = true)
         @NotNull LocalDate dataFinanceira) {}

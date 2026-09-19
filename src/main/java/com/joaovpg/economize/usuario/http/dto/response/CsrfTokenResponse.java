@@ -8,5 +8,6 @@ public record CsrfTokenResponse(
                 "Valor que deve ser repetido no header X-CSRF-Token em requisições POST, PUT e"
                     + " DELETE.",
             example = "6d8f2e4a...",
-            readOnly = true)
+            readOnly = true,
+            required = true)
         String csrfToken) {}

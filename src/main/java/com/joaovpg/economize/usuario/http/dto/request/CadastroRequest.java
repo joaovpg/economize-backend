@@ -9,12 +9,17 @@ import java.util.Locale;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public record CadastroRequest(
-    @Schema(description = "Nome de exibição do usuário.", example = "Maria Silva", maxLength = 120)
+    @Schema(
+            description = "Nome de exibição do usuário.",
+            example = "Maria Silva",
+            maxLength = 120,
+            required = true)
         @NotBlank @Size(max = 120) String nome,
     @Schema(
             description = "E-mail usado para autenticação.",
             example = "maria@example.com",
-            maxLength = 320)
+            maxLength = 320,
+            required = true)
         @NotBlank @Email @Size(max = 320) String email,
     @Schema(
             description = "Senha do usuário. Nunca é devolvida nas respostas.",
@@ -22,12 +27,14 @@ public record CadastroRequest(
             minLength = 8,
             maxLength = 128,
             format = "password",
-            writeOnly = true)
+            writeOnly = true,
+            required = true)
         @NotNull @Size(min = 8, max = 128) String senha,
     @Schema(
             description = "Timezone IANA usada para validar datas efetivadas.",
             example = "America/Sao_Paulo",
-            maxLength = 80)
+            maxLength = 80,
+            required = true)
         @NotBlank @Size(max = 80) @TimezoneValido
         String timezone) {
   public CadastroRequest {

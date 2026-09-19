@@ -10,29 +10,43 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record TransferenciaResponse(
     @Schema(
             description = "Identificador da transferência.",
-            example = "00000000-0000-0000-0000-000000000020")
+            example = "00000000-0000-0000-0000-000000000020",
+            required = true)
         UUID id,
     @Schema(
             description = "Conta de origem da saída.",
-            example = "00000000-0000-0000-0000-000000000001")
+            example = "00000000-0000-0000-0000-000000000001",
+            required = true)
         UUID contaOrigemId,
     @Schema(
             description = "Conta de destino da entrada.",
-            example = "00000000-0000-0000-0000-000000000002")
+            example = "00000000-0000-0000-0000-000000000002",
+            required = true)
         UUID contaDestinoId,
-    @Schema(description = "Situação aplicada aos dois lados.", example = "EFETIVADA")
+    @Schema(
+            description = "Situação aplicada aos dois lados.",
+            example = "EFETIVADA",
+            required = true)
         SituacaoTransferencia situacao,
-    @Schema(description = "Descrição da transferência.", example = "Reserva") String descricao,
-    @Schema(description = "Observação, quando informada.", nullable = true) String observacoes,
-    @Schema(description = "Valor positivo da transferência.", example = "500.00", format = "double")
+    @Schema(description = "Descrição da transferência.", example = "Reserva", required = true)
+        String descricao,
+    @Schema(description = "Observação, quando informada.", nullable = true, required = false)
+        String observacoes,
+    @Schema(
+            description = "Valor positivo da transferência.",
+            example = "500.00",
+            format = "double",
+            required = true)
         BigDecimal valor,
     @Schema(
             description = "Data financeira dos dois lados.",
             example = "2026-03-01",
-            format = "date")
+            format = "date",
+            required = true)
         LocalDate dataFinanceira,
     @Schema(
             description = "Instante de efetivação; nulo quando PLANEJADA.",
             nullable = true,
-            format = "date-time")
+            format = "date-time",
+            required = false)
         Instant efetivadoEm) {}

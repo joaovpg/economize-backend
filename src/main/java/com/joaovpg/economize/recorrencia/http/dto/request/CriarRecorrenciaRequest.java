@@ -19,26 +19,32 @@ public record CriarRecorrenciaRequest(
             description =
                 "Define o fluxo: RECORRENCIA gera uma série por regra; PARCELAMENTO gera parcelas"
                     + " numeradas.",
-            example = "RECORRENCIA")
+            example = "RECORRENCIA",
+            required = true)
         @NotNull TipoGrupoRecorrencia tipoGrupo,
     @Schema(
             description = "Conta ativa onde as ocorrências serão projetadas.",
-            example = "00000000-0000-0000-0000-000000000001")
+            example = "00000000-0000-0000-0000-000000000001",
+            required = true)
         @NotNull UUID contaId,
-    @Schema(description = "Categoria opcional das ocorrências.", nullable = true) UUID categoriaId,
+    @Schema(description = "Categoria opcional das ocorrências.", nullable = true, required = false)
+        UUID categoriaId,
     @Schema(
             description = "Natureza financeira; recorrências aceitam somente RECEITA ou DESPESA.",
-            example = "DESPESA")
+            example = "DESPESA",
+            required = true)
         @NotNull TipoTransacao tipo,
     @Schema(
             description = "Descrição copiada para as ocorrências.",
             example = "Aluguel",
-            maxLength = 255)
+            maxLength = 255,
+            required = true)
         @NotBlank String descricao,
     @Schema(
             description = "Observação copiada para as ocorrências.",
             maxLength = 2000,
-            nullable = true)
+            nullable = true,
+            required = false)
         String observacoes,
     @Schema(
             description =
@@ -46,7 +52,8 @@ public record CriarRecorrenciaRequest(
                     + " decimais.",
             example = "1800.00",
             minimum = "0.0001",
-            format = "double")
+            format = "double",
+            required = true)
         @NotNull @DecimalMin("0.0001") @JsonAlias("valorPorParcela")
         BigDecimal valor,
     @Schema(
@@ -54,31 +61,36 @@ public record CriarRecorrenciaRequest(
                 "Data da primeira ocorrência. Também aceita os aliases dataInicio e"
                     + " dataPrimeiraOcorrencia.",
             example = "2026-01-05",
-            format = "date")
+            format = "date",
+            required = true)
         @NotNull @JsonAlias({"dataInicio", "dataPrimeiraOcorrencia"})
         LocalDate inicio,
     @Schema(
             description =
                 "Frequência usada para expandir a regra; obrigatória nos dois tipos de grupo.",
-            example = "MONTHLY")
+            example = "MONTHLY",
+            required = true)
         @NotNull FrequenciaRecorrencia frequencia,
     @Schema(
             description = "Intervalo entre ocorrências; padrão 1.",
             example = "1",
             minimum = "1",
-            nullable = true)
+            nullable = true,
+            required = false)
         Integer intervalo,
     @Schema(
             description =
                 "Dias da semana usados principalmente em regras WEEKLY; nulo ou vazio quando não"
                     + " aplicável.",
             example = "[\"MONDAY\"]",
-            nullable = true)
+            nullable = true,
+            required = false)
         Set<DayOfWeek> diasSemana,
     @Schema(
             description = "Dias do mês da regra. Para MONTHLY, informe ao menos um dia.",
             example = "[5, 20]",
-            nullable = true)
+            nullable = true,
+            required = false)
         Set<Integer> diasMes,
     @Schema(
             description =
@@ -86,14 +98,16 @@ public record CriarRecorrenciaRequest(
                     + " PARCELAMENTO.",
             example = "12",
             minimum = "1",
-            nullable = true)
+            nullable = true,
+            required = false)
         @JsonAlias("count")
         Integer quantidadeOcorrencias,
     @Schema(
             description = "Data limite da RECORRENCIA; é alternativa a quantidadeOcorrencias.",
             example = "2026-12-31",
             format = "date",
-            nullable = true)
+            nullable = true,
+            required = false)
         @JsonAlias("dataFim")
         LocalDate ate,
     @Schema(
@@ -101,7 +115,8 @@ public record CriarRecorrenciaRequest(
                 "Número da primeira parcela. Obrigatório para PARCELAMENTO e deve ser positivo.",
             example = "3",
             minimum = "1",
-            nullable = true)
+            nullable = true,
+            required = false)
         Integer numeroPrimeiraParcela,
     @Schema(
             description =
@@ -109,5 +124,6 @@ public record CriarRecorrenciaRequest(
                     + " maior ou igual à primeira parcela.",
             example = "12",
             minimum = "1",
-            nullable = true)
+            nullable = true,
+            required = false)
         Integer quantidadeTotalOriginal) {}

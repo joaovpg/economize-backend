@@ -6,11 +6,21 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record CategoriaResponse(
     @Schema(
             description = "Identificador da categoria.",
-            example = "00000000-0000-0000-0000-000000000003")
+            example = "00000000-0000-0000-0000-000000000003",
+            required = true)
         UUID id,
-    @Schema(description = "Nome da categoria.", example = "Alimentação") String nome,
-    @Schema(description = "Cor hexadecimal para exibição.", example = "#E67E22", nullable = true)
+    @Schema(description = "Nome da categoria.", example = "Alimentação", required = true)
+        String nome,
+    @Schema(
+            description = "Cor hexadecimal para exibição.",
+            example = "#E67E22",
+            nullable = true,
+            required = false)
         String cor,
-    @Schema(description = "Identificador da categoria pai, quando houver.", nullable = true)
+    @Schema(
+            description = "Identificador da categoria pai, quando houver.",
+            nullable = true,
+            required = false)
         UUID categoriaPaiId,
-    @Schema(description = "Indica se a categoria está ativa.", example = "true") boolean ativo) {}
+    @Schema(description = "Indica se a categoria está ativa.", example = "true", required = true)
+        boolean ativo) {}
