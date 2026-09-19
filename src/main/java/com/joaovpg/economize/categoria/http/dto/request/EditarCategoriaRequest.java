@@ -7,17 +7,25 @@ import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public record EditarCategoriaRequest(
-    @Schema(description = "Nome da categoria.", example = "Alimentação", maxLength = 80) @NotBlank String nome,
+    @Schema(
+            description = "Nome da categoria.",
+            example = "Alimentação",
+            maxLength = 80,
+            required = true)
+        @NotBlank String nome,
     @Schema(
             description = "Cor hexadecimal opcional para exibição no frontend.",
             example = "#E67E22",
             pattern = "^\\s*(#[0-9A-Fa-f]{6})?\\s*$",
-            nullable = true)
+            nullable = true,
+            required = false)
         @Pattern(regexp = "^\\s*(#[0-9A-Fa-f]{6})?\\s*$")
         String cor,
     @Schema(
             description = "Categoria pai; envie null para remover a associação.",
             example = "00000000-0000-0000-0000-000000000003",
-            nullable = true)
+            nullable = true,
+            required = false)
         UUID categoriaPaiId,
-    @Schema(description = "Define se a categoria fica ativa.", example = "true") @NotNull Boolean ativo) {}
+    @Schema(description = "Define se a categoria fica ativa.", example = "true", required = true)
+        @NotNull Boolean ativo) {}

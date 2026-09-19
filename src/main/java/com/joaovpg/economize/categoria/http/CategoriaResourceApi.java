@@ -116,6 +116,7 @@ public interface CategoriaResourceApi {
               name = "ativo",
               in = ParameterIn.QUERY,
               description = "Filtra pelo estado ativo da categoria.",
+              required = false,
               schema = @Schema(implementation = Boolean.class))
           Boolean ativo);
 }

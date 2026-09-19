@@ -12,7 +12,7 @@ O contrato OpenAPI precisa deixar de depender de nomes e resumos automáticos e 
 
 Cada Resource público terá uma interface de contrato no mesmo módulo HTTP. A interface declarará a assinatura da operação e concentrará as anotações MicroProfile OpenAPI, incluindo `operationId`, tags, resumo, descrição, parâmetros, corpos, respostas, regras e exemplos. A classe concreta implementará essa interface e permanecerá responsável somente pela adaptação HTTP e execução do caso de uso.
 
-Os `operationId`s e tags serão estáveis e em português, alinhados ao vocabulário do domínio. Os DTOs HTTP também receberão anotações `@Schema` para documentar campos, formatos, limites, nulabilidade e significados condicionais. O formato JSON existente será preservado nesta etapa.
+Os `operationId`s e tags serão estáveis e em português, alinhados ao vocabulário do domínio. Os DTOs HTTP também receberão anotações `@Schema` para documentar campos, formatos, limites, nulabilidade, obrigatoriedade explícita (`required=true/false`) e significados condicionais. Campos condicionais serão opcionais no schema base, com a regra que os torna obrigatórios descrita no próprio campo e na operação. O formato JSON existente será preservado nesta etapa.
 
 O filtro OpenAPI continuará reservado para preocupações transversais, como autenticação por cookie, CSRF, schemas e respostas de erro comuns. Respostas e regras específicas permanecerão no contrato da operação.
 
