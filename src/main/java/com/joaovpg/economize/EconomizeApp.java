@@ -21,8 +21,12 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
       @Tag(name = "Autenticação", description = "Cadastro, login e encerramento de sessão."),
       @Tag(name = "Contas", description = "Contas financeiras e seus saldos iniciais."),
       @Tag(name = "Categorias", description = "Categorias financeiras e hierarquia de categorias."),
-      @Tag(name = "Transações", description = "Receitas, despesas e consulta do extrato consolidado."),
-      @Tag(name = "Transferências", description = "Movimentações entre duas contas na mesma moeda."),
+      @Tag(
+          name = "Transações",
+          description = "Receitas, despesas e consulta do extrato consolidado."),
+      @Tag(
+          name = "Transferências",
+          description = "Movimentações entre duas contas na mesma moeda."),
       @Tag(
           name = "Recorrências",
           description =

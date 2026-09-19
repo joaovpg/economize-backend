@@ -49,8 +49,7 @@ public interface CategoriaResourceApi {
   @APIResponse(responseCode = "404", description = "Categoria pai não encontrada.")
   @APIResponse(responseCode = "422", description = "Nome, cor ou hierarquia inválidos.")
   RestResponse<CategoriaResponse> cadastrar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Dados da categoria.",
               required = true,
               content =
@@ -87,8 +86,7 @@ public interface CategoriaResourceApi {
               required = true,
               schema = @Schema(implementation = UUID.class))
           UUID categoriaId,
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Novos dados da categoria.",
               required = true,
               content =

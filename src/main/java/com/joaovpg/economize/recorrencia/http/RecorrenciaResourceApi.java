@@ -55,15 +55,16 @@ public interface RecorrenciaResourceApi {
       value = RecorrenciaResponse.class,
       responseCode = "201",
       responseDescription = "Recorrência ou parcelamento criado com sucesso.")
-  @APIResponse(responseCode = "404", description = "Conta, categoria ou usuário relacionado não encontrado.")
+  @APIResponse(
+      responseCode = "404",
+      description = "Conta, categoria ou usuário relacionado não encontrado.")
   @APIResponse(
       responseCode = "422",
       description =
           "Regra violada; exemplos: RRULE_INVALIDA, FREQUENCIA_INVALIDA, "
               + "NUMERO_PRIMEIRA_PARCELA_INVALIDO ou QUANTIDADE_PARCELAS_INVALIDA.")
   RestResponse<RecorrenciaResponse> criar(
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description =
                   "Use tipoGrupo=RECORRENCIA para uma série por regra ou "
                       + "tipoGrupo=PARCELAMENTO para parcelas numeradas.",
@@ -132,8 +133,7 @@ public interface RecorrenciaResourceApi {
               required = true,
               schema = @Schema(implementation = LocalDate.class, format = "date"))
           LocalDate dataOriginal,
-      @Valid
-          @RequestBody(
+      @Valid @RequestBody(
               description = "Novo estado e escopo da alteração.",
               required = true,
               content =
@@ -144,8 +144,8 @@ public interface RecorrenciaResourceApi {
                           @ExampleObject(
                               name = "alterarEstaEAsProximas",
                               value =
-                                  "{\"escopo\":\"THIS_AND_FUTURE\",\"contaId\":\"00000000-0000-0000-0000-000000000001\","
-                                      + "\"tipo\":\"DESPESA\",\"descricao\":\"Aluguel reajustado\","
+                                  "{\"escopo\":\"THIS_AND_FUTURE\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"tipo\":\"DESPESA\",\"descricao\":\"Aluguel"
+                                      + " reajustado\","
                                       + "\"valor\":1900.00,\"dataFinanceira\":\"2026-04-05\","
                                       + "\"frequencia\":\"MONTHLY\",\"diasMes\":[5],\"semTermino\":true}")))
           AlterarOcorrenciaRecorrenteRequest request);
@@ -186,16 +186,16 @@ public interface RecorrenciaResourceApi {
               schema = @Schema(implementation = LocalDate.class, format = "date"))
           LocalDate dataOriginal,
       @RequestBody(
-          description = "Opcional; informe dataFinanceira para efetivar em outra data.",
-          required = false,
-          content =
-              @Content(
-                  mediaType = MediaType.APPLICATION_JSON,
-                  schema = @Schema(implementation = EfetivarOcorrenciaRecorrenteRequest.class),
-                  examples =
-                      @ExampleObject(
-                          name = "efetivarEmOutraData",
-                          value = "{\"dataFinanceira\":\"2026-04-06\"}")))
+              description = "Opcional; informe dataFinanceira para efetivar em outra data.",
+              required = false,
+              content =
+                  @Content(
+                      mediaType = MediaType.APPLICATION_JSON,
+                      schema = @Schema(implementation = EfetivarOcorrenciaRecorrenteRequest.class),
+                      examples =
+                          @ExampleObject(
+                              name = "efetivarEmOutraData",
+                              value = "{\"dataFinanceira\":\"2026-04-06\"}")))
           EfetivarOcorrenciaRecorrenteRequest request);
 
   @DELETE
@@ -210,7 +210,9 @@ public interface RecorrenciaResourceApi {
               + "nesse caso, interrompe a geração a partir dela.")
   @APIResponse(responseCode = "204", description = "Ocorrência excluída com sucesso.")
   @APIResponse(responseCode = "404", description = "Segmento ou ocorrência não encontrada.")
-  @APIResponse(responseCode = "422", description = "Escopo inválido ou ocorrência não pode ser excluída.")
+  @APIResponse(
+      responseCode = "422",
+      description = "Escopo inválido ou ocorrência não pode ser excluída.")
   RestResponse<Void> excluir(
       @PathParam("segmentoId")
           @Parameter(
