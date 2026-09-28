@@ -1,6 +1,7 @@
 package com.joaovpg.economize.recorrencia.application;
 
 import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
+import com.joaovpg.economize.recorrencia.FormatadorDescricaoParcela;
 import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
@@ -126,11 +127,17 @@ public class ResolverOcorrenciasRecorrentes {
               : segmento.getNumeroPrimeiraParcela()
                   + ocorrenciaNumero(expansor, segmento, transacao.getIdentificadorRecorrencia())
                   - 1;
+      var descricao =
+          FormatadorDescricaoParcela.formatar(
+              transacao.getDescricao(),
+              grupo == null ? null : grupo.getTipo(),
+              numeroParcela,
+              segmento == null ? null : segmento.getQuantidadeTotalOriginal());
       return new Resultado(
           origem,
           transacao.getId(),
           transacao.getSituacao(),
-          transacao.getDescricao(),
+          descricao,
           transacao.getObservacoes(),
           impacto(transacao),
           transacao.getDataFinanceira(),
@@ -156,11 +163,17 @@ public class ResolverOcorrenciasRecorrentes {
           segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
               ? OrigemItemConsulta.PARCELA
               : OrigemItemConsulta.TRANSACAO_RECORRENTE;
+      var descricao =
+          FormatadorDescricaoParcela.formatar(
+              segmento.getDescricao(),
+              segmento.getGrupo().getTipo(),
+              numeroParcela,
+              segmento.getQuantidadeTotalOriginal());
       return new Resultado(
           origem,
           null,
           SituacaoTransacao.PLANEJADA,
-          segmento.getDescricao(),
+          descricao,
           segmento.getObservacoes(),
           segmento.getTipo() == com.joaovpg.economize.transacao.TipoTransacao.RECEITA
               ? segmento.getValor()

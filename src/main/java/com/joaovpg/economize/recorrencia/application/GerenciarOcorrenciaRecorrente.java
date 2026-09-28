@@ -5,6 +5,7 @@ import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
+import com.joaovpg.economize.recorrencia.FormatadorDescricaoParcela;
 import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
@@ -566,13 +567,12 @@ public class GerenciarOcorrenciaRecorrente {
           "DATA_ORIGINAL_OBRIGATORIA", "Data original da ocorrencia obrigatoria");
     }
     var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
-    var limite = dataOriginal;
-    if (segmento.getFim() != null && segmento.getFim().isBefore(limite)) {
+      if (segmento.getFim() != null && segmento.getFim().isBefore(dataOriginal)) {
       throw new RecursoNaoEncontradoException(
           "RECURSO_NAO_ENCONTRADO", "Ocorrencia nao encontrada");
     }
     var politica = politica(segmento);
-    return expansor.expandir(regra, segmento.getInicio(), limite, politica).stream()
+    return expansor.expandir(regra, segmento.getInicio(), dataOriginal, politica).stream()
         .filter(ocorrencia -> ocorrencia.dataOriginal().equals(dataOriginal))
         .findFirst()
         .orElseThrow(
@@ -727,6 +727,7 @@ public class GerenciarOcorrenciaRecorrente {
       LocalDate inicioRecorrencia,
       PoliticaDataOcorrencia politicaDataOcorrencia) {
     static Resultado de(Transacao transacao, SegmentoRecorrencia segmento, int numeroParcela) {
+      var numero = numeroParcela == 0 ? null : numeroParcela;
       return new Resultado(
           transacao.getId(),
           segmento.getGrupo().getId(),
@@ -735,7 +736,11 @@ public class GerenciarOcorrenciaRecorrente {
           segmento.getStatus(),
           transacao.getTipo(),
           transacao.getSituacao(),
-          transacao.getDescricao(),
+          FormatadorDescricaoParcela.formatar(
+              transacao.getDescricao(),
+              segmento.getGrupo().getTipo(),
+              numero,
+              segmento.getQuantidadeTotalOriginal()),
           transacao.getObservacoes(),
           transacao.getValor(),
           transacao.getDataFinanceira(),
@@ -743,7 +748,7 @@ public class GerenciarOcorrenciaRecorrente {
           transacao.getConta().getId(),
           transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
           transacao.getIdentificadorRecorrencia(),
-          numeroParcela == 0 ? null : numeroParcela,
+          numero,
           segmento.getRrule(),
           segmento.getInicio(),
           segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
@@ -752,6 +757,7 @@ public class GerenciarOcorrenciaRecorrente {
     }
 
     static Resultado deSegmento(SegmentoRecorrencia segmento) {
+      var numero = segmento.getNumeroPrimeiraParcela();
       return new Resultado(
           null,
           segmento.getGrupo().getId(),
@@ -760,7 +766,11 @@ public class GerenciarOcorrenciaRecorrente {
           segmento.getStatus(),
           segmento.getTipo(),
           null,
-          segmento.getDescricao(),
+          FormatadorDescricaoParcela.formatar(
+              segmento.getDescricao(),
+              segmento.getGrupo().getTipo(),
+              numero,
+              segmento.getQuantidadeTotalOriginal()),
           segmento.getObservacoes(),
           segmento.getValor(),
           segmento.getInicio(),
@@ -768,7 +778,7 @@ public class GerenciarOcorrenciaRecorrente {
           segmento.getConta().getId(),
           segmento.getCategoria() == null ? null : segmento.getCategoria().getId(),
           segmento.getInicio(),
-          segmento.getNumeroPrimeiraParcela(),
+          numero,
           segmento.getRrule(),
           segmento.getInicio(),
           segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
