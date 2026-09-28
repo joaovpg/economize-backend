@@ -567,7 +567,7 @@ public class GerenciarOcorrenciaRecorrente {
           "DATA_ORIGINAL_OBRIGATORIA", "Data original da ocorrencia obrigatoria");
     }
     var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
-      if (segmento.getFim() != null && segmento.getFim().isBefore(dataOriginal)) {
+    if (segmento.getFim() != null && segmento.getFim().isBefore(dataOriginal)) {
       throw new RecursoNaoEncontradoException(
           "RECURSO_NAO_ENCONTRADO", "Ocorrencia nao encontrada");
     }
