@@ -37,7 +37,7 @@ public class LeitorRruleRecorrencia {
       }
     }
     var frequencia = parseFrequencia(componentes.remove("FREQ"));
-    var intervalo = parseInteiro(componentes.remove("INTERVAL"), 1, "INTERVAL");
+    var intervalo = parseInteiro(componentes.remove("INTERVAL"));
     var quantidade = parseInteiroOpcional(componentes.remove("COUNT"), "COUNT");
     var ate = parseData(componentes.remove("UNTIL"));
     componentes.remove("WKST");
@@ -63,9 +63,9 @@ public class LeitorRruleRecorrencia {
     }
   }
 
-  private Integer parseInteiro(String valor, int padrao, String nome) {
-    var resultado = parseInteiroOpcional(valor, nome);
-    return resultado == null ? padrao : resultado;
+  private int parseInteiro(String valor) {
+    var resultado = parseInteiroOpcional(valor, "INTERVAL");
+    return resultado == null ? 1 : resultado;
   }
 
   private Integer parseInteiroOpcional(String valor, String nome) {
@@ -73,7 +73,7 @@ public class LeitorRruleRecorrencia {
       return null;
     }
     try {
-      var numero = Integer.valueOf(valor);
+      int numero = Integer.parseInt(valor);
       if (numero < 1) {
         throw new IllegalArgumentException(nome + " invalido");
       }

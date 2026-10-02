@@ -12,6 +12,7 @@ import com.joaovpg.economize.transferencia.TransferenciaRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -132,7 +133,7 @@ public class AlterarTransferencia {
     if (comando.valor() == null
         || comando.valor().signum() <= 0
         || comando.valor().scale() > 4
-        || comando.valor().setScale(4).precision() > 19) {
+        || comando.valor().setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
       throw new RegraNegocioException(
           "VALOR_TRANSFERENCIA_INVALIDO", "Valor da Transferencia invalido");
     }

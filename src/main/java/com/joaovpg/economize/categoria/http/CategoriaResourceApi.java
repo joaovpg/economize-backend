@@ -51,7 +51,6 @@ public interface CategoriaResourceApi {
   RestResponse<CategoriaResponse> cadastrar(
       @Valid @RequestBody(
               description = "Dados da categoria.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -88,7 +87,6 @@ public interface CategoriaResourceApi {
           UUID categoriaId,
       @Valid @RequestBody(
               description = "Novos dados da categoria.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -116,7 +114,6 @@ public interface CategoriaResourceApi {
               name = "ativo",
               in = ParameterIn.QUERY,
               description = "Filtra pelo estado ativo da categoria.",
-              required = false,
               schema = @Schema(implementation = Boolean.class))
           Boolean ativo);
 }

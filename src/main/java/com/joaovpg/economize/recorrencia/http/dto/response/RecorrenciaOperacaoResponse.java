@@ -16,43 +16,52 @@ public record RecorrenciaOperacaoResponse(
             description =
                 "Identificador da transação materializada; nulo quando o retorno representa"
                     + " segmento virtual.",
-            nullable = true,
-            required = false)
+            nullable = true)
         UUID id,
     @Schema(
             description = "Identificador do grupo lógico.",
-            example = "00000000-0000-0000-0000-000000000031",
+            examples = {"00000000-0000-0000-0000-000000000031"},
             required = true)
         UUID grupoId,
     @Schema(
             description = "Identificador do segmento da regra.",
-            example = "00000000-0000-0000-0000-000000000030",
+            examples = {"00000000-0000-0000-0000-000000000030"},
             required = true)
         UUID segmentoId,
-    @Schema(description = "RECORRENCIA ou PARCELAMENTO.", example = "RECORRENCIA", required = true)
+    @Schema(
+            description = "RECORRENCIA ou PARCELAMENTO.",
+            examples = {"RECORRENCIA"},
+            required = true)
         TipoGrupoRecorrencia tipoGrupo,
-    @Schema(description = "Estado do grupo/segmento.", example = "ATIVO", required = true)
+    @Schema(
+            description = "Estado do grupo/segmento.",
+            examples = {"ATIVO"},
+            required = true)
         StatusRecorrencia status,
-    @Schema(description = "Natureza financeira.", example = "DESPESA", required = true)
+    @Schema(
+            description = "Natureza financeira.",
+            examples = {"DESPESA"},
+            required = true)
         TipoTransacao tipo,
     @Schema(
             description = "Situação da transação; nula quando a ocorrência ainda é virtual.",
-            nullable = true,
-            required = false)
+            nullable = true)
         SituacaoTransacao situacao,
-    @Schema(description = "Descrição retornada.", example = "Aluguel", required = true)
+    @Schema(
+            description = "Descrição retornada.",
+            examples = {"Aluguel"},
+            required = true)
         String descricao,
-    @Schema(description = "Observação, quando houver.", nullable = true, required = false)
-        String observacoes,
+    @Schema(description = "Observação, quando houver.", nullable = true) String observacoes,
     @Schema(
             description = "Valor positivo da transação ou ocorrência.",
-            example = "1800.00",
+            examples = {"1800.00"},
             format = "double",
             required = true)
         BigDecimal valor,
     @Schema(
             description = "Data financeira efetiva.",
-            example = "2026-04-05",
+            examples = {"2026-04-05"},
             format = "date",
             required = true)
         LocalDate dataFinanceira,
@@ -60,37 +69,37 @@ public record RecorrenciaOperacaoResponse(
             description =
                 "Instante de efetivação; nulo quando a ocorrência continua planejada/virtual.",
             nullable = true,
-            format = "date-time",
-            required = false)
+            format = "date-time")
         Instant efetivadoEm,
     @Schema(
             description = "Conta da ocorrência.",
-            example = "00000000-0000-0000-0000-000000000001",
+            examples = {"00000000-0000-0000-0000-000000000001"},
             required = true)
         UUID contaId,
-    @Schema(description = "Categoria, quando houver.", nullable = true, required = false)
-        UUID categoriaId,
+    @Schema(description = "Categoria, quando houver.", nullable = true) UUID categoriaId,
     @Schema(
             description = "Data original usada para identificar a ocorrência.",
-            example = "2026-04-05",
+            examples = {"2026-04-05"},
             format = "date",
             required = true)
         LocalDate dataOriginalRecorrencia,
-    @Schema(
-            description = "Número da parcela; nulo para recorrências comuns.",
-            nullable = true,
-            required = false)
+    @Schema(description = "Número da parcela; nulo para recorrências comuns.", nullable = true)
         Integer numeroParcela,
+    @Schema(description = "Total de parcelas; nulo para recorrências comuns.", nullable = true)
+        Integer totalParcelas,
     @Schema(
             description = "Regra RFC 5545 do segmento.",
-            example = "FREQ=MONTHLY;BYMONTHDAY=5",
+            examples = {"FREQ=MONTHLY;BYMONTHDAY=5"},
             required = true)
         String rrule,
     @Schema(
             description = "Início do segmento de recorrência.",
-            example = "2026-01-05",
+            examples = {"2026-01-05"},
             format = "date",
             required = true)
         LocalDate inicioRecorrencia,
-    @Schema(description = "Política de ajuste de datas.", example = "PADRAO", required = true)
+    @Schema(
+            description = "Política de ajuste de datas.",
+            examples = {"PADRAO"},
+            required = true)
         PoliticaDataOcorrencia politicaDataOcorrencia) {}

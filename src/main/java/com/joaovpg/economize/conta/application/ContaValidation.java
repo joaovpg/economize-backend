@@ -4,6 +4,7 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -27,7 +28,7 @@ final class ContaValidation {
   static BigDecimal saldoInicial(BigDecimal saldoInicial) {
     if (saldoInicial == null
         || saldoInicial.scale() > 4
-        || saldoInicial.setScale(4).precision() > 19) {
+        || saldoInicial.setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
       throw new RegraNegocioException("SALDO_INICIAL_INVALIDO", "Saldo inicial invalido");
     }
     return saldoInicial;

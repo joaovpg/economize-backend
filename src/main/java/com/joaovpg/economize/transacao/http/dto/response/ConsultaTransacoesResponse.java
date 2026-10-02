@@ -17,21 +17,21 @@ public record ConsultaTransacoesResponse(
             description = "Primeiro mês consultado, inclusivo.",
             type = SchemaType.STRING,
             pattern = "\\d{4}-(0[1-9]|1[0-2])",
-            example = "\"2026-01\"",
+            examples = {"\"2026-01\""},
             required = true)
         YearMonth inicio,
     @Schema(
             description = "Último mês consultado, inclusivo.",
             type = SchemaType.STRING,
             pattern = "\\d{4}-(0[1-9]|1[0-2])",
-            example = "\"2026-03\"",
+            examples = {"\"2026-03\""},
             required = true)
         YearMonth fim,
     @Schema(
             description =
                 "Saldo imediatamente antes do primeiro dia do período, já considerando saldos"
                     + " iniciais e impactos anteriores dos filtros informados.",
-            example = "1250.0000",
+            examples = {"1250.0000"},
             format = "double",
             required = true)
         BigDecimal saldoAbertura,
@@ -45,37 +45,37 @@ public record ConsultaTransacoesResponse(
               description =
                   "Origem do item: SALDO_INICIAL_CONTA, TRANSACAO_SIMPLES, TRANSFERENCIA, "
                       + "TRANSACAO_RECORRENTE ou PARCELA.",
-              example = "TRANSACAO_RECORRENTE",
+              examples = {"TRANSACAO_RECORRENTE"},
               required = true)
           OrigemItemConsulta origem,
       @Schema(
               description =
                   "Identificador da operação. Em ocorrência recorrente ainda virtual, pode ser"
                       + " nulo; em transferência identifica a transferência, não cada lado.",
-              nullable = true,
-              required = false)
+              nullable = true)
           UUID operacaoId,
       @Schema(
               description =
                   "Situação da transação; nula para SALDO_INICIAL_CONTA e ocorrência virtual.",
-              nullable = true,
-              required = false)
+              nullable = true)
           SituacaoTransacao situacao,
-      @Schema(description = "Descrição exibida no extrato.", example = "Aluguel", required = true)
+      @Schema(
+              description = "Descrição exibida no extrato.",
+              examples = {"Aluguel"},
+              required = true)
           String descricao,
-      @Schema(description = "Observação, quando houver.", nullable = true, required = false)
-          String observacoes,
+      @Schema(description = "Observação, quando houver.", nullable = true) String observacoes,
       @Schema(
               description =
                   "Valor com sinal de impacto na conta: receitas/entradas positivas,"
                       + " despesas/saídas negativas.",
-              example = "-1800.0000",
+              examples = {"-1800.0000"},
               format = "double",
               required = true)
           BigDecimal valor,
       @Schema(
               description = "Data financeira que determina a ordenação do item.",
-              example = "2026-02-05",
+              examples = {"2026-02-05"},
               format = "date",
               required = true)
           LocalDate dataFinanceira,
@@ -83,69 +83,59 @@ public record ConsultaTransacoesResponse(
               description =
                   "Instante da efetivação; nulo para itens planejados, virtuais ou saldo inicial.",
               nullable = true,
-              format = "date-time",
-              required = false)
+              format = "date-time")
           Instant efetivadoEm,
       @Schema(
               description = "Conta cujo saldo é impactado.",
-              example = "00000000-0000-0000-0000-000000000001",
+              examples = {"00000000-0000-0000-0000-000000000001"},
               required = true)
           UUID contaId,
       @Schema(
               description =
                   "Categoria do item, quando houver; saldo inicial e transferência não têm"
                       + " categoria.",
-              nullable = true,
-              required = false)
+              nullable = true)
           UUID categoriaId,
       @Schema(
               description =
                   "Conta do outro lado da transferência; preenchido somente para TRANSFERENCIA.",
-              nullable = true,
-              required = false)
+              nullable = true)
           UUID contaContraparteId,
       @Schema(
               description =
                   "Grupo da recorrência; preenchido somente para TRANSACAO_RECORRENTE ou PARCELA.",
-              nullable = true,
-              required = false)
+              nullable = true)
           UUID grupoRecorrenciaId,
       @Schema(
               description =
                   "Segmento da recorrência; preenchido somente para TRANSACAO_RECORRENTE ou"
                       + " PARCELA.",
-              nullable = true,
-              required = false)
+              nullable = true)
           UUID segmentoRecorrenciaId,
       @Schema(
               description =
                   "Data original da ocorrência recorrente, antes de eventual dataFinanceira"
                       + " efetiva.",
               nullable = true,
-              format = "date",
-              required = false)
+              format = "date")
           LocalDate dataOriginalRecorrencia,
-      @Schema(
-              description = "Número da parcela; preenchido somente para PARCELA.",
-              nullable = true,
-              required = false)
+      @Schema(description = "Número da parcela; preenchido somente para PARCELA.", nullable = true)
           Integer numeroParcela,
+      @Schema(description = "Total de parcelas; preenchido somente para PARCELA.", nullable = true)
+          Integer totalParcelas,
       @Schema(
               description = "Regra RFC 5545 da recorrência ou parcelamento.",
               nullable = true,
-              example = "FREQ=MONTHLY;BYMONTHDAY=5",
-              required = false)
+              examples = {"FREQ=MONTHLY;BYMONTHDAY=5"})
           String rrule,
       @Schema(
               description = "Data de início do segmento recorrente.",
               nullable = true,
-              format = "date",
-              required = false)
+              format = "date")
           LocalDate inicioRecorrencia,
       @Schema(
               description = "Política aplicada ao cálculo da data de ocorrência.",
               nullable = true,
-              example = "PADRAO",
-              required = false)
+              examples = {"PADRAO"})
           PoliticaDataOcorrencia politicaDataOcorrencia) {}
 }

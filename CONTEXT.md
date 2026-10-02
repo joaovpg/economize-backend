@@ -31,6 +31,8 @@
 - **Escopo de edicao**: alcance da alteracao de uma ocorrencia, `ONLY_THIS` ou `THIS_AND_FUTURE`; o segundo so vale para ocorrencia virtual.
 - **Parcelamento**: plano financeiro finito composto por parcelas numeradas, com valor por parcela e quantidade total original definidos na criacao.
 - **Parcela**: ocorrencia numerada de um Parcelamento, virtual enquanto apenas projetada e persistida quando efetivada ou individualizada.
+- **Numero da parcela**: posicao atual de uma Parcela dentro do Segmento de recorrencia que a originou; e exposto como `numeroParcela` e fica nulo para Recorrencias comuns.
+- **Total de parcelas**: quantidade total usada para exibir a numeracao de um Parcelamento no Segmento de recorrencia atual; e exposta como `totalParcelas` e fica nula para Recorrencias comuns.
 - **Total contratado original**: valor por parcela multiplicado pela quantidade total original de um Parcelamento, derivado sob demanda a partir dos dados preservados e nao persistido nesta entrega.
 - **Total atual do parcelamento**: soma derivada das parcelas existentes; nao e calculada nem exposta pelo contrato atual.
 

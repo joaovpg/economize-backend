@@ -8,6 +8,7 @@ import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -84,7 +85,7 @@ class ContaFinanceiraMigrationTest {
             assertTrue(coluna.next());
             assertEquals("boolean", coluna.getString(1));
           }
-          assertFalse(existeColuna(statement, schema, "tb001_usuario", "str_status"));
+          assertFalse(existeColuna(statement, schema));
           assertTrue(
               booleano(
                   statement,
@@ -181,9 +182,7 @@ class ContaFinanceiraMigrationTest {
     }
   }
 
-  private boolean existeColuna(
-      java.sql.Statement statement, String schema, String tabela, String coluna)
-      throws SQLException {
+  private boolean existeColuna(Statement statement, String schema) throws SQLException {
     try (var resultado =
         statement.executeQuery(
             """
@@ -191,7 +190,7 @@ class ContaFinanceiraMigrationTest {
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME = '%s'
             """
-                .formatted(schema, tabela, coluna))) {
+                .formatted(schema, "tb001_usuario", "str_status"))) {
       resultado.next();
       return resultado.getInt(1) > 0;
     }

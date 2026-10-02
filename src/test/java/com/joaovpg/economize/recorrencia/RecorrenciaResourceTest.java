@@ -75,6 +75,8 @@ class RecorrenciaResourceTest {
         .body("itens[0].origem", equalTo("TRANSACAO_RECORRENTE"))
         .body("itens[0].operacaoId", org.hamcrest.Matchers.nullValue())
         .body("itens[0].descricao", equalTo("Salario"))
+        .body("itens[0].numeroParcela", org.hamcrest.Matchers.nullValue())
+        .body("itens[0].totalParcelas", org.hamcrest.Matchers.nullValue())
         .body("itens[0].segmentoRecorrenciaId", equalTo(segmentoId.toString()))
         .body("itens[0].rrule", equalTo("FREQ=MONTHLY;BYMONTHDAY=10;COUNT=3"))
         .body("itens[0].inicioRecorrencia", equalTo("2026-01-10"))
@@ -269,16 +271,19 @@ class RecorrenciaResourceTest {
     assertEquals("2026-01-31", primeiro.get("dataFinanceira"));
     assertEquals("2026-02-28", segundo.get("dataFinanceira"));
     assertEquals("2026-03-31", terceiro.get("dataFinanceira"));
-    assertEquals("Seguro (1/3)", primeiro.get("descricao"));
-    assertEquals("Seguro (2/3)", segundo.get("descricao"));
-    assertEquals("Seguro (3/3)", terceiro.get("descricao"));
+    assertEquals("Seguro", primeiro.get("descricao"));
+    assertEquals("Seguro", segundo.get("descricao"));
+    assertEquals("Seguro", terceiro.get("descricao"));
     assertEquals(1, primeiro.get("numeroParcela"));
     assertEquals(2, segundo.get("numeroParcela"));
     assertEquals(3, terceiro.get("numeroParcela"));
+    assertEquals(3, primeiro.get("totalParcelas"));
+    assertEquals(3, segundo.get("totalParcelas"));
+    assertEquals(3, terceiro.get("totalParcelas"));
   }
 
   @Test
-  void formataDescricaoNasOperacoesDeParcelaSemPersistirSufixo() {
+  void retornaNumeracaoNasOperacoesDeParcelaSemAlterarDescricao() {
     var token = autenticar();
     var resposta =
         given()
@@ -319,7 +324,9 @@ class RecorrenciaResourceTest {
             "2026-02-10")
         .then()
         .statusCode(200)
-        .body("descricao", equalTo("Compra (2/3)"));
+        .body("descricao", equalTo("Compra"))
+        .body("numeroParcela", equalTo(2))
+        .body("totalParcelas", equalTo(3));
 
     given()
         .auth()
@@ -341,7 +348,9 @@ class RecorrenciaResourceTest {
         .put("/api/recorrencias/{segmentoId}/ocorrencias/{dataOriginal}", segmentoId, "2026-03-10")
         .then()
         .statusCode(200)
-        .body("descricao", equalTo("Compra ajustada (3/3)"));
+        .body("descricao", equalTo("Compra ajustada"))
+        .body("numeroParcela", equalTo(3))
+        .body("totalParcelas", equalTo(3));
 
     given()
         .auth()
@@ -350,8 +359,12 @@ class RecorrenciaResourceTest {
         .get("/api/transacoes?inicio=2026-01&fim=2026-03")
         .then()
         .statusCode(200)
-        .body("itens[1].descricao", equalTo("Compra (2/3)"))
-        .body("itens[2].descricao", equalTo("Compra ajustada (3/3)"));
+        .body("itens[1].descricao", equalTo("Compra"))
+        .body("itens[1].numeroParcela", equalTo(2))
+        .body("itens[1].totalParcelas", equalTo(3))
+        .body("itens[2].descricao", equalTo("Compra ajustada"))
+        .body("itens[2].numeroParcela", equalTo(3))
+        .body("itens[2].totalParcelas", equalTo(3));
   }
 
   @Test
@@ -678,6 +691,7 @@ class RecorrenciaResourceTest {
             .statusCode(200)
             .body("id", org.hamcrest.Matchers.nullValue())
             .body("numeroParcela", equalTo(2))
+            .body("totalParcelas", equalTo(5))
             .extract()
             .path("grupoId");
     assertNotEquals(grupoAntigo, novoGrupo);
@@ -690,16 +704,21 @@ class RecorrenciaResourceTest {
         .then()
         .statusCode(200)
         .body("itens", hasSize(5))
-        .body("itens[0].descricao", equalTo("Curso (1/3)"))
-        .body("itens[1].descricao", equalTo("Curso ampliado (2/5)"))
-        .body("itens[2].descricao", equalTo("Curso ampliado (3/5)"))
-        .body("itens[3].descricao", equalTo("Curso ampliado (4/5)"))
-        .body("itens[4].descricao", equalTo("Curso ampliado (5/5)"))
+        .body("itens[0].descricao", equalTo("Curso"))
+        .body("itens[1].descricao", equalTo("Curso ampliado"))
+        .body("itens[2].descricao", equalTo("Curso ampliado"))
+        .body("itens[3].descricao", equalTo("Curso ampliado"))
+        .body("itens[4].descricao", equalTo("Curso ampliado"))
         .body("itens[0].numeroParcela", equalTo(1))
         .body("itens[1].numeroParcela", equalTo(2))
         .body("itens[2].numeroParcela", equalTo(3))
         .body("itens[3].numeroParcela", equalTo(4))
-        .body("itens[4].numeroParcela", equalTo(5));
+        .body("itens[4].numeroParcela", equalTo(5))
+        .body("itens[0].totalParcelas", equalTo(3))
+        .body("itens[1].totalParcelas", equalTo(5))
+        .body("itens[2].totalParcelas", equalTo(5))
+        .body("itens[3].totalParcelas", equalTo(5))
+        .body("itens[4].totalParcelas", equalTo(5));
   }
 
   @Test
@@ -749,10 +768,12 @@ class RecorrenciaResourceTest {
         .then()
         .statusCode(200)
         .body("itens", hasSize(2))
-        .body("itens[0].descricao", equalTo("Compra (1/3)"))
-        .body("itens[1].descricao", equalTo("Compra (3/3)"))
+        .body("itens[0].descricao", equalTo("Compra"))
+        .body("itens[1].descricao", equalTo("Compra"))
         .body("itens[0].numeroParcela", equalTo(1))
-        .body("itens[1].numeroParcela", equalTo(3));
+        .body("itens[1].numeroParcela", equalTo(3))
+        .body("itens[0].totalParcelas", equalTo(3))
+        .body("itens[1].totalParcelas", equalTo(3));
   }
 
   private ValidatableResponse criarRecorrencia(String token) {

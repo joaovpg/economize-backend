@@ -7,8 +7,7 @@ public record EfetivarOcorrenciaRecorrenteRequest(
     @Schema(
             description =
                 "Data financeira usada na transação efetivada; quando omitida, usa dataOriginal.",
-            example = "2026-04-06",
+            examples = {"2026-04-06"},
             format = "date",
-            nullable = true,
-            required = false)
+            nullable = true)
         LocalDate dataFinanceira) {}

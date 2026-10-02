@@ -1,4 +1,4 @@
-# Definir a decomposicao final dos marcos do MVP
+# Definir a decomposição final dos marcos do MVP
 
 Parent: [Reestruturar o roadmap do MVP por dependencias](../map.md)
 Type: grilling

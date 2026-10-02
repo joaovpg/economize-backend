@@ -77,7 +77,7 @@ Não é necessário instalar Maven separadamente: o repositório inclui o Maven 
 
 ## Desenvolvimento local
 
-O fluxo local usa o [`docker-compose.yml`](docker-compose.yml) para iniciar o PostgreSQL em `localhost:5432` e o pgAdmin em <http://localhost:5050>. As credenciais declaradas no Compose são destinadas exclusivamente ao desenvolvimento local.
+O fluxo local usa Docker Compose para iniciar o PostgreSQL em `localhost:5432` e o pgAdmin em <http://localhost:5050>. As credenciais declaradas no Compose são destinadas exclusivamente ao desenvolvimento local.
 
 ### 1. Configure o ambiente
 
