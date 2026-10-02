@@ -1,7 +1,6 @@
 package com.joaovpg.economize.recorrencia.application;
 
 import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.FormatadorDescricaoParcela;
 import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
@@ -108,6 +107,7 @@ public class ResolverOcorrenciasRecorrentes {
       UUID segmentoRecorrenciaId,
       LocalDate dataOriginalRecorrencia,
       Integer numeroParcela,
+      Integer totalParcelas,
       String rrule,
       LocalDate inicioRecorrencia,
       PoliticaDataOcorrencia politicaDataOcorrencia) {
@@ -127,17 +127,15 @@ public class ResolverOcorrenciasRecorrentes {
               : segmento.getNumeroPrimeiraParcela()
                   + ocorrenciaNumero(expansor, segmento, transacao.getIdentificadorRecorrencia())
                   - 1;
-      var descricao =
-          FormatadorDescricaoParcela.formatar(
-              transacao.getDescricao(),
-              grupo == null ? null : grupo.getTipo(),
-              numeroParcela,
-              segmento == null ? null : segmento.getQuantidadeTotalOriginal());
+      var totalParcelas =
+          segmento == null || grupo == null || grupo.getTipo() != TipoGrupoRecorrencia.PARCELAMENTO
+              ? null
+              : segmento.getQuantidadeTotalOriginal();
       return new Resultado(
           origem,
           transacao.getId(),
           transacao.getSituacao(),
-          descricao,
+          transacao.getDescricao(),
           transacao.getObservacoes(),
           impacto(transacao),
           transacao.getDataFinanceira(),
@@ -149,6 +147,7 @@ public class ResolverOcorrenciasRecorrentes {
           segmento == null ? null : segmento.getId(),
           transacao.getIdentificadorRecorrencia(),
           numeroParcela,
+          totalParcelas,
           segmento == null ? null : segmento.getRrule(),
           segmento == null ? null : segmento.getInicio(),
           segmento == null ? null : politica(segmento));
@@ -163,17 +162,15 @@ public class ResolverOcorrenciasRecorrentes {
           segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
               ? OrigemItemConsulta.PARCELA
               : OrigemItemConsulta.TRANSACAO_RECORRENTE;
-      var descricao =
-          FormatadorDescricaoParcela.formatar(
-              segmento.getDescricao(),
-              segmento.getGrupo().getTipo(),
-              numeroParcela,
-              segmento.getQuantidadeTotalOriginal());
+      var totalParcelas =
+          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
+              ? segmento.getQuantidadeTotalOriginal()
+              : null;
       return new Resultado(
           origem,
           null,
           SituacaoTransacao.PLANEJADA,
-          descricao,
+          segmento.getDescricao(),
           segmento.getObservacoes(),
           segmento.getTipo() == com.joaovpg.economize.transacao.TipoTransacao.RECEITA
               ? segmento.getValor()
@@ -187,6 +184,7 @@ public class ResolverOcorrenciasRecorrentes {
           segmento.getId(),
           ocorrencia.dataOriginal(),
           numeroParcela,
+          totalParcelas,
           segmento.getRrule(),
           segmento.getInicio(),
           politica(segmento));

@@ -12,38 +12,50 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record RecorrenciaResponse(
     @Schema(
             description = "Identificador do segmento retornado.",
-            example = "00000000-0000-0000-0000-000000000030",
+            examples = {"00000000-0000-0000-0000-000000000030"},
             required = true)
         UUID id,
     @Schema(
             description = "Identificador do grupo lógico.",
-            example = "00000000-0000-0000-0000-000000000031",
+            examples = {"00000000-0000-0000-0000-000000000031"},
             required = true)
         UUID grupoId,
     @Schema(
             description = "Identificador do segmento da regra.",
-            example = "00000000-0000-0000-0000-000000000030",
+            examples = {"00000000-0000-0000-0000-000000000030"},
             required = true)
         UUID segmentoId,
-    @Schema(description = "RECORRENCIA ou PARCELAMENTO.", example = "RECORRENCIA", required = true)
+    @Schema(
+            description = "RECORRENCIA ou PARCELAMENTO.",
+            examples = {"RECORRENCIA"},
+            required = true)
         TipoGrupoRecorrencia tipoGrupo,
-    @Schema(description = "Estado do grupo/segmento.", example = "ATIVO", required = true)
+    @Schema(
+            description = "Estado do grupo/segmento.",
+            examples = {"ATIVO"},
+            required = true)
         StatusRecorrencia status,
-    @Schema(description = "Natureza financeira.", example = "DESPESA", required = true)
+    @Schema(
+            description = "Natureza financeira.",
+            examples = {"DESPESA"},
+            required = true)
         TipoTransacao tipo,
-    @Schema(description = "Descrição da regra.", example = "Aluguel", required = true)
+    @Schema(
+            description = "Descrição da regra.",
+            examples = {"Aluguel"},
+            required = true)
         String descricao,
-    @Schema(description = "Observação da regra, quando houver.", nullable = true, required = false)
+    @Schema(description = "Observação da regra, quando houver.", nullable = true)
         String observacoes,
     @Schema(
             description = "Valor por ocorrência ou parcela.",
-            example = "1800.00",
+            examples = {"1800.00"},
             format = "double",
             required = true)
         BigDecimal valor,
     @Schema(
             description = "Data da primeira ocorrência.",
-            example = "2026-01-05",
+            examples = {"2026-01-05"},
             format = "date",
             required = true)
         LocalDate inicio,
@@ -52,32 +64,28 @@ public record RecorrenciaResponse(
                 "Data final de uma recorrência limitada; nula para regra sem data final ou"
                     + " parcelamento.",
             nullable = true,
-            format = "date",
-            required = false)
+            format = "date")
         LocalDate fim,
     @Schema(
             description = "Regra RFC 5545 usada para expandir as ocorrências.",
-            example = "FREQ=MONTHLY;BYMONTHDAY=5",
+            examples = {"FREQ=MONTHLY;BYMONTHDAY=5"},
             required = true)
         String rrule,
     @Schema(
             description =
                 "Quantidade de ocorrências; nula quando a regra termina por data ou não se aplica.",
-            nullable = true,
-            required = false)
+            nullable = true)
         Integer totalOcorrencias,
     @Schema(
             description = "Primeira parcela; preenchido somente para PARCELAMENTO.",
-            nullable = true,
-            required = false)
+            nullable = true)
         Integer numeroPrimeiraParcela,
     @Schema(
             description = "Quantidade total original; preenchido somente para PARCELAMENTO.",
-            nullable = true,
-            required = false)
+            nullable = true)
         Integer quantidadeTotalOriginal,
     @Schema(
             description = "Política de ajuste de datas; parcelamentos usam AJUSTAR_ULTIMO_DIA_MES.",
-            example = "PADRAO",
+            examples = {"PADRAO"},
             required = true)
         PoliticaDataOcorrencia politicaDataOcorrencia) {}

@@ -8,7 +8,6 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.ext.Provider;
-import java.io.IOException;
 import java.util.Set;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -28,7 +27,7 @@ public class ProtecaoCsrfFilter implements ContainerRequestFilter {
   }
 
   @Override
-  public void filter(ContainerRequestContext requestContext) throws IOException {
+  public void filter(ContainerRequestContext requestContext) {
     if (!METODOS_MUTAVEIS.contains(requestContext.getMethod())
         || endpointPublico(requestContext)
         || requisicaoSameOrigin(requestContext)) {

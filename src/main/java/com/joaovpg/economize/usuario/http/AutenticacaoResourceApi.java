@@ -56,7 +56,6 @@ public interface AutenticacaoResourceApi {
   RestResponse<UsuarioResponse> cadastrar(
       @Valid @RequestBody(
               description = "Dados do novo usuário.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -97,7 +96,6 @@ public interface AutenticacaoResourceApi {
   RestResponse<CsrfTokenResponse> login(
       @Valid @RequestBody(
               description = "Credenciais do usuário.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,

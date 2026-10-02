@@ -82,7 +82,7 @@ public interface TransacaoResourceApi {
                   @Schema(
                       type = SchemaType.STRING,
                       pattern = "\\d{4}-(0[1-9]|1[0-2])",
-                      example = "\"2026-01\""))
+                      examples = {"\"2026-01\""}))
           String inicio,
       @QueryParam("fim")
           @Parameter(
@@ -94,14 +94,13 @@ public interface TransacaoResourceApi {
                   @Schema(
                       type = SchemaType.STRING,
                       pattern = "\\d{4}-(0[1-9]|1[0-2])",
-                      example = "\"2026-03\""))
+                      examples = {"\"2026-03\""}))
           String fim,
       @QueryParam("contaId")
           @Parameter(
               name = "contaId",
               in = ParameterIn.QUERY,
               description = "Identificador de conta; o parâmetro pode ser repetido.",
-              required = false,
               style = ParameterStyle.FORM,
               explode = Explode.TRUE,
               schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class),
@@ -115,7 +114,6 @@ public interface TransacaoResourceApi {
               description =
                   "Identificador de categoria; o parâmetro pode ser repetido. Quando usado, "
                       + "transferências ficam fora do resultado.",
-              required = false,
               style = ParameterStyle.FORM,
               explode = Explode.TRUE,
               schema = @Schema(type = SchemaType.ARRAY, implementation = UUID.class))
@@ -156,7 +154,6 @@ public interface TransacaoResourceApi {
           UUID id,
       @Valid @RequestBody(
               description = "Novo estado da transação simples.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -182,7 +179,6 @@ public interface TransacaoResourceApi {
   RestResponse<TransacaoResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transação simples.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,

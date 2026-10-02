@@ -266,9 +266,11 @@ class CadastrarUsuarioResourceTest {
 
   @Test
   void mapeiaJsonInvalidoComoProblemDetail() {
+    String jsonInvalido = "{\"nome\":";
+
     given()
         .contentType("application/json")
-        .body("{\"nome\":")
+        .body(jsonInvalido)
         .when()
         .post("/api/autenticacao/cadastro")
         .then()

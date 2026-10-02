@@ -12,6 +12,7 @@ import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Set;
@@ -52,14 +53,14 @@ final class RecorrenciaValidacao {
       String observacoes,
       BigDecimal valor,
       LocalDate inicio) {
-    if (tipo == null || (tipo != TipoTransacao.RECEITA && tipo != TipoTransacao.DESPESA)) {
+    if (tipo != TipoTransacao.RECEITA && tipo != TipoTransacao.DESPESA) {
       throw new RegraNegocioException(
           "TIPO_TRANSACAO_INVALIDO", "Recorrencias aceitam somente receita ou despesa");
     }
     if (valor == null
         || valor.signum() <= 0
         || valor.scale() > 4
-        || valor.setScale(4).precision() > 19) {
+        || valor.setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
       throw new RegraNegocioException("VALOR_TRANSACAO_INVALIDO", "Valor da transacao invalido");
     }
     if (descricao == null || descricao.isBlank() || descricao.strip().length() > 255) {

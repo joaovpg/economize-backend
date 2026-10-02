@@ -54,7 +54,6 @@ public interface TransferenciaResourceApi {
   RestResponse<TransferenciaResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transferência.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -98,7 +97,6 @@ public interface TransferenciaResourceApi {
           UUID id,
       @Valid @RequestBody(
               description = "Novos dados da transferência.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,

@@ -13,6 +13,7 @@ import com.joaovpg.economize.transacao.TransacaoRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -144,7 +145,7 @@ public class AlterarTransacao {
     if (comando.valor() == null
         || comando.valor().signum() <= 0
         || comando.valor().scale() > 4
-        || comando.valor().setScale(4).precision() > 19) {
+        || comando.valor().setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
       throw new RegraNegocioException("VALOR_TRANSACAO_INVALIDO", "Valor da transacao invalido");
     }
     if (comando.descricao() == null

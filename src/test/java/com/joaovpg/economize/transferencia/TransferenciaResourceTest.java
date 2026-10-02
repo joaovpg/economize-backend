@@ -33,7 +33,7 @@ class TransferenciaResourceTest {
     token = cadastrarUsuario("transferencia-" + UUID.randomUUID() + "@example.com");
     contaOrigemId = cadastrarConta(token, "Conta origem");
     contaDestinoId = cadastrarConta(token, "Conta destino");
-    categoriaId = cadastrarCategoria(token, "Transferências");
+    categoriaId = cadastrarCategoria(token);
   }
 
   @Test
@@ -178,7 +178,7 @@ class TransferenciaResourceTest {
     var data = LocalDate.now();
     var transferenciaId =
         criarTransferencia("PLANEJADA", data).statusCode(201).extract().jsonPath().getUUID("id");
-    editarConta(token, contaOrigemId, "Conta origem", false);
+    editarConta(token, contaOrigemId);
 
     alterarTransferencia(transferenciaId, "PLANEJADA", data, "Corrigida")
         .statusCode(200)
@@ -324,7 +324,7 @@ class TransferenciaResourceTest {
         .getUUID("id");
   }
 
-  private UUID cadastrarCategoria(String tokenUsuario, String nome) {
+  private UUID cadastrarCategoria(String tokenUsuario) {
     return given()
         .auth()
         .oauth2(tokenUsuario)
@@ -337,7 +337,7 @@ class TransferenciaResourceTest {
               "categoriaPaiId":null
             }
             """
-                .formatted(nome))
+                .formatted("Transferências"))
         .when()
         .post("/api/categorias")
         .then()
@@ -348,7 +348,7 @@ class TransferenciaResourceTest {
         .getUUID("id");
   }
 
-  private void editarConta(String tokenUsuario, UUID contaId, String nome, boolean ativo) {
+  private void editarConta(String tokenUsuario, UUID contaId) {
     given()
         .auth()
         .oauth2(tokenUsuario)
@@ -363,7 +363,7 @@ class TransferenciaResourceTest {
               "ativo":%s
             }
             """
-                .formatted(nome, ativo))
+                .formatted("Conta origem", false))
         .when()
         .put("/api/contas/{id}", contaId)
         .then()

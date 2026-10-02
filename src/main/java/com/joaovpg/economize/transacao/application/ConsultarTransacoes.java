@@ -330,6 +330,7 @@ public class ConsultarTransacoes {
         resultado.segmentoRecorrenciaId(),
         resultado.dataOriginalRecorrencia(),
         resultado.numeroParcela(),
+        resultado.totalParcelas(),
         resultado.rrule(),
         resultado.inicioRecorrencia(),
         resultado.politicaDataOcorrencia());
@@ -407,6 +408,7 @@ public class ConsultarTransacoes {
       UUID segmentoRecorrenciaId,
       LocalDate dataOriginalRecorrencia,
       Integer numeroParcela,
+      Integer totalParcelas,
       String rrule,
       LocalDate inicioRecorrencia,
       PoliticaDataOcorrencia politicaDataOcorrencia) {
@@ -434,6 +436,7 @@ public class ConsultarTransacoes {
           contaId,
           categoriaId,
           contaContraparteId,
+          null,
           null,
           null,
           null,

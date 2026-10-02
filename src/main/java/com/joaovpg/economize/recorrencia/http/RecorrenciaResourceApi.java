@@ -68,7 +68,6 @@ public interface RecorrenciaResourceApi {
               description =
                   "Use tipoGrupo=RECORRENCIA para uma série por regra ou "
                       + "tipoGrupo=PARCELAMENTO para parcelas numeradas.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -135,7 +134,6 @@ public interface RecorrenciaResourceApi {
           LocalDate dataOriginal,
       @Valid @RequestBody(
               description = "Novo estado e escopo da alteração.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -237,7 +235,6 @@ public interface RecorrenciaResourceApi {
               in = ParameterIn.QUERY,
               description = "Escopo da exclusão; o padrão é somente a ocorrência selecionada.",
               schema = @Schema(implementation = EscopoOcorrencia.class),
-              required = false,
               example = "ONLY_THIS")
           EscopoOcorrencia escopo);
 }

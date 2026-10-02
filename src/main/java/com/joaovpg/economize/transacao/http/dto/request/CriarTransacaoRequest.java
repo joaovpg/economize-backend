@@ -15,42 +15,43 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public record CriarTransacaoRequest(
     @Schema(
             description = "Conta ativa que recebe a transação.",
-            example = "00000000-0000-0000-0000-000000000001",
+            examples = {"00000000-0000-0000-0000-000000000001"},
             required = true)
         @NotNull UUID contaId,
-    @Schema(description = "Categoria opcional da transação.", nullable = true, required = false)
-        UUID categoriaId,
+    @Schema(description = "Categoria opcional da transação.", nullable = true) UUID categoriaId,
     @Schema(
             description = "Situação da transação; EFETIVADA preenche efetivadoEm.",
-            example = "EFETIVADA",
+            examples = {"EFETIVADA"},
             required = true)
         @NotNull SituacaoTransacao situacao,
-    @Schema(description = "Natureza financeira da operação.", example = "DESPESA", required = true)
+    @Schema(
+            description = "Natureza financeira da operação.",
+            examples = {"DESPESA"},
+            required = true)
         @NotNull TipoTransacao tipo,
     @Schema(
             description = "Descrição exibida no extrato.",
-            example = "Mercado",
+            examples = {"Mercado"},
             maxLength = 255,
             required = true)
         @NotBlank @Size(max = 255) String descricao,
     @Schema(
             description = "Observação opcional da operação.",
-            example = "Compra do mês",
+            examples = {"Compra do mês"},
             maxLength = 2000,
-            nullable = true,
-            required = false)
+            nullable = true)
         @Size(max = 2000) String observacoes,
     @Schema(
             description =
                 "Valor positivo da operação, com até 15 dígitos inteiros e 4 casas decimais.",
-            example = "250.75",
+            examples = {"250.75"},
             minimum = "0.0001",
             format = "double",
             required = true)
         @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 15, fraction = 4) BigDecimal valor,
     @Schema(
             description = "Data financeira da operação.",
-            example = "2026-02-10",
+            examples = {"2026-02-10"},
             format = "date",
             required = true)
         @NotNull LocalDate dataFinanceira) {}

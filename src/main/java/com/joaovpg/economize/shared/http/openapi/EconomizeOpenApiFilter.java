@@ -87,16 +87,12 @@ public class EconomizeOpenApiFilter implements OASFilter {
   }
 
   private void registerProblemResponses(Components components) {
+    components.addResponse("BadRequestProblem", problemResponse("Dados inválidos."));
+    components.addResponse("UnauthorizedProblem", problemResponse("Autenticação necessária."));
+    components.addResponse("ForbiddenProblem", problemResponse("Operação não permitida."));
+    components.addResponse("NotFoundProblem", problemResponse("Recurso não encontrado."));
     components.addResponse(
-        "BadRequestProblem", problemResponse("Dados inválidos.", PROBLEM_SCHEMA));
-    components.addResponse(
-        "UnauthorizedProblem", problemResponse("Autenticação necessária.", PROBLEM_SCHEMA));
-    components.addResponse(
-        "ForbiddenProblem", problemResponse("Operação não permitida.", PROBLEM_SCHEMA));
-    components.addResponse(
-        "NotFoundProblem", problemResponse("Recurso não encontrado.", PROBLEM_SCHEMA));
-    components.addResponse(
-        "UnprocessableEntityProblem", problemResponse("Regra de negócio violada.", PROBLEM_SCHEMA));
+        "UnprocessableEntityProblem", problemResponse("Regra de negócio violada."));
   }
 
   private void registerCookieSecurity(Components components) {
@@ -115,15 +111,15 @@ public class EconomizeOpenApiFilter implements OASFilter {
         OASFactory.createSchema()
             .addType(Schema.SchemaType.STRING)
             .pattern(YEAR_MONTH_PATTERN)
-            .example("2026-02")
+            .addExample("2026-02")
             .description("Mês no formato AAAA-MM."));
   }
 
   private org.eclipse.microprofile.openapi.models.responses.APIResponse problemResponse(
-      String description, String schemaReference) {
+      String description) {
     var content = OASFactory.createContent();
     var mediaType = OASFactory.createMediaType();
-    mediaType.setSchema(OASFactory.createSchema().ref(schemaReference));
+    mediaType.setSchema(OASFactory.createSchema().ref(EconomizeOpenApiFilter.PROBLEM_SCHEMA));
     content.addMediaType(PROBLEM_MEDIA_TYPE, mediaType);
 
     return OASFactory.createAPIResponse().description(description).content(content);

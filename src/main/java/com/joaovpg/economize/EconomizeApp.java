@@ -36,7 +36,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @QuarkusMain(name = "api")
 public class EconomizeApp extends Application implements QuarkusApplication {
 
-  public static void main(String... args) {
+  static void main(String... args) {
     Quarkus.run(EconomizeApp.class, args);
   }
 

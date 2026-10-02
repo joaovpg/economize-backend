@@ -54,7 +54,6 @@ public interface ContaResourceApi {
   RestResponse<ContaResponse> cadastrar(
       @Valid @RequestBody(
               description = "Dados da conta financeira.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
@@ -88,7 +87,6 @@ public interface ContaResourceApi {
               name = "ativo",
               in = ParameterIn.QUERY,
               description = "Filtra pelo estado ativo da conta.",
-              required = false,
               schema = @Schema(implementation = Boolean.class))
           Boolean ativo);
 
@@ -118,7 +116,6 @@ public interface ContaResourceApi {
           UUID contaId,
       @Valid @RequestBody(
               description = "Novos dados da conta financeira.",
-              required = true,
               content =
                   @Content(
                       mediaType = MediaType.APPLICATION_JSON,
