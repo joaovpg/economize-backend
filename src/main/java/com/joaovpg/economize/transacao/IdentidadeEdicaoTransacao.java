@@ -36,6 +36,40 @@ public final class IdentidadeEdicaoTransacao {
     return codificar(PREFIXO_RECORRENCIA + segmentoId + ":" + dataOriginal);
   }
 
+  /** Indica se a chave identifica uma ocorrência de série (segmento e data original). */
+  public static boolean ehChaveDeOcorrencia(String chave) {
+    var valor = decodificarOuNulo(chave);
+    return valor != null && valor.startsWith(PREFIXO_RECORRENCIA);
+  }
+
+  /**
+   * Identifica uma ocorrência de série pela chave. Chaves malformadas ou que não sejam de
+   * ocorrência resultam em não encontrado, sem revelar propriedade.
+   */
+  public static ChaveOcorrencia identificarOcorrencia(String chave) {
+    var valor = decodificarOuNulo(chave);
+    if (valor == null || !valor.startsWith(PREFIXO_RECORRENCIA)) {
+      throw naoEncontrada();
+    }
+    var partes = valor.substring(PREFIXO_RECORRENCIA.length()).split(":", 2);
+    if (partes.length != 2) {
+      throw naoEncontrada();
+    }
+    try {
+      var segmentoId = UUID.fromString(partes[0]);
+      var dataOriginal = LocalDate.parse(partes[1]);
+      if (!chaveRecorrencia(segmentoId, dataOriginal).equals(chave)) {
+        throw naoEncontrada();
+      }
+      return new ChaveOcorrencia(segmentoId, dataOriginal);
+    } catch (IllegalArgumentException | java.time.DateTimeException e) {
+      throw naoEncontrada();
+    }
+  }
+
+  /** Segmento e data original que identificam uma ocorrência de série. */
+  public record ChaveOcorrencia(UUID segmentoId, LocalDate dataOriginal) {}
+
   public static String versao(long versao) {
     return codificar("1:v:" + versao);
   }
@@ -53,5 +87,20 @@ public final class IdentidadeEdicaoTransacao {
     return Base64.getUrlEncoder()
         .withoutPadding()
         .encodeToString(valor.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static String decodificarOuNulo(String chave) {
+    if (chave == null) {
+      return null;
+    }
+    try {
+      return new String(Base64.getUrlDecoder().decode(chave), StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
+  private static RecursoNaoEncontradoException naoEncontrada() {
+    return new RecursoNaoEncontradoException("RECURSO_NAO_ENCONTRADO", "Transacao nao encontrada");
   }
 }

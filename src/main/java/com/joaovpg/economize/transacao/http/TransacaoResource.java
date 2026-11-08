@@ -3,6 +3,7 @@ package com.joaovpg.economize.transacao.http;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
@@ -25,6 +26,7 @@ import org.jboss.resteasy.reactive.RestResponse;
 public class TransacaoResource implements TransacaoResourceApi {
   private final CriarTransacao criarTransacao;
   private final AlterarTransacao alterarTransacao;
+  private final AlterarOcorrenciaSerie alterarOcorrenciaSerie;
   private final ExcluirTransacao excluirTransacao;
   private final ConsultarTransacoes consultarTransacoes;
   private final TransacaoHttpMapper mapper;
@@ -33,12 +35,14 @@ public class TransacaoResource implements TransacaoResourceApi {
   TransacaoResource(
       CriarTransacao criarTransacao,
       AlterarTransacao alterarTransacao,
+      AlterarOcorrenciaSerie alterarOcorrenciaSerie,
       ExcluirTransacao excluirTransacao,
       ConsultarTransacoes consultarTransacoes,
       TransacaoHttpMapper mapper,
       JsonWebToken token) {
     this.criarTransacao = criarTransacao;
     this.alterarTransacao = alterarTransacao;
+    this.alterarOcorrenciaSerie = alterarOcorrenciaSerie;
     this.excluirTransacao = excluirTransacao;
     this.consultarTransacoes = consultarTransacoes;
     this.mapper = mapper;
@@ -80,8 +84,14 @@ public class TransacaoResource implements TransacaoResourceApi {
 
   @Override
   public ItemResponse alterar(String chaveEdicao, AlterarTransacaoRequest request) {
+    var usuarioId = UUID.fromString(token.getSubject());
+    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
+      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      var comando = mapper.toCommandOcorrencia(usuarioId, chave, request);
+      return mapper.toResponse(alterarOcorrenciaSerie.executar(comando));
+    }
     var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
-    var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
+    var comando = mapper.toCommand(usuarioId, request);
     var resultado = alterarTransacao.executar(id, comando);
     return mapper.toResponse(resultado);
   }

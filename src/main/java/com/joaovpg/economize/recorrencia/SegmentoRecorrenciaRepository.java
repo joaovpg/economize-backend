@@ -20,6 +20,19 @@ public class SegmentoRecorrenciaRepository
     return find("id = ?1 and usuario.id = ?2", id, usuarioId).firstResultOptional();
   }
 
+  /** Identifica o grupo do segmento sem carregar a entidade, para bloquear o grupo antes dela. */
+  public Optional<UUID> buscarGrupoIdDoUsuario(UUID id, UUID usuarioId) {
+    return getEntityManager()
+        .createQuery(
+            "select s.grupo.id from SegmentoRecorrencia s"
+                + " where s.id = :id and s.usuario.id = :usuarioId",
+            UUID.class)
+        .setParameter("id", id)
+        .setParameter("usuarioId", usuarioId)
+        .getResultStream()
+        .findFirst();
+  }
+
   public Optional<SegmentoRecorrencia> buscarDoUsuarioParaEdicao(UUID id, UUID usuarioId) {
     return find("id = ?1 and usuario.id = ?2", id, usuarioId)
         .withLock(LockModeType.PESSIMISTIC_WRITE)

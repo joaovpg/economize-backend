@@ -75,4 +75,18 @@ public class Transacao extends EntidadeBase {
 
   @Column(name = "BOL_EXCECAO_RECORRENCIA", nullable = false)
   private boolean excecaoRecorrencia;
+
+  /**
+   * Origem histórica de uma ocorrência de série desligada e tratada como transação simples. Não
+   * vincula a transação à série; apenas preserva de onde ela veio.
+   */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "ID_SEGMENTO_ORIGEM")
+  private SegmentoRecorrencia segmentoOrigem;
+
+  @Column(name = "DAT_ORIGEM_RECORRENCIA")
+  private LocalDate dataOriginalOrigem;
+
+  @Column(name = "INT_NUMERO_PARCELA_ORIGEM")
+  private Integer numeroParcelaOrigem;
 }

@@ -1,8 +1,11 @@
 package com.joaovpg.economize.transacao.http;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
@@ -27,6 +30,39 @@ interface TransacaoHttpMapper {
   @Mapping(target = "escopoInformado", expression = "java(request.escopoInformado())")
   @Mapping(target = "resolucaoInformada", expression = "java(request.resolucaoInformada())")
   AlterarTransacao.Comando toCommand(UUID usuarioId, AlterarTransacaoRequest request);
+
+  /**
+   * Converte a alteração de uma ocorrência de série. O escopo chega como texto para que o caso de
+   * uso decida se é aplicável, inclusive quando ausente ou nulo.
+   */
+  default AlterarOcorrenciaSerie.Comando toCommandOcorrencia(
+      UUID usuarioId,
+      IdentidadeEdicaoTransacao.ChaveOcorrencia chave,
+      AlterarTransacaoRequest request) {
+    return new AlterarOcorrenciaSerie.Comando(
+        usuarioId,
+        chave.segmentoId(),
+        chave.dataOriginal(),
+        request.versaoEdicao(),
+        escopoTexto(request.escopo()),
+        request.resolucaoInformada(),
+        request.contaId(),
+        request.categoriaId(),
+        request.situacao(),
+        request.tipo(),
+        request.descricao(),
+        request.observacoes(),
+        request.valor(),
+        request.dataFinanceira(),
+        toRepeticao(request.repeticao()));
+  }
+
+  default String escopoTexto(JsonNode escopo) {
+    if (escopo == null) {
+      return null;
+    }
+    return escopo.isTextual() ? escopo.asText() : escopo.toString();
+  }
 
   ConsultarTransacoes.Comando toCommand(UUID usuarioId, ConsultaTransacoesRequest request);
 

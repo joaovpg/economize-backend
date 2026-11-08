@@ -9,6 +9,7 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
+import com.joaovpg.economize.recorrencia.enums.TipoGrupoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
@@ -307,10 +308,27 @@ public class ConsultarTransacoes {
         IdentidadeEdicaoTransacao.versao(transacao.getVersao()),
         transacao.getTipo(),
         false,
-        false,
-        null,
+        transacao.getSegmentoOrigem() != null,
+        serieHistorica(transacao),
         null,
         List.of());
+  }
+
+  /** Série de onde uma transação simples foi desligada; nula para simples sem origem. */
+  private static SerieRecorrencia serieHistorica(Transacao transacao) {
+    var segmento = transacao.getSegmentoOrigem();
+    if (segmento == null) {
+      return null;
+    }
+    var grupo = segmento.getGrupo();
+    var parcelado = grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO;
+    return new SerieRecorrencia(
+        grupo.getId(),
+        segmento.getId(),
+        segmento.getInicio(),
+        transacao.getDataOriginalOrigem(),
+        parcelado ? transacao.getNumeroParcelaOrigem() : null,
+        parcelado ? segmento.getQuantidadeTotalOriginal() : null);
   }
 
   public static Item itemRecorrente(ResolverOcorrenciasRecorrentes.Resultado resultado) {

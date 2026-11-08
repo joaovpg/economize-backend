@@ -4,6 +4,7 @@ import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
+import com.joaovpg.economize.recorrencia.application.RevisarSerieRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
@@ -25,14 +26,17 @@ public class AlterarTransacao {
   private final TransacaoRepository transacaoRepository;
   private final ContaFinanceiraRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
+  private final RevisarSerieRecorrencia revisarSerie;
 
   public AlterarTransacao(
       TransacaoRepository transacaoRepository,
       ContaFinanceiraRepository contaRepository,
-      CategoriaRepository categoriaRepository) {
+      CategoriaRepository categoriaRepository,
+      RevisarSerieRecorrencia revisarSerie) {
     this.transacaoRepository = transacaoRepository;
     this.contaRepository = contaRepository;
     this.categoriaRepository = categoriaRepository;
+    this.revisarSerie = revisarSerie;
   }
 
   @Transactional
@@ -74,7 +78,7 @@ public class AlterarTransacao {
     transacao.setSituacao(comando.situacao());
     transacao.setDescricao(comando.descricao().strip());
     transacao.setObservacoes(comando.observacoes() == null ? null : comando.observacoes().strip());
-    transacao.setValor(comando.valor());
+    transacao.setValor(comando.valor().setScale(4, RoundingMode.UNNECESSARY));
     transacao.setDataFinanceira(comando.dataFinanceira());
 
     if (comando.situacao() == SituacaoTransacao.PLANEJADA) {
@@ -83,6 +87,9 @@ public class AlterarTransacao {
       transacao.setEfetivadoEm(Instant.now());
     }
 
+    if (transacao.getSegmentoOrigem() != null) {
+      revisarSerie.revisar(transacao.getSegmentoOrigem().getGrupo().getId(), comando.usuarioId());
+    }
     transacaoRepository.flush();
     return ConsultarTransacoes.itemTransacaoSimples(transacao);
   }
