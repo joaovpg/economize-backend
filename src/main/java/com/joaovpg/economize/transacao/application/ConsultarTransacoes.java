@@ -10,6 +10,7 @@ import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorren
 import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.OrigemItemConsulta;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
@@ -171,22 +172,7 @@ public class ConsultarTransacoes {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     var itens = new ArrayList<Item>();
-    transacoes.stream()
-        .map(
-            transacao ->
-                new Item(
-                    OrigemItemConsulta.TRANSACAO_SIMPLES,
-                    transacao.getId(),
-                    transacao.getSituacao(),
-                    transacao.getDescricao(),
-                    transacao.getObservacoes(),
-                    impacto(transacao.getTipo(), transacao.getValor()),
-                    transacao.getDataFinanceira(),
-                    transacao.getEfetivadoEm(),
-                    transacao.getConta().getId(),
-                    transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
-                    null))
-        .forEach(itens::add);
+    transacoes.stream().map(ConsultarTransacoes::itemTransacaoSimples).forEach(itens::add);
 
     transferencias.forEach(
         transferencia -> {
@@ -313,6 +299,39 @@ public class ConsultarTransacoes {
         && (categoriaIds.isEmpty() || categoriaIds.contains(resultado.categoriaId()));
   }
 
+  public static Item itemTransacaoSimples(Transacao transacao) {
+    return new Item(
+        OrigemItemConsulta.TRANSACAO_SIMPLES,
+        transacao.getId(),
+        transacao.getSituacao(),
+        transacao.getDescricao(),
+        transacao.getObservacoes(),
+        transacao.getTipo() == TipoTransacao.RECEITA
+            ? transacao.getValor()
+            : transacao.getValor().negate(),
+        transacao.getDataFinanceira(),
+        transacao.getEfetivadoEm(),
+        transacao.getConta().getId(),
+        transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        IdentidadeEdicaoTransacao.chave(transacao.getId()),
+        IdentidadeEdicaoTransacao.versao(transacao.getVersao()),
+        transacao.getTipo(),
+        false,
+        false,
+        null,
+        null,
+        List.of());
+  }
+
   private Item item(ResolverOcorrenciasRecorrentes.Resultado resultado) {
     return new Item(
         resultado.origem(),
@@ -333,7 +352,15 @@ public class ConsultarTransacoes {
         resultado.totalParcelas(),
         resultado.rrule(),
         resultado.inicioRecorrencia(),
-        resultado.politicaDataOcorrencia());
+        resultado.politicaDataOcorrencia(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of());
   }
 
   private Periodo resolverPeriodo(YearMonth inicio, YearMonth fim) {
@@ -358,10 +385,6 @@ public class ConsultarTransacoes {
 
   private BigDecimal monetario(BigDecimal valor) {
     return valor.setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY);
-  }
-
-  private BigDecimal impacto(TipoTransacao tipo, BigDecimal valor) {
-    return tipo == TipoTransacao.RECEITA ? valor : valor.negate();
   }
 
   private RecursoNaoEncontradoException recursoNaoEncontrado() {
@@ -411,7 +434,15 @@ public class ConsultarTransacoes {
       Integer totalParcelas,
       String rrule,
       LocalDate inicioRecorrencia,
-      PoliticaDataOcorrencia politicaDataOcorrencia) {
+      PoliticaDataOcorrencia politicaDataOcorrencia,
+      String chaveEdicao,
+      String versaoEdicao,
+      TipoTransacao tipo,
+      Boolean virtual,
+      Boolean protegida,
+      Object serie,
+      Object repeticao,
+      List<String> escoposDisponiveis) {
     public Item(
         OrigemItemConsulta origem,
         UUID operacaoId,
@@ -443,7 +474,15 @@ public class ConsultarTransacoes {
           null,
           null,
           null,
-          null);
+          null,
+          null,
+          null,
+          null,
+          origem == OrigemItemConsulta.TRANSFERENCIA ? false : null,
+          origem == OrigemItemConsulta.TRANSFERENCIA ? false : null,
+          null,
+          null,
+          List.of());
     }
   }
 }

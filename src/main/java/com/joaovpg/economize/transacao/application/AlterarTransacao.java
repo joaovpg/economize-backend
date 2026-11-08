@@ -6,6 +6,7 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
@@ -35,7 +36,7 @@ public class AlterarTransacao {
   }
 
   @Transactional
-  public Resultado executar(UUID transacaoId, Comando comando) {
+  public ConsultarTransacoes.Item executar(UUID transacaoId, Comando comando) {
     validar(comando);
 
     var transacao =
@@ -44,6 +45,10 @@ public class AlterarTransacao {
             .orElseThrow(() -> recursoNaoEncontrado("Transacao"));
 
     validarTransacaoSimples(transacao);
+    if (!IdentidadeEdicaoTransacao.versao(transacao.getVersao()).equals(comando.versaoEdicao())) {
+      throw new RegraNegocioException(
+          "VERSAO_DESATUALIZADA", "A transacao foi alterada por outra operacao");
+    }
 
     var conta = resolverConta(transacao, comando);
     var categoria = resolverCategoria(transacao, comando);
@@ -78,17 +83,8 @@ public class AlterarTransacao {
       transacao.setEfetivadoEm(Instant.now());
     }
 
-    return new Resultado(
-        transacao.getId(),
-        transacao.getTipo(),
-        transacao.getSituacao(),
-        transacao.getDescricao(),
-        transacao.getObservacoes(),
-        transacao.getValor(),
-        transacao.getDataFinanceira(),
-        transacao.getEfetivadoEm(),
-        conta.getId(),
-        categoria == null ? null : categoria.getId());
+    transacaoRepository.flush();
+    return ConsultarTransacoes.itemTransacaoSimples(transacao);
   }
 
   private ContaFinanceira resolverConta(Transacao transacao, Comando comando) {
@@ -126,12 +122,22 @@ public class AlterarTransacao {
     if (transacaoRepository.estaVinculadaATransferencia(transacao.getId())
         || transacao.getGrupoRecorrencia() != null
         || transacao.getSegmentoRecorrencia() != null) {
-      throw new RegraNegocioException(
-          "TRANSACAO_NAO_SIMPLES", "A transacao deve ser manipulada pelo modulo de origem");
+      throw recursoNaoEncontrado("Transacao");
     }
   }
 
   private void validar(Comando comando) {
+    if (comando.escopoInformado()) {
+      throw new RegraNegocioException(
+          "ESCOPO_INVALIDO", "Escopo nao se aplica a transacao simples");
+    }
+    if (comando.resolucaoInformada()) {
+      throw new RegraNegocioException(
+          "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao nao se aplica a transacao simples");
+    }
+    if (comando.repeticaoInformada()) {
+      throw new RegraNegocioException("REPETICAO_INVALIDA", "Repeticao ainda nao suportada");
+    }
     if (comando.contaId() == null) {
       throw new RegraNegocioException("CONTA_OBRIGATORIA", "Conta obrigatoria");
     }
@@ -169,6 +175,10 @@ public class AlterarTransacao {
 
   public record Comando(
       UUID usuarioId,
+      String versaoEdicao,
+      boolean repeticaoInformada,
+      boolean escopoInformado,
+      boolean resolucaoInformada,
       UUID contaId,
       UUID categoriaId,
       SituacaoTransacao situacao,
@@ -177,16 +187,4 @@ public class AlterarTransacao {
       String observacoes,
       BigDecimal valor,
       LocalDate dataFinanceira) {}
-
-  public record Resultado(
-      UUID id,
-      TipoTransacao tipo,
-      SituacaoTransacao situacao,
-      String descricao,
-      String observacoes,
-      BigDecimal valor,
-      LocalDate dataFinanceira,
-      Instant efetivadoEm,
-      UUID contaId,
-      UUID categoriaId) {}
 }

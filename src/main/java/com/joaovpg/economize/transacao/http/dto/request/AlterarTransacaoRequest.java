@@ -1,11 +1,14 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +24,7 @@ public record AlterarTransacaoRequest(
     @Schema(
             description = "Categoria opcional; envie null para remover a categoria.",
             nullable = true)
+        @JsonProperty(required = true)
         UUID categoriaId,
     @Schema(
             description =
@@ -44,7 +48,9 @@ public record AlterarTransacaoRequest(
             examples = {"Compra do mês"},
             maxLength = 2000,
             nullable = true)
-        @Size(max = 2000) String observacoes,
+        @JsonProperty(required = true)
+        @Size(max = 2000) @Pattern(regexp = "(?s).*\\S.*")
+        String observacoes,
     @Schema(
             description = "Valor positivo da operação, com até 4 casas decimais.",
             examples = {"250.75"},
@@ -57,4 +63,29 @@ public record AlterarTransacaoRequest(
             examples = {"2026-02-10"},
             format = "date",
             required = true)
-        @NotNull LocalDate dataFinanceira) {}
+        @NotNull LocalDate dataFinanceira,
+    @Schema(description = "Versão opaca obtida na consulta ou escrita anterior.", required = true)
+        @NotBlank String versaoEdicao,
+    @Schema(
+            description = "Deve ser null para transação simples.",
+            ref = "#/components/schemas/NullValue",
+            required = true)
+        @JsonProperty(required = true)
+        JsonNode repeticao,
+    @Schema(description = "Não se aplica a transação simples e deve ser omitido.") JsonNode escopo,
+    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+        JsonNode politicaSobreposicao,
+    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+        JsonNode resolucoesSobreposicao) {
+  public boolean repeticaoInformada() {
+    return repeticao != null && !repeticao.isNull();
+  }
+
+  public boolean escopoInformado() {
+    return escopo != null;
+  }
+
+  public boolean resolucaoInformada() {
+    return politicaSobreposicao != null || resolucoesSobreposicao != null;
+  }
+}

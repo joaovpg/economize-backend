@@ -1,0 +1,3599 @@
+{
+  "info": {
+    "_postman_id": "3b7462c2-6882-4eeb-a691-72ed97e0654e",
+    "name": "Economize — fluxos de transações, contas e categorias",
+    "description": "Testa os contratos novos de transações unificadas (simples, repetição, parcelamento, conversões e prévia de edição), contas, categorias e transferências.\n\nComo usar:\n1. Importe esta collection. Não é preciso environment: as variáveis (baseUrl e as que as requisições criam) ficam na própria collection.\n2. Suba a API em http://localhost:8080 (perfil local com PostgreSQL).\n3. Execute a collection inteira no Collection Runner, na ordem das pastas. Cada execução cria um usuário novo e encadeia IDs e versões por variáveis da collection.\n\nAutenticação: o cookie de sessão é gerenciado pelo cookie jar do Postman. Escritas enviam X-CSRF-Token com o csrfToken devolvido no login.\n\nFalhas esperadas enquanto o contrato não estiver completo: a prévia de edição e as conversões dependem das issues 04 a 06; transferências dependem da issue 07 (versaoEdicao e transferenciaId).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const metodo = pm.request.method;",
+          "const csrf = pm.collectionVariables.get('csrfToken');",
+          "if (['POST', 'PUT', 'DELETE'].includes(metodo) && csrf && !pm.request.headers.has('X-CSRF-Token')) {",
+          "  pm.request.headers.add({ key: 'X-CSRF-Token', value: csrf });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "academiaChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academiaVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aluguelChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aluguelVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assinaturaChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assinaturaVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "categoriaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflitoChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflitoVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflitoVersaoOriginal",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "contaAId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "contaBId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "csrfToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cursoChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cursoVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataFimRecorrencia",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataSerie",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataSerie7",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataSerieMes2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataSerieMes2Dia7",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "diaSemanaSerie",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hoje",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "internetChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "internetVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mesAtual",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mesDataSerie",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mesFim",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nome",
+      "value": "Usuário de teste Postman",
+      "type": "string"
+    },
+    {
+      "key": "notebookChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notebookVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "receitaChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "receitaVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sAChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sAChave2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sAColisao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sAVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sAVersao2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sBChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sBChave2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sBColisao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sBVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sBVersao2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "senha",
+      "value": "senha-segura-123",
+      "type": "string"
+    },
+    {
+      "key": "simplesChave",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "simplesId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "simplesVersao",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "simplesVersaoOriginal",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "timezone",
+      "value": "America/Sao_Paulo",
+      "type": "string"
+    },
+    {
+      "key": "transferenciaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transferenciaVersao",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticação",
+      "description": "Cadastro cria a sessão; login devolve o csrfToken usado nas escritas.",
+      "item": [
+        {
+          "name": "Cadastrar usuário",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autenticacao/cadastro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autenticacao",
+                "cadastro"
+              ]
+            },
+            "description": "Cria um usuário novo com e-mail único por execução e inicia a sessão (cookies).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"{{nome}}\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"timezone\": \"{{timezone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const pad = (n) => String(n).padStart(2, '0');",
+                  "const fmt = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());",
+                  "const mes = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1);",
+                  "const em = (y, m, d) => new Date(y, m, d, 12);",
+                  "const hoje = new Date(); hoje.setHours(12, 0, 0, 0);",
+                  "const base = new Date(hoje); base.setDate(base.getDate() + 3);",
+                  "const s = base.getDate() <= 5 ? em(base.getFullYear(), base.getMonth(), 5) : em(base.getFullYear(), base.getMonth() + 1, 5);",
+                  "const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];",
+                  "const fim = new Date(hoje); fim.setDate(fim.getDate() + 330);",
+                  "const vars = {",
+                  "  email: 'economize.teste.' + Date.now() + '@example.com',",
+                  "  hoje: fmt(hoje),",
+                  "  mesAtual: mes(hoje),",
+                  "  mesFim: mes(em(hoje.getFullYear(), hoje.getMonth() + 11, 1)),",
+                  "  dataSerie: fmt(s),",
+                  "  dataSerie7: fmt(em(s.getFullYear(), s.getMonth(), 7)),",
+                  "  dataSerieMes2: fmt(em(s.getFullYear(), s.getMonth() + 1, 5)),",
+                  "  dataSerieMes2Dia7: fmt(em(s.getFullYear(), s.getMonth() + 1, 7)),",
+                  "  mesDataSerie: mes(s),",
+                  "  diaSemanaSerie: dias[s.getDay()],",
+                  "  dataFimRecorrencia: fmt(fim),",
+                  "};",
+                  "pm.collectionVariables.unset('academiaChave'); pm.collectionVariables.unset('academiaVersao'); pm.collectionVariables.unset('aluguelChave'); pm.collectionVariables.unset('aluguelVersao'); pm.collectionVariables.unset('assinaturaChave'); pm.collectionVariables.unset('assinaturaVersao'); pm.collectionVariables.unset('categoriaId'); pm.collectionVariables.unset('conflitoChave'); pm.collectionVariables.unset('conflitoVersao'); pm.collectionVariables.unset('conflitoVersaoOriginal'); pm.collectionVariables.unset('contaAId'); pm.collectionVariables.unset('contaBId'); pm.collectionVariables.unset('csrfToken'); pm.collectionVariables.unset('cursoChave'); pm.collectionVariables.unset('cursoVersao'); pm.collectionVariables.unset('internetChave'); pm.collectionVariables.unset('internetVersao'); pm.collectionVariables.unset('notebookChave'); pm.collectionVariables.unset('notebookVersao'); pm.collectionVariables.unset('receitaChave'); pm.collectionVariables.unset('receitaVersao'); pm.collectionVariables.unset('sAChave'); pm.collectionVariables.unset('sAChave2'); pm.collectionVariables.unset('sAColisao'); pm.collectionVariables.unset('sAVersao'); pm.collectionVariables.unset('sAVersao2'); pm.collectionVariables.unset('sBChave'); pm.collectionVariables.unset('sBChave2'); pm.collectionVariables.unset('sBColisao'); pm.collectionVariables.unset('sBVersao'); pm.collectionVariables.unset('sBVersao2'); pm.collectionVariables.unset('simplesChave'); pm.collectionVariables.unset('simplesId'); pm.collectionVariables.unset('simplesVersao'); pm.collectionVariables.unset('simplesVersaoOriginal'); pm.collectionVariables.unset('transferenciaId'); pm.collectionVariables.unset('transferenciaVersao');",
+                  "Object.entries(vars).forEach(([k, v]) => pm.collectionVariables.set(k, v));",
+                  "pm.collectionVariables.set('csrfToken', '');",
+                  "pm.request.headers.remove('X-CSRF-Token');",
+                  "try { pm.cookies.jar().clear(pm.collectionVariables.get('baseUrl'), () => {}); } catch (e) {}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"usuário cadastrado com cookie de sessão\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "      pm.expect(j.email).to.eql(pm.collectionVariables.get('email'));",
+                  "      pm.expect(pm.cookies.has('economize_token')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autenticacao/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autenticacao",
+                "login"
+              ]
+            },
+            "description": "Valida credenciais e devolve csrfToken, que é enviado em X-CSRF-Token nas escritas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"login devolve csrfToken e cookie de sessão\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "        pm.expect(j.csrfToken).to.be.a('string').and.not.be.empty;",
+                  "        pm.expect(pm.cookies.has('economize_token')).to.be.true;",
+                  "});",
+                  "{ const v = j.csrfToken; if (v !== undefined && v !== null) pm.collectionVariables.set('csrfToken', v); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Contas",
+      "description": "Criação, listagem e edição de contas. Duas contas BRL para cobrir transferências.",
+      "item": [
+        {
+          "name": "Criar conta corrente (A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Conta corrente A\",\n  \"moeda\": \"BRL\",\n  \"saldoInicial\": 1000,\n  \"dataSaldoInicial\": \"{{hoje}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"conta criada ativa com saldo inicial\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "        pm.expect(j.ativo).to.be.true;",
+                  "        pm.expect(j.moeda).to.eql('BRL');",
+                  "        pm.expect(j.saldoInicial).to.eql(1000);",
+                  "});",
+                  "{ const v = j.id; if (v !== undefined && v !== null) pm.collectionVariables.set('contaAId', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar conta poupança (B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Conta poupança B\",\n  \"moeda\": \"BRL\",\n  \"saldoInicial\": 0,\n  \"dataSaldoInicial\": \"{{hoje}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"segunda conta criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "pm.expect(j.ativo).to.be.true;",
+                  "});",
+                  "{ const v = j.id; if (v !== undefined && v !== null) pm.collectionVariables.set('contaBId', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar contas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contas"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"listagem contém as duas contas\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const ids = j.map((c) => c.id);",
+                  "      pm.expect(ids).to.include(pm.collectionVariables.get('contaAId'));",
+                  "      pm.expect(ids).to.include(pm.collectionVariables.get('contaBId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar conta A",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contas/{{contaAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contas",
+                "{{contaAId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Conta corrente A (editada)\",\n  \"moeda\": \"BRL\",\n  \"saldoInicial\": 1000,\n  \"dataSaldoInicial\": \"{{hoje}}\",\n  \"ativo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"nome atualizado\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.nome).to.eql('Conta corrente A (editada)');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Categorias",
+      "description": "Categorias usadas nas transações de despesa e receita.",
+      "item": [
+        {
+          "name": "Criar categoria",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categorias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categorias"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Alimentação\",\n  \"cor\": \"#E67E22\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"categoria criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "pm.expect(j.ativo).to.be.true;",
+                  "});",
+                  "{ const v = j.id; if (v !== undefined && v !== null) pm.collectionVariables.set('categoriaId', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar categorias",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categorias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categorias"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"listagem contém a categoria\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.map((c) => c.id)).to.include(pm.collectionVariables.get('categoriaId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar categoria",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categorias/{{categoriaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categorias",
+                "{{categoriaId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Alimentação e mercado\",\n  \"cor\": \"#D35400\",\n  \"categoriaPaiId\": null,\n  \"ativo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"nome e cor atualizados\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.nome).to.eql('Alimentação e mercado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Transações simples",
+      "description": "Despesa e receita sem repetição: criar, listar, editar, efetivar, replanejar e excluir.",
+      "item": [
+        {
+          "name": "Criar despesa simples efetivada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"EFETIVADA\",\n  \"descricao\": \"Mercado\",\n  \"observacoes\": \"Compra do mês\",\n  \"valor\": 250.75,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"despesa criada com valor negativo e instante de efetivação\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "        pm.expect(j.tipo).to.eql('DESPESA');",
+                  "        pm.expect(j.valor).to.eql(-250.75);",
+                  "        pm.expect(j.efetivadoEm).to.not.be.null;",
+                  "        pm.expect(j.virtual).to.be.false;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesVersao', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesVersaoOriginal', v); }",
+                  "{ const v = j.operacaoId; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesId', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar receita simples planejada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"RECEITA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Freelance\",\n  \"observacoes\": null,\n  \"valor\": 3000,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"receita criada planejada com valor positivo\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "        pm.expect(j.tipo).to.eql('RECEITA');",
+                  "        pm.expect(j.valor).to.eql(3000);",
+                  "        pm.expect(j.efetivadoEm).to.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar extrato do período",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"extrato traz despesa, receita e saldo inicial\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Mercado' && i.valor === -250.75)).to.be.true;",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Freelance' && i.valor === 3000)).to.be.true;",
+                  "    pm.expect(j.itens.some((i) => i.origem === 'SALDO_INICIAL_CONTA' && i.valor === 1000)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar despesa simples",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{simplesChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{simplesChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"EFETIVADA\",\n  \"descricao\": \"Mercado editado\",\n  \"observacoes\": \"Compra do mês (corrigida)\",\n  \"valor\": 260,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{simplesVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"valor e descrição atualizados; nova versão\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.valor).to.eql(-260);",
+                  "      pm.expect(j.descricao).to.eql('Mercado editado');",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('simplesVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Efetivar receita planejada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{receitaChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{receitaChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"RECEITA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"EFETIVADA\",\n  \"descricao\": \"Freelance\",\n  \"observacoes\": null,\n  \"valor\": 3000,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{receitaVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"efetivadoEm preenchido\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.efetivadoEm).to.not.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replanejar receita efetivada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{receitaChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{receitaChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"RECEITA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Freelance\",\n  \"observacoes\": null,\n  \"valor\": 3000,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{receitaVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"replanejar limpa efetivadoEm\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.efetivadoEm).to.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('receitaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir despesa simples",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{simplesId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{simplesId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"transação excluída\", () => {",
+                  "pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Recorrências",
+      "description": "Repetição mensal indefinida, semanal com término em data e diária com término após N ocorrências.",
+      "item": [
+        {
+          "name": "Criar despesa recorrente mensal sem término (Aluguel)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Aluguel\",\n  \"observacoes\": null,\n  \"valor\": 1500,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"série criada com repetição estruturada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "        pm.expect(j.repeticao.frequencia).to.eql('MENSAL');",
+                  "        pm.expect(j.repeticao.termino.tipo).to.eql('INDEFINIDO');",
+                  "        pm.expect(j.serie.dataOriginal).to.eql(pm.collectionVariables.get('dataSerie'));",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar receita recorrente semanal com término em data (Salário)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"RECEITA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Salário\",\n  \"observacoes\": null,\n  \"valor\": 5000,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"SEMANAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [\n      \"{{diaSemanaSerie}}\"\n    ],\n    \"diasMes\": [],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"EM_DATA\",\n      \"data\": \"{{dataFimRecorrencia}}\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"série semanal com término em data\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "      pm.expect(j.repeticao.frequencia).to.eql('SEMANAL');",
+                  "      pm.expect(j.repeticao.termino.tipo).to.eql('EM_DATA');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar despesa diária com término após 5 ocorrências (Assinatura)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Assinatura\",\n  \"observacoes\": null,\n  \"valor\": 19.9,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": {\n    \"frequencia\": \"DIARIA\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"APOS_OCORRENCIAS\",\n      \"quantidade\": 5\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"término por quantidade preservado\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "      pm.expect(j.repeticao.termino.quantidade).to.eql(5);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('assinaturaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('assinaturaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar extrato com ocorrências virtuais",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrências expandidas no período\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Aluguel' && i.virtual === true && i.dataFinanceira === pm.collectionVariables.get('dataSerie'))).to.be.true;",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Salário' && i.origem === 'TRANSACAO_RECORRENTE')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alterar uma ocorrência do Aluguel (SOMENTE_ESTA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{aluguelChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{aluguelChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Aluguel\",\n  \"observacoes\": null,\n  \"valor\": 1600,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{aluguelVersao}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrência individualizada e protegida\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.valor).to.eql(-1600);",
+                  "      pm.expect(j.protegida).to.be.true;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelVersao', v); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Parcelamento",
+      "description": "Parcelas numeradas: criação do início, retomada em parcela intermediária, listagem e alteração de valor.",
+      "item": [
+        {
+          "name": "Criar parcelamento 1 de 6 (Notebook)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Notebook\",\n  \"observacoes\": null,\n  \"valor\": 400,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 6\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"parcelamento com numeração 1 de 6\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "      pm.expect(j.serie.numeroParcela).to.eql(1);",
+                  "      pm.expect(j.serie.totalParcelas).to.eql(6);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar parcelamento retomado 4 de 6 (Celular)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Celular\",\n  \"observacoes\": null,\n  \"valor\": 150,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 4,\n      \"totalParcelas\": 6\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"numeração inicial 4 preservada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "      pm.expect(j.serie.numeroParcela).to.eql(4);",
+                  "      pm.expect(j.serie.totalParcelas).to.eql(6);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar parcelas no período",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"parcelas aparecem com número e total\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Notebook' && i.numeroParcela === 1 && i.totalParcelas === 6)).to.be.true;",
+                  "    pm.expect(j.itens.some((i) => i.descricao === 'Celular' && i.numeroParcela === 4)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alterar valor de uma parcela (SOMENTE_ESTA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{notebookChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{notebookChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Notebook\",\n  \"observacoes\": null,\n  \"valor\": 410,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 6\n    }\n  },\n  \"versaoEdicao\": \"{{notebookVersao}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"valor alterado, numeração mantida\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.valor).to.eql(-410);",
+                  "      pm.expect(j.serie.numeroParcela).to.eql(1);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookVersao', v); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Conversões entre tipos",
+      "description": "Matriz de conversão da spec: simples, repetição e parcelamento em ambos os escopos.",
+      "item": [
+        {
+          "name": "Criar despesa simples para virar repetição (Academia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Academia\",\n  \"observacoes\": null,\n  \"valor\": 120,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"simples sem repetição\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "pm.expect(j.repeticao).to.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar despesa simples para virar parcelamento (Curso)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Curso\",\n  \"observacoes\": null,\n  \"valor\": 800,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"simples sem repetição\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar recorrência auxiliar (Internet)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Internet\",\n  \"observacoes\": null,\n  \"valor\": 99.9,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"série mensal criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Simples → repetição (Academia vira mensal)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{academiaChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{academiaChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Academia\",\n  \"observacoes\": null,\n  \"valor\": 120,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{academiaVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"transação agora é repetição\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.repeticao.frequencia).to.eql('MENSAL');",
+                  "      pm.expect(j.serie).to.not.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Simples → parcelamento (Curso vira 1 de 4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{cursoChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{cursoChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Curso\",\n  \"observacoes\": null,\n  \"valor\": 800,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 4\n    }\n  },\n  \"versaoEdicao\": \"{{cursoVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"transação agora é parcelamento de 4\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.serie.totalParcelas).to.eql(4);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Série → simples, SOMENTE_ESTA (Academia)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{academiaChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{academiaChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Academia\",\n  \"observacoes\": null,\n  \"valor\": 120,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{academiaVersao}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrência vira simples e origem TRANSACAO_SIMPLES\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.repeticao).to.be.null;",
+                  "      pm.expect(j.origem).to.eql('TRANSACAO_SIMPLES');",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('academiaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Série → simples, ESTA_E_AS_PROXIMAS (Assinatura)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{assinaturaChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{assinaturaChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Assinatura\",\n  \"observacoes\": null,\n  \"valor\": 19.9,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{assinaturaVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"selecionada vira simples e a projeção antiga é encerrada\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.repeticao).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Série → nova repetição, SOMENTE_ESTA (Aluguel)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{aluguelChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{aluguelChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Aluguel\",\n  \"observacoes\": null,\n  \"valor\": 1600,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"APOS_OCORRENCIAS\",\n      \"quantidade\": 3\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{aluguelVersao}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrência inicia nova série com término após 3\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.repeticao.termino.tipo).to.eql('APOS_OCORRENCIAS');",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('aluguelVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Série → repetição, ESTA_E_AS_PROXIMAS (Internet)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{internetChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{internetChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Internet\",\n  \"observacoes\": null,\n  \"valor\": 89.9,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"EM_DATA\",\n      \"data\": \"{{dataFimRecorrencia}}\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{internetVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"novo trecho de repetição com término em data\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.repeticao.termino.tipo).to.eql('EM_DATA');",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Série → parcelamento, ESTA_E_AS_PROXIMAS (Internet 1 de 3)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{internetChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{internetChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Internet\",\n  \"observacoes\": null,\n  \"valor\": 89.9,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 3\n    }\n  },\n  \"versaoEdicao\": \"{{internetVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"novo trecho parcelado de 3\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.serie.totalParcelas).to.eql(3);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('internetVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parcelamento → parcelamento, mesmo total (Curso 1 de 4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{cursoChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{cursoChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Curso\",\n  \"observacoes\": null,\n  \"valor\": 800,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 4\n    }\n  },\n  \"versaoEdicao\": \"{{cursoVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"numeração e total preservados\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.serie.numeroParcela).to.eql(1);",
+                  "      pm.expect(j.serie.totalParcelas).to.eql(4);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parcelamento → parcelamento, total alterado para 5 (Curso)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{cursoChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{cursoChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": null,\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Curso\",\n  \"observacoes\": null,\n  \"valor\": 800,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"AJUSTAR_ULTIMO_DIA_MES\",\n    \"termino\": null,\n    \"parcelamento\": {\n      \"numeroPrimeiraParcela\": 1,\n      \"totalParcelas\": 5\n    }\n  },\n  \"versaoEdicao\": \"{{cursoVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"novo plano com total 5\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.serie.totalParcelas).to.eql(5);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('cursoVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parcelamento → recorrência, ESTA_E_AS_PROXIMAS (Notebook)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{notebookChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{notebookChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Notebook\",\n  \"observacoes\": null,\n  \"valor\": 410,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{notebookVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"parcelamento convertido em recorrência indefinida\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.repeticao.termino.tipo).to.eql('INDEFINIDO');",
+                  "      pm.expect(j.serie.totalParcelas).to.be.null;",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('notebookVersao', v); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sobreposição: Streaming A (MANTER_SOMENTE_PRESERVADA)",
+      "description": "Ocorrência 2 deslocada do dia 5 para o dia 7; alteração recria o dia 7 e a colisão é resolvida com MANTER_SOMENTE_PRESERVADA.",
+      "item": [
+        {
+          "name": "Criar série Streaming A (mensal, dia 5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming A\",\n  \"observacoes\": null,\n  \"valor\": 90,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"série criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sAChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sAVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ocorrências de Streaming A",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrências 1 e 2 localizadas\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const c1 = j.itens.find((i) => i.descricao === 'Streaming A' && i.dataFinanceira === pm.collectionVariables.get('dataSerie'));",
+                  "      const c2 = j.itens.find((i) => i.descricao === 'Streaming A' && i.dataFinanceira === pm.collectionVariables.get('dataSerieMes2'));",
+                  "      pm.expect(c1).to.not.be.undefined;",
+                  "      pm.expect(c2).to.not.be.undefined;",
+                  "      pm.collectionVariables.set('sAChave', c1.chaveEdicao);",
+                  "      pm.collectionVariables.set('sAVersao', c1.versaoEdicao);",
+                  "      pm.collectionVariables.set('sAChave2', c2.chaveEdicao);",
+                  "      pm.collectionVariables.set('sAVersao2', c2.versaoEdicao);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mover ocorrência 2 de Streaming A para o dia 7 (SOMENTE_ESTA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sAChave2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sAChave2}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming A\",\n  \"observacoes\": null,\n  \"valor\": 90,\n  \"dataFinanceira\": \"{{dataSerieMes2Dia7}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{sAVersao2}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrência protegida na data 7\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "        pm.expect(j.protegida).to.be.true;",
+                  "        pm.expect(j.dataFinanceira).to.eql(pm.collectionVariables.get('dataSerieMes2Dia7'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ocorrências de Streaming A após a alteração",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"versão da primeira ocorrência atualizada\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const c1 = j.itens.find((i) => i.descricao === 'Streaming A' && i.dataFinanceira === pm.collectionVariables.get('dataSerie'));",
+                  "      pm.expect(c1).to.not.be.undefined;",
+                  "      pm.collectionVariables.set('sAChave', c1.chaveEdicao);",
+                  "      pm.collectionVariables.set('sAVersao', c1.versaoEdicao);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prévia: regra mensal no dia 7 (Streaming A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sAChave}}/previa-edicao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sAChave}}",
+                "previa-edicao"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alteracao\": {\n    \"tipo\": \"DESPESA\",\n    \"contaId\": \"{{contaAId}}\",\n    \"categoriaId\": \"{{categoriaId}}\",\n    \"situacao\": \"PLANEJADA\",\n    \"descricao\": \"Streaming A\",\n    \"observacoes\": null,\n    \"valor\": 95,\n    \"dataFinanceira\": \"{{dataSerie7}}\",\n    \"repeticao\": {\n      \"frequencia\": \"MENSAL\",\n      \"intervalo\": 1,\n      \"diasSemana\": [],\n      \"diasMes\": [\n        7\n      ],\n      \"politicaData\": \"PADRAO\",\n      \"termino\": {\n        \"tipo\": \"INDEFINIDO\"\n      },\n      \"parcelamento\": null\n    },\n    \"versaoEdicao\": \"{{sAVersao}}\",\n    \"escopo\": \"ESTA_E_AS_PROXIMAS\"\n  },\n  \"periodo\": {\n    \"inicio\": \"{{mesDataSerie}}\",\n    \"fim\": \"{{mesFim}}\"\n  },\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"prévia aponta colisão no dia 7 do mês seguinte\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "        const s = j.sobreposicoes.find((x) => x.dataFinanceira === pm.collectionVariables.get('dataSerieMes2Dia7'));",
+                  "        pm.expect(s, 'sobreposição esperada').to.not.be.undefined;",
+                  "        pm.expect(s.chavesPreservadas.length).to.be.above(0);",
+                  "        pm.expect(s.resolucoesPermitidas).to.include.members(['MANTER_SOMENTE_PRESERVADA', 'MANTER_AMBAS']);",
+                  "        pm.collectionVariables.set('sAColisao', s.dataOriginalCandidata);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aplicar alteração de Streaming A (MANTER_SOMENTE_PRESERVADA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sAChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sAChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming A\",\n  \"observacoes\": null,\n  \"valor\": 95,\n  \"dataFinanceira\": \"{{dataSerie7}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      7\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{sAVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"alteração aplicada\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.valor).to.eql(-95);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sAChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sAVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar resolução da colisão de Streaming A",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrências no dia 7 = 1\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const n = j.itens.filter((i) => i.descricao === 'Streaming A' && i.dataFinanceira === pm.collectionVariables.get('dataSerieMes2Dia7')).length;",
+                  "      pm.expect(n).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sobreposição: Streaming B (MANTER_AMBAS)",
+      "description": "Ocorrência 2 deslocada do dia 5 para o dia 7; alteração recria o dia 7 e a colisão é resolvida com MANTER_AMBAS.",
+      "item": [
+        {
+          "name": "Criar série Streaming B (mensal, dia 5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming B\",\n  \"observacoes\": null,\n  \"valor\": 90,\n  \"dataFinanceira\": \"{{dataSerie}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"série criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sBChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sBVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ocorrências de Streaming B",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrências 1 e 2 localizadas\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const c1 = j.itens.find((i) => i.descricao === 'Streaming B' && i.dataFinanceira === pm.collectionVariables.get('dataSerie'));",
+                  "      const c2 = j.itens.find((i) => i.descricao === 'Streaming B' && i.dataFinanceira === pm.collectionVariables.get('dataSerieMes2'));",
+                  "      pm.expect(c1).to.not.be.undefined;",
+                  "      pm.expect(c2).to.not.be.undefined;",
+                  "      pm.collectionVariables.set('sBChave', c1.chaveEdicao);",
+                  "      pm.collectionVariables.set('sBVersao', c1.versaoEdicao);",
+                  "      pm.collectionVariables.set('sBChave2', c2.chaveEdicao);",
+                  "      pm.collectionVariables.set('sBVersao2', c2.versaoEdicao);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mover ocorrência 2 de Streaming B para o dia 7 (SOMENTE_ESTA)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sBChave2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sBChave2}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming B\",\n  \"observacoes\": null,\n  \"valor\": 90,\n  \"dataFinanceira\": \"{{dataSerieMes2Dia7}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      5\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{sBVersao2}}\",\n  \"escopo\": \"SOMENTE_ESTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrência protegida na data 7\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "        pm.expect(j.protegida).to.be.true;",
+                  "        pm.expect(j.dataFinanceira).to.eql(pm.collectionVariables.get('dataSerieMes2Dia7'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ocorrências de Streaming B após a alteração",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"versão da primeira ocorrência atualizada\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const c1 = j.itens.find((i) => i.descricao === 'Streaming B' && i.dataFinanceira === pm.collectionVariables.get('dataSerie'));",
+                  "      pm.expect(c1).to.not.be.undefined;",
+                  "      pm.collectionVariables.set('sBChave', c1.chaveEdicao);",
+                  "      pm.collectionVariables.set('sBVersao', c1.versaoEdicao);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prévia: regra mensal no dia 7 (Streaming B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sBChave}}/previa-edicao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sBChave}}",
+                "previa-edicao"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alteracao\": {\n    \"tipo\": \"DESPESA\",\n    \"contaId\": \"{{contaAId}}\",\n    \"categoriaId\": \"{{categoriaId}}\",\n    \"situacao\": \"PLANEJADA\",\n    \"descricao\": \"Streaming B\",\n    \"observacoes\": null,\n    \"valor\": 95,\n    \"dataFinanceira\": \"{{dataSerie7}}\",\n    \"repeticao\": {\n      \"frequencia\": \"MENSAL\",\n      \"intervalo\": 1,\n      \"diasSemana\": [],\n      \"diasMes\": [\n        7\n      ],\n      \"politicaData\": \"PADRAO\",\n      \"termino\": {\n        \"tipo\": \"INDEFINIDO\"\n      },\n      \"parcelamento\": null\n    },\n    \"versaoEdicao\": \"{{sBVersao}}\",\n    \"escopo\": \"ESTA_E_AS_PROXIMAS\"\n  },\n  \"periodo\": {\n    \"inicio\": \"{{mesDataSerie}}\",\n    \"fim\": \"{{mesFim}}\"\n  },\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"prévia aponta colisão no dia 7 do mês seguinte\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "        const s = j.sobreposicoes.find((x) => x.dataFinanceira === pm.collectionVariables.get('dataSerieMes2Dia7'));",
+                  "        pm.expect(s, 'sobreposição esperada').to.not.be.undefined;",
+                  "        pm.expect(s.chavesPreservadas.length).to.be.above(0);",
+                  "        pm.expect(s.resolucoesPermitidas).to.include.members(['MANTER_SOMENTE_PRESERVADA', 'MANTER_AMBAS']);",
+                  "        pm.collectionVariables.set('sBColisao', s.dataOriginalCandidata);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aplicar alteração de Streaming B (MANTER_AMBAS)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{sBChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{sBChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Streaming B\",\n  \"observacoes\": null,\n  \"valor\": 95,\n  \"dataFinanceira\": \"{{dataSerie7}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [\n      7\n    ],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  },\n  \"versaoEdicao\": \"{{sBVersao}}\",\n  \"escopo\": \"ESTA_E_AS_PROXIMAS\",\n  \"politicaSobreposicao\": \"MANTER_SOMENTE_PRESERVADA\",\n  \"resolucoesSobreposicao\": [\n    {\n      \"dataOriginalCandidata\": \"{{sBColisao}}\",\n      \"resolucao\": \"MANTER_AMBAS\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"alteração aplicada\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "pm.expect(j.valor).to.eql(-95);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sBChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('sBVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar resolução da colisão de Streaming B",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"ocorrências no dia 7 = 2\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      const n = j.itens.filter((i) => i.descricao === 'Streaming B' && i.dataFinanceira === pm.collectionVariables.get('dataSerieMes2Dia7')).length;",
+                  "      pm.expect(n).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Transferências",
+      "description": "Transferência entre as contas A e B: criar, listar pelos dois lados, editar e excluir.",
+      "item": [
+        {
+          "name": "Criar transferência efetivada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transferencias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferencias"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contaOrigemId\": \"{{contaAId}}\",\n  \"contaDestinoId\": \"{{contaBId}}\",\n  \"situacao\": \"EFETIVADA\",\n  \"descricao\": \"Reserva\",\n  \"observacoes\": null,\n  \"valor\": 200,\n  \"dataFinanceira\": \"{{hoje}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"transferência criada com ID e versão\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "        pm.expect(j.transferenciaId).to.be.a('string');",
+                  "        pm.expect(j.efetivadoEm).to.not.be.null;",
+                  "});",
+                  "{ const v = j.transferenciaId; if (v !== undefined && v !== null) pm.collectionVariables.set('transferenciaId', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('transferenciaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar transferência pelos dois lados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes?inicio={{mesAtual}}&fim={{mesFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ],
+              "query": [
+                {
+                  "key": "inicio",
+                  "value": "{{mesAtual}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{mesFim}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"lado de origem negativo e lado de destino positivo\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "    pm.expect(j.itens.some((i) => i.origem === 'TRANSFERENCIA' && i.valor === -200)).to.be.true;",
+                  "    pm.expect(j.itens.some((i) => i.origem === 'TRANSFERENCIA' && i.valor === 200)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar transferência (PLANEJADA, valor 250)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transferencias/{{transferenciaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferencias",
+                "{{transferenciaId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contaOrigemId\": \"{{contaAId}}\",\n  \"contaDestinoId\": \"{{contaBId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Reserva\",\n  \"observacoes\": null,\n  \"valor\": 250,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"versaoEdicao\": \"{{transferenciaVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"valor atualizado e efetivadoEm limpo\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "      pm.expect(j.valor).to.eql(250);",
+                  "      pm.expect(j.efetivadoEm).to.be.null;",
+                  "});",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('transferenciaVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir transferência",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transferencias/{{transferenciaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferencias",
+                "{{transferenciaId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"transferência excluída\", () => {",
+                  "pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Erros essenciais",
+      "description": "Um caso por código: 400 (campo ausente), 404 (chave inexistente), 409 (versão obsoleta) e 422 (repetição inválida).",
+      "item": [
+        {
+          "name": "400 — descrição ausente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"observacoes\": null,\n  \"valor\": 10,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"400 DADOS_INVALIDOS em problem+json\", () => {",
+                  "pm.response.to.have.status(400);",
+                  "      pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 — chave de edição inexistente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/chave-inexistente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "chave-inexistente"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"x\",\n  \"observacoes\": null,\n  \"valor\": 1,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"versao-invalida\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"404 RECURSO_NAO_ENCONTRADO\", () => {",
+                  "pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar transação para teste de versão",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Conflito\",\n  \"observacoes\": null,\n  \"valor\": 10,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"criada\", () => {",
+                  "pm.response.to.have.status(201);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('conflitoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('conflitoVersao', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('conflitoVersaoOriginal', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atualizar com versão atual",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{conflitoChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{conflitoChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Conflito\",\n  \"observacoes\": null,\n  \"valor\": 11,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{conflitoVersao}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"aceita a versão atual\", () => {",
+                  "pm.response.to.have.status(200);",
+                  "});",
+                  "{ const v = j.chaveEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('conflitoChave', v); }",
+                  "{ const v = j.versaoEdicao; if (v !== undefined && v !== null) pm.collectionVariables.set('conflitoVersao', v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 — atualizar com versão obsoleta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes/{{conflitoChave}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes",
+                "{{conflitoChave}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Conflito\",\n  \"observacoes\": null,\n  \"valor\": 12,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": null,\n  \"versaoEdicao\": \"{{conflitoVersaoOriginal}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"409 VERSAO_DESATUALIZADA\", () => {",
+                  "pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 — mensal sem dias do mês",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transacoes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"DESPESA\",\n  \"contaId\": \"{{contaAId}}\",\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"situacao\": \"PLANEJADA\",\n  \"descricao\": \"Inválida\",\n  \"observacoes\": null,\n  \"valor\": 10,\n  \"dataFinanceira\": \"{{hoje}}\",\n  \"repeticao\": {\n    \"frequencia\": \"MENSAL\",\n    \"intervalo\": 1,\n    \"diasSemana\": [],\n    \"diasMes\": [],\n    \"politicaData\": \"PADRAO\",\n    \"termino\": {\n      \"tipo\": \"INDEFINIDO\"\n    },\n    \"parcelamento\": null\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"422 REPETICAO_INVALIDA\", () => {",
+                  "pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. Encerramento",
+      "description": "Encerra a sessão ao final da execução.",
+      "item": [
+        {
+          "name": "Encerrar sessão",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autenticacao/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autenticacao",
+                "logout"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let j; try { j = pm.response.json(); } catch (e) { j = {}; }",
+                  "pm.test(\"sessão encerrada\", () => {",
+                  "pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

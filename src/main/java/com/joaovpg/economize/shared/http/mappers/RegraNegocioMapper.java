@@ -18,7 +18,7 @@ public class RegraNegocioMapper implements ExceptionMapper<RegraNegocioException
     return HttpProblem.builder()
         .withType(URI.create("urn:economize:problem:" + exception.codigo()))
         .withTitle("Regra de negocio violada")
-        .withStatus(422)
+        .withStatus("VERSAO_DESATUALIZADA".equals(exception.codigo()) ? 409 : 422)
         .withDetail(exception.getMessage())
         .withInstance(uriInfo.getRequestUri())
         .build()

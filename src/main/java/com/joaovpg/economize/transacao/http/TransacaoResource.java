@@ -2,6 +2,7 @@ package com.joaovpg.economize.transacao.http;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
@@ -10,7 +11,7 @@ import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
-import com.joaovpg.economize.transacao.http.dto.response.TransacaoResponse;
+import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
 import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -78,18 +79,22 @@ public class TransacaoResource implements TransacaoResourceApi {
   }
 
   @Override
-  public TransacaoResponse alterar(UUID id, AlterarTransacaoRequest request) {
+  public ItemResponse alterar(String chaveEdicao, AlterarTransacaoRequest request) {
+    var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
     var resultado = alterarTransacao.executar(id, comando);
     return mapper.toResponse(resultado);
   }
 
   @Override
-  public RestResponse<TransacaoResponse> criar(CriarTransacaoRequest request) {
+  public RestResponse<ItemResponse> criar(CriarTransacaoRequest request) {
     var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
     var resultado = criarTransacao.executar(comando);
     var response = mapper.toResponse(resultado);
-    return RestResponse.status(RestResponse.Status.CREATED, response);
+
+    return RestResponse.ResponseBuilder.create(RestResponse.Status.CREATED, response)
+        .location(java.net.URI.create("/transacoes/" + response.chaveEdicao()))
+        .build();
   }
 
   @Override

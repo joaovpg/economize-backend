@@ -3,7 +3,7 @@ package com.joaovpg.economize.transacao.http;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
-import com.joaovpg.economize.transacao.http.dto.response.TransacaoResponse;
+import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -120,7 +120,7 @@ public interface TransacaoResourceApi {
           List<String> categoriaIds);
 
   @PUT
-  @Path("/{id}")
+  @Path("/{chaveEdicao}")
   @RolesAllowed("usuario")
   @Tag(name = "Transações")
   @Operation(
@@ -130,28 +130,32 @@ public interface TransacaoResourceApi {
           "Atualiza uma transação simples do usuário autenticado. Transações vinculadas a "
               + "transferências, recorrências ou parcelamentos devem ser alteradas pelo recurso "
               + "de origem. Ao mudar para `EFETIVADA`, a data financeira não pode estar no futuro; "
-              + "ao voltar para `PLANEJADA`, `efetivadoEm` é limpo.")
+              + "ao voltar para `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, "
+              + "inclusive os anuláveis e `repeticao: null`, e a `versaoEdicao` vigente.")
   @APIResponseSchema(
-      value = TransacaoResponse.class,
+      value = ItemResponse.class,
       responseCode = "200",
       responseDescription = "Transação atualizada com sucesso.")
   @APIResponse(
       responseCode = "404",
       description = "Transação ou recurso relacionado não encontrado.")
   @APIResponse(
+      responseCode = "409",
+      description = "VERSAO_DESATUALIZADA: a transação foi alterada por outra operação.")
+  @APIResponse(
       responseCode = "422",
       description =
-          "Regra violada; exemplos: TRANSACAO_NAO_SIMPLES, DATA_FINANCEIRA_FUTURA ou "
+          "Regra violada; exemplos: ESCOPO_INVALIDO, DATA_FINANCEIRA_FUTURA ou "
               + "MOEDA_CONTA_INCOMPATIVEL.")
-  TransacaoResponse alterar(
-      @PathParam("id")
+  ItemResponse alterar(
+      @PathParam("chaveEdicao")
           @Parameter(
-              name = "id",
+              name = "chaveEdicao",
               in = ParameterIn.PATH,
-              description = "Identificador da transação simples.",
+              description = "Chave opaca da transação simples.",
               required = true,
-              schema = @Schema(implementation = UUID.class))
-          UUID id,
+              schema = @Schema(type = SchemaType.STRING))
+          String chaveEdicao,
       @Valid @RequestBody(
               description = "Novo estado da transação simples.",
               content =
@@ -171,12 +175,12 @@ public interface TransacaoResourceApi {
               + "é opcional; a conta e a categoria, quando informada, devem pertencer ao usuário. "
               + "Uma transação `EFETIVADA` não pode ter data financeira futura.")
   @APIResponseSchema(
-      value = TransacaoResponse.class,
+      value = ItemResponse.class,
       responseCode = "201",
       responseDescription = "Transação criada com sucesso.")
   @APIResponse(responseCode = "404", description = "Conta ou categoria informada não encontrada.")
   @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
-  RestResponse<TransacaoResponse> criar(
+  RestResponse<ItemResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transação simples.",
               content =
@@ -190,8 +194,8 @@ public interface TransacaoResourceApi {
                                   "{\"contaId\":\"00000000-0000-0000-0000-000000000001\","
                                       + "\"categoriaId\":\"00000000-0000-0000-0000-000000000002\","
                                       + "\"situacao\":\"EFETIVADA\",\"tipo\":\"DESPESA\","
-                                      + "\"descricao\":\"Mercado\",\"valor\":250.75,"
-                                      + "\"dataFinanceira\":\"2026-02-10\"}")))
+                                      + "\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":250.75,"
+                                      + "\"dataFinanceira\":\"2026-02-10\",\"repeticao\":null}")))
           CriarTransacaoRequest request);
 
   @DELETE

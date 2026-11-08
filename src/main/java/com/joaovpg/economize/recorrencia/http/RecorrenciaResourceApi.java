@@ -41,6 +41,7 @@ public interface RecorrenciaResourceApi {
   @Tag(name = "Recorrências")
   @Operation(
       operationId = "criarRecorrencia",
+      deprecated = true,
       summary = "Cria uma recorrência ou parcelamento",
       description =
           "A operação é escolhida por `tipoGrupo`. Com `RECORRENCIA`, gera ocorrências pela "
@@ -97,6 +98,7 @@ public interface RecorrenciaResourceApi {
   @Tag(name = "Recorrências")
   @Operation(
       operationId = "alterarOcorrenciaRecorrente",
+      deprecated = true,
       summary = "Altera uma ocorrência recorrente",
       description =
           "`escopo=ONLY_THIS` altera somente a ocorrência selecionada. "
@@ -153,6 +155,7 @@ public interface RecorrenciaResourceApi {
   @Tag(name = "Recorrências")
   @Operation(
       operationId = "efetivarOcorrenciaRecorrente",
+      deprecated = true,
       summary = "Efetiva uma ocorrência recorrente",
       description =
           "Materializa a ocorrência virtual como uma transação efetivada. O corpo é opcional: "
@@ -201,6 +204,7 @@ public interface RecorrenciaResourceApi {
   @Tag(name = "Recorrências")
   @Operation(
       operationId = "excluirOcorrenciaRecorrente",
+      deprecated = true,
       summary = "Exclui uma ocorrência recorrente",
       description =
           "Por padrão, `escopo=ONLY_THIS` suprime somente a ocorrência selecionada. "

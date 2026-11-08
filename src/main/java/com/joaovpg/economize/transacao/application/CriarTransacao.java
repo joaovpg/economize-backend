@@ -38,7 +38,7 @@ public class CriarTransacao {
   }
 
   @Transactional
-  public Resultado executar(Comando comando) {
+  public ConsultarTransacoes.Item executar(Comando comando) {
     validar(comando);
     var usuario =
         usuarioRepository
@@ -77,20 +77,13 @@ public class CriarTransacao {
     transacao.setEfetivadoEm(
         comando.situacao() == SituacaoTransacao.EFETIVADA ? Instant.now() : null);
     transacaoRepository.persist(transacao);
-    return new Resultado(
-        transacao.getId(),
-        transacao.getTipo(),
-        transacao.getSituacao(),
-        transacao.getDescricao(),
-        transacao.getObservacoes(),
-        transacao.getValor(),
-        transacao.getDataFinanceira(),
-        transacao.getEfetivadoEm(),
-        conta.getId(),
-        categoria == null ? null : categoria.getId());
+    return ConsultarTransacoes.itemTransacaoSimples(transacao);
   }
 
   private void validar(Comando comando) {
+    if (comando.repeticaoInformada()) {
+      throw new RegraNegocioException("REPETICAO_INVALIDA", "Repeticao ainda nao suportada");
+    }
     if (comando.situacao() == null) {
       throw new RegraNegocioException(
           "SITUACAO_TRANSACAO_INVALIDA", "Situacao da transacao invalida");
@@ -125,6 +118,7 @@ public class CriarTransacao {
 
   public record Comando(
       UUID usuarioId,
+      boolean repeticaoInformada,
       UUID contaId,
       UUID categoriaId,
       SituacaoTransacao situacao,
@@ -133,16 +127,4 @@ public class CriarTransacao {
       String observacoes,
       BigDecimal valor,
       LocalDate dataFinanceira) {}
-
-  public record Resultado(
-      UUID id,
-      TipoTransacao tipo,
-      SituacaoTransacao situacao,
-      String descricao,
-      String observacoes,
-      BigDecimal valor,
-      LocalDate dataFinanceira,
-      java.time.Instant efetivadoEm,
-      UUID contaId,
-      UUID categoriaId) {}
 }

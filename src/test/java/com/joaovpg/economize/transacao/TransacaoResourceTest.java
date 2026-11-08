@@ -36,6 +36,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +132,275 @@ class TransacaoResourceTest {
   }
 
   @Test
+  void criaTransacaoSimplesComContratoUnificado() {
+    given()
+        .auth()
+        .oauth2(autenticar())
+        .contentType("application/json")
+        .body(
+            """
+            {"contaId":"%s","categoriaId":null,"situacao":"PLANEJADA",
+             "tipo":"DESPESA","descricao":"Mercado","observacoes":null,
+             "valor":125.45,"dataFinanceira":"2026-07-26","repeticao":null}
+            """
+                .formatted(contaId))
+        .when()
+        .post("/api/transacoes")
+        .then()
+        .statusCode(201)
+        .header("Location", notNullValue())
+        .body("origem", equalTo("TRANSACAO_SIMPLES"))
+        .body("valor", equalTo(-125.45f))
+        .body("chaveEdicao", matchesPattern("^[A-Za-z0-9_-]+$"))
+        .body("versaoEdicao", notNullValue());
+  }
+
+  @Test
+  void editaComVersaoERecusaEscritaDesatualizada() {
+    var token = autenticar();
+    var corpo =
+        """
+        {"contaId":"%s","categoriaId":null,"situacao":"PLANEJADA",
+         "tipo":"DESPESA","descricao":"Mercado","observacoes":null,
+         "valor":125.45,"dataFinanceira":"2026-07-26","repeticao":null}
+        """
+            .formatted(contaId);
+    var criada =
+        given()
+            .auth()
+            .oauth2(token)
+            .contentType("application/json")
+            .body(corpo)
+            .when()
+            .post("/api/transacoes")
+            .then()
+            .statusCode(201)
+            .extract();
+    String chave = criada.path("chaveEdicao");
+    String versao = criada.path("versaoEdicao");
+    org.junit.jupiter.api.Assertions.assertTrue(
+        criada.header("Location").endsWith("/api/transacoes/" + chave));
+    given()
+        .auth()
+        .oauth2(token)
+        .queryParam("inicio", "2026-07")
+        .queryParam("fim", "2026-07")
+        .when()
+        .get("/api/transacoes")
+        .then()
+        .statusCode(200)
+        .body("itens[0].chaveEdicao", equalTo(chave))
+        .body("itens[0].versaoEdicao", equalTo(versao))
+        .body("itens[0].tipo", equalTo("DESPESA"));
+    var item =
+        given()
+            .auth()
+            .oauth2(token)
+            .queryParam("inicio", "2026-07")
+            .queryParam("fim", "2026-07")
+            .when()
+            .get("/api/transacoes")
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getMap("itens[0]");
+    assertEquals(criada.jsonPath().getMap("$"), item);
+    var alteracao =
+        corpo
+            .replace("Mercado", "Padaria")
+            .replace(
+                "\"repeticao\":null", "\"repeticao\":null,\"versaoEdicao\":\"" + versao + "\"");
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(alteracao)
+        .when()
+        .put("/api/transacoes/" + chave)
+        .then()
+        .statusCode(200)
+        .body("descricao", equalTo("Padaria"))
+        .body("chaveEdicao", equalTo(chave))
+        .body("versaoEdicao", not(equalTo(versao)));
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(alteracao)
+        .when()
+        .put("/api/transacoes/" + chave)
+        .then()
+        .statusCode(409)
+        .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"));
+  }
+
+  @Test
+  void rejeitaCorposIncompletosEDesconhecidosNoContratoUnificado() {
+    var token = autenticar();
+    var corpo =
+        """
+        {"contaId":"%s","categoriaId":null,"situacao":"PLANEJADA",
+         "tipo":"DESPESA","descricao":"Mercado","observacoes":null,
+         "valor":125.45,"dataFinanceira":"2026-07-26","repeticao":null}
+        """
+            .formatted(contaId);
+    for (var invalido :
+        java.util.List.of(
+            corpo.replace("\"categoriaId\":null,", ""),
+            corpo.replace("\"observacoes\":null,", ""),
+            corpo.replace(",\"repeticao\":null", ""),
+            corpo.replace("\"repeticao\":null", "\"repeticao\":null,\"extra\":true"),
+            corpo.replace("\"observacoes\":null", "\"observacoes\":\"  \""),
+            "{json invalido")) {
+      given()
+          .auth()
+          .oauth2(token)
+          .contentType("application/json")
+          .body(invalido)
+          .when()
+          .post("/api/transacoes")
+          .then()
+          .statusCode(400)
+          .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+    }
+  }
+
+  @Test
+  void duasEdicoesConcorrentesNaoSobrescrevemUmaAOutra() throws Exception {
+    var token = autenticar();
+    var corpo =
+        """
+        {"contaId":"%s","categoriaId":null,"situacao":"PLANEJADA",
+         "tipo":"DESPESA","descricao":"Original","observacoes":null,
+         "valor":125.45,"dataFinanceira":"2026-07-26","repeticao":null}
+        """
+            .formatted(contaId);
+    var criada =
+        given()
+            .auth()
+            .oauth2(token)
+            .contentType("application/json")
+            .body(corpo)
+            .when()
+            .post("/api/transacoes")
+            .then()
+            .statusCode(201)
+            .extract();
+    String chave = criada.path("chaveEdicao");
+    String versao = criada.path("versaoEdicao");
+    var inicio = new java.util.concurrent.CountDownLatch(1);
+    try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+      var respostas = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+      for (var descricao : java.util.List.of("Primeira", "Segunda")) {
+        var alteracao =
+            corpo
+                .replace("Original", descricao)
+                .replace(
+                    "\"repeticao\":null", "\"repeticao\":null,\"versaoEdicao\":\"" + versao + "\"");
+        respostas.add(
+            executor.submit(
+                () -> {
+                  inicio.await();
+                  return given()
+                      .auth()
+                      .oauth2(token)
+                      .contentType("application/json")
+                      .body(alteracao)
+                      .when()
+                      .put("/api/transacoes/" + chave)
+                      .statusCode();
+                }));
+      }
+      inicio.countDown();
+      var codigos =
+          Stream.of(respostas.get(0).get(), respostas.get(1).get())
+              .sorted()
+              .toList();
+      assertEquals(java.util.List.of(200, 409), codigos);
+    }
+  }
+
+  @Test
+  void rejeitaChavesAlheiasEOpcoesInaplicaveis() {
+    var token = autenticar();
+    var corpo =
+        """
+        {"contaId":"%s","categoriaId":null,"situacao":"PLANEJADA",
+         "tipo":"DESPESA","descricao":"Original","observacoes":null,
+         "valor":125.45,"dataFinanceira":"2026-07-26","repeticao":null}
+        """
+            .formatted(contaId);
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(corpo.replace("\"repeticao\":null", "\"repeticao\":{}"))
+        .when()
+        .post("/api/transacoes")
+        .then()
+        .statusCode(422)
+        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
+    var criada =
+        given()
+            .auth()
+            .oauth2(token)
+            .contentType("application/json")
+            .body(corpo)
+            .when()
+            .post("/api/transacoes")
+            .then()
+            .statusCode(201)
+            .extract();
+    String chave = criada.path("chaveEdicao");
+    String versao = criada.path("versaoEdicao");
+    var alteracao =
+        corpo.replace(
+            "\"repeticao\":null", "\"repeticao\":null,\"versaoEdicao\":\"" + versao + "\"");
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(alteracao.replace(versao, "  "))
+        .when()
+        .put("/api/transacoes/" + chave)
+        .then()
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+    for (var par :
+        java.util.List.of(
+            new String[] {"escopo", "ESCOPO_INVALIDO"},
+            new String[] {"resolucoesSobreposicao", "RESOLUCAO_SOBREPOSICAO_INVALIDA"})) {
+      var invalida =
+          alteracao.replace("\"repeticao\":null", "\"repeticao\":null,\"" + par[0] + "\":null");
+      given()
+          .auth()
+          .oauth2(token)
+          .contentType("application/json")
+          .body(invalida)
+          .when()
+          .put("/api/transacoes/" + chave)
+          .then()
+          .statusCode(422)
+          .body("type", equalTo("urn:economize:problem:" + par[1]));
+    }
+    for (var par :
+        java.util.List.of(
+            new String[] {token, "invalida"}, new String[] {autenticarOutroUsuario(), chave})) {
+      given()
+          .auth()
+          .oauth2(par[0])
+          .contentType("application/json")
+          .body(alteracao)
+          .when()
+          .put("/api/transacoes/" + par[1])
+          .then()
+          .statusCode(404)
+          .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
+    }
+  }
+
+  @Test
   void criaTransacaoPlanejadaParaUsuarioAutenticado() {
     String token = autenticar();
 
@@ -139,7 +410,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "tipo":"DESPESA",
@@ -153,7 +424,7 @@ class TransacaoResourceTest {
         .post("/api/transacoes")
         .then()
         .statusCode(201)
-        .body("id", notNullValue())
+        .body("operacaoId", notNullValue())
         .body("situacao", equalTo("PLANEJADA"))
         .body("tipo", equalTo("DESPESA"))
         .body("descricao", equalTo("Mercado"))
@@ -250,7 +521,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "tipo":"DESPESA",
               "descricao":"Mercado",
@@ -273,7 +544,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "status":"PLANEJADA",
@@ -297,7 +568,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "tipo":"DESPESA",
@@ -358,7 +629,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "tipo":"TRANSFERENCIA",
@@ -382,7 +653,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "tipo":"DESPESA",
@@ -463,7 +734,11 @@ class TransacaoResourceTest {
   void excluiFisicamenteTransacaoPlanejadaERejeitaNovaExclusao() {
     var token = autenticar();
     UUID transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
 
     excluirTransacao(token, transacaoId).statusCode(204);
     excluirTransacao(token, transacaoId)
@@ -485,7 +760,7 @@ class TransacaoResourceTest {
             .statusCode(201)
             .extract()
             .jsonPath()
-            .getUUID("id");
+            .getUUID("operacaoId");
 
     excluirTransacao(token, transacaoId).statusCode(204);
 
@@ -508,7 +783,7 @@ class TransacaoResourceTest {
             .statusCode(201)
             .extract()
             .jsonPath()
-            .getUUID("id");
+            .getUUID("operacaoId");
 
     excluirTransacao(autenticar(), transacaoId)
         .statusCode(404)
@@ -542,7 +817,11 @@ class TransacaoResourceTest {
   void rejeitaExclusaoDeTransacaoVinculadaARecorrencia() {
     var token = autenticar();
     UUID transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
     QuarkusTransaction.requiringNew()
         .run(
             () -> {
@@ -570,7 +849,11 @@ class TransacaoResourceTest {
   void alteraTodosOsCamposMutaveisEEfetivaTransacao() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
     var hoje = LocalDate.now(FUSO_USUARIO);
 
     alterarTransacao(
@@ -585,7 +868,7 @@ class TransacaoResourceTest {
             "987.6543",
             hoje)
         .statusCode(200)
-        .body("id", equalTo(transacaoId.toString()))
+        .body("operacaoId", equalTo(transacaoId.toString()))
         .body("contaId", equalTo(contaSecundariaId.toString()))
         .body("categoriaId", equalTo(categoriaId.toString()))
         .body("situacao", equalTo("EFETIVADA"))
@@ -603,7 +886,7 @@ class TransacaoResourceTest {
     var ontem = LocalDate.now(FUSO_USUARIO).minusDays(1);
     var respostaCriacao =
         criarTransacaoEfetivada(token, "DESPESA", ontem, categoriaId).statusCode(201).extract();
-    var transacaoId = respostaCriacao.jsonPath().getUUID("id");
+    var transacaoId = respostaCriacao.jsonPath().getUUID("operacaoId");
     var efetivadoEmOriginal =
         QuarkusTransaction.requiringNew()
             .call(() -> transacaoRepository.findById(transacaoId).getEfetivadoEm());
@@ -633,7 +916,7 @@ class TransacaoResourceTest {
     var hoje = LocalDate.now(FUSO_USUARIO);
     var respostaCriacao =
         criarTransacaoEfetivada(token, "DESPESA", hoje, null).statusCode(201).extract();
-    var transacaoId = respostaCriacao.jsonPath().getUUID("id");
+    var transacaoId = respostaCriacao.jsonPath().getUUID("operacaoId");
     var efetivadoEmOriginal =
         QuarkusTransaction.requiringNew()
             .call(() -> transacaoRepository.findById(transacaoId).getEfetivadoEm());
@@ -681,7 +964,7 @@ class TransacaoResourceTest {
             .statusCode(201)
             .extract()
             .jsonPath()
-            .getUUID("id");
+            .getUUID("operacaoId");
     QuarkusTransaction.requiringNew()
         .run(
             () -> {
@@ -709,7 +992,11 @@ class TransacaoResourceTest {
   void rejeitaNovasAssociacoesInativasEPreservaEstadoAnterior() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
 
     alterarTransacao(
             token,
@@ -742,7 +1029,11 @@ class TransacaoResourceTest {
   void rejeitaDataFuturaAoEfetivarEDataAnteriorAoSaldoDaNovaConta() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
 
     alterarTransacao(
             token,
@@ -785,7 +1076,7 @@ class TransacaoResourceTest {
             .statusCode(201)
             .extract()
             .jsonPath()
-            .getUUID("id");
+            .getUUID("operacaoId");
     alterarTransacao(
             autenticar(),
             transacaoAlheiaId,
@@ -818,15 +1109,19 @@ class TransacaoResourceTest {
             null,
             "10.0000",
             LocalDate.now(FUSO_USUARIO))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:TRANSACAO_NAO_SIMPLES"));
+        .statusCode(404)
+        .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
   }
 
   @Test
   void rejeitaTipoTransferenciaEExigeEstadoCompletoNaAlteracao() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
 
     alterarTransacao(
             token,
@@ -855,7 +1150,11 @@ class TransacaoResourceTest {
   void rejeitaRecursosInexistentesOuAlheiosNaAlteracao() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
     var hoje = LocalDate.now(FUSO_USUARIO);
 
     alterarTransacao(
@@ -920,7 +1219,7 @@ class TransacaoResourceTest {
             .statusCode(201)
             .extract()
             .jsonPath()
-            .getUUID("id");
+            .getUUID("operacaoId");
     QuarkusTransaction.requiringNew()
         .run(() -> categoriaRepository.findById(categoriaId).setAtivo(false));
 
@@ -943,7 +1242,11 @@ class TransacaoResourceTest {
   void rejeitaAlteracaoDeTransacaoVinculadaARecorrencia() {
     var token = autenticar();
     var transacaoId =
-        criarTransacao(token, "2026-07-26").statusCode(201).extract().jsonPath().getUUID("id");
+        criarTransacao(token, "2026-07-26")
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getUUID("operacaoId");
     QuarkusTransaction.requiringNew()
         .run(
             () -> {
@@ -968,8 +1271,8 @@ class TransacaoResourceTest {
             null,
             "10.0000",
             LocalDate.now(FUSO_USUARIO))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:TRANSACAO_NAO_SIMPLES"));
+        .statusCode(404)
+        .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
   }
 
   @Test
@@ -1015,7 +1318,7 @@ class TransacaoResourceTest {
         .body("itens", hasSize(1))
         .body("itens[0].origem", equalTo("SALDO_INICIAL_CONTA"))
         .body("itens[0].operacaoId", equalTo(contaSecundariaId.toString()))
-        .body("itens[0]", not(hasKey("tipo")))
+        .body("itens[0].tipo", nullValue())
         .body("itens[0].situacao", nullValue())
         .body("itens[0].descricao", equalTo("Saldo inicial"))
         .body("itens[0].valor", equalTo(new BigDecimal("75.0000")))
@@ -1042,7 +1345,7 @@ class TransacaoResourceTest {
         .body("itens", hasSize(4))
         .body("itens[0].origem", equalTo("SALDO_INICIAL_CONTA"))
         .body("itens[1].descricao", equalTo("Receita efetivada"))
-        .body("itens[1]", not(hasKey("tipo")))
+        .body("itens[1].tipo", equalTo("RECEITA"))
         .body("itens[1].valor", equalTo(new BigDecimal("20.0000")))
         .body("itens[2].descricao", equalTo("Despesa efetivada"))
         .body("itens[2].valor", equalTo(new BigDecimal("-30.0000")))
@@ -1096,7 +1399,7 @@ class TransacaoResourceTest {
         .statusCode(200)
         .body("itens", hasSize(2))
         .body("itens[0].origem", equalTo("SALDO_INICIAL_CONTA"))
-        .body("itens[0]", not(hasKey("tipo")))
+        .body("itens[0].tipo", nullValue())
         .body("itens[0].valor", equalTo(new BigDecimal("-75.0000")))
         .body("itens[1].valor", equalTo(new BigDecimal("-10.0000")))
         .body("itens[1].descricao", equalTo("Movimento no inicio da conta"));
@@ -1417,7 +1720,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"categoriaId":null,"observacoes":null,
               "contaId":"%s",
               "situacao":"PLANEJADA",
               "tipo":"DESPESA",
@@ -1450,13 +1753,21 @@ class TransacaoResourceTest {
       LocalDate dataFinanceira) {
     var categoria = categoriaId == null ? "null" : "\"" + categoriaId + "\"";
     var observacoesJson = observacoes == null ? "null" : "\"" + observacoes + "\"";
+    var versao =
+        QuarkusTransaction.requiringNew()
+            .call(
+                () -> {
+                  var transacao = transacaoRepository.findById(transacaoId);
+                  return IdentidadeEdicaoTransacao.versao(
+                      transacao == null ? 0 : transacao.getVersao());
+                });
     return given()
         .auth()
         .oauth2(token)
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,
               "contaId":"%s",
               "categoriaId":%s,
               "situacao":"%s",
@@ -1464,7 +1775,8 @@ class TransacaoResourceTest {
               "descricao":"%s",
               "observacoes":%s,
               "valor":%s,
-              "dataFinanceira":"%s"
+              "dataFinanceira":"%s",
+              "versaoEdicao":"%s"
             }
             """
                 .formatted(
@@ -1475,9 +1787,10 @@ class TransacaoResourceTest {
                     descricao,
                     observacoesJson,
                     valor,
-                    dataFinanceira))
+                    dataFinanceira,
+                    versao))
         .when()
-        .put("/api/transacoes/{id}", transacaoId)
+        .put("/api/transacoes/{id}", IdentidadeEdicaoTransacao.chave(transacaoId))
         .then();
   }
 
@@ -1495,7 +1808,7 @@ class TransacaoResourceTest {
         .contentType("application/json")
         .body(
             """
-            {
+            {"repeticao":null,"observacoes":null,
               "contaId":"%s",
               "categoriaId":%s,
               "situacao":"EFETIVADA",

@@ -3,6 +3,7 @@ package com.joaovpg.economize.transacao.http.dto.response;
 import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import com.joaovpg.economize.transacao.OrigemItemConsulta;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
+import com.joaovpg.economize.transacao.TipoTransacao;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -137,5 +138,44 @@ public record ConsultaTransacoesResponse(
               description = "Política aplicada ao cálculo da data de ocorrência.",
               nullable = true,
               examples = {"PADRAO"})
-          PoliticaDataOcorrencia politicaDataOcorrencia) {}
+          PoliticaDataOcorrencia politicaDataOcorrencia,
+      @Schema(
+              description = "Identidade opaca para edição; nula para itens não editáveis.",
+              nullable = true,
+              required = true)
+          String chaveEdicao,
+      @Schema(
+              description = "Versão opaca necessária para edição; nula para itens não editáveis.",
+              nullable = true,
+              required = true)
+          String versaoEdicao,
+      @Schema(
+              description = "Tipo de transação, quando aplicável.",
+              nullable = true,
+              required = true)
+          TipoTransacao tipo,
+      @Schema(
+              description = "Indica ocorrência virtual; nulo para saldo inicial.",
+              nullable = true,
+              required = true)
+          Boolean virtual,
+      @Schema(
+              description = "Indica ocorrência protegida; nulo para saldo inicial.",
+              nullable = true,
+              required = true)
+          Boolean protegida,
+      @Schema(
+              description = "Metadados de série, quando aplicáveis.",
+              nullable = true,
+              required = true)
+          Object serie,
+      @Schema(
+              description = "Configuração de repetição; nula para transação simples.",
+              nullable = true,
+              required = true)
+          Object repeticao,
+      @Schema(
+              description = "Escopos de edição disponíveis; lista vazia para transação simples.",
+              required = true)
+          List<String> escoposDisponiveis) {}
 }
