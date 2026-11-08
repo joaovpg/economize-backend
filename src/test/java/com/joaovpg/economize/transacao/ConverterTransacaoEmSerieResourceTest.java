@@ -220,8 +220,7 @@ class ConverterTransacaoEmSerieResourceTest {
     alterar(
             token,
             chave,
-            corpoEdicao(
-                versao, "PLANEJADA", "2026-10-10", REPETICAO_MENSAL_DIA_10_INDEFINIDA, ""))
+            corpoEdicao(versao, "PLANEJADA", "2026-10-10", REPETICAO_MENSAL_DIA_10_INDEFINIDA, ""))
         .statusCode(200)
         .body("situacao", equalTo("PLANEJADA"))
         .body("efetivadoEm", nullValue())
