@@ -483,7 +483,7 @@ class AlterarOcorrenciaSerieResourceTest {
                 "null",
                 "PLANEJADA",
                 "2026-10-12",
-                "90"))
+                "90.0000"))
         .statusCode(200)
         .body("origem", equalTo("TRANSACAO_SIMPLES"))
         .body("protegida", equalTo(true))

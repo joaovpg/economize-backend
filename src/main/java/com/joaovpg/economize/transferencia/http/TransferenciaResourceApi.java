@@ -44,13 +44,18 @@ public interface TransferenciaResourceApi {
   @APIResponseSchema(
       value = TransferenciaResponse.class,
       responseCode = "201",
-      responseDescription = "Transferência criada com sucesso.")
+      responseDescription = "Transferência criada com sucesso; o header Location aponta para ela.")
+  @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: campo ausente, desconhecido ou formato inválido (categoriaId, repeticao"
+              + " e parcelamento não se aplicam a transferências).")
   @APIResponse(responseCode = "404", description = "Conta de origem ou destino não encontrada.")
   @APIResponse(
       responseCode = "422",
       description =
           "Regra violada; exemplos: CONTAS_TRANSFERENCIA_IGUAIS, "
-              + "MOEDAS_TRANSFERENCIA_DIFERENTES ou DATA_FINANCEIRA_FUTURA.")
+              + "DATA_FINANCEIRA_FUTURA ou DATA_FINANCEIRA_ANTERIOR_SALDO_INICIAL.")
   RestResponse<TransferenciaResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transferência.",
@@ -65,6 +70,7 @@ public interface TransferenciaResourceApi {
                                   "{\"contaOrigemId\":\"00000000-0000-0000-0000-000000000001\","
                                       + "\"contaDestinoId\":\"00000000-0000-0000-0000-000000000002\","
                                       + "\"situacao\":\"PLANEJADA\",\"descricao\":\"Reserva\","
+                                      + "\"observacoes\":null,"
                                       + "\"valor\":500.00,\"dataFinanceira\":\"2026-03-01\"}")))
           CriarTransferenciaRequest request);
 
@@ -75,16 +81,23 @@ public interface TransferenciaResourceApi {
       operationId = "alterarTransferencia",
       summary = "Altera uma transferência",
       description =
-          "Atualiza a transferência e os dois lados financeiros da operação. Mantém as regras de "
-              + "contas diferentes, mesma moeda e data financeira compatível com o saldo inicial; "
-              + "ao mudar para `PLANEJADA`, `efetivadoEm` é limpo.")
+          "Atualiza a transferência e os dois lados financeiros da operação. Exige `versaoEdicao`"
+              + " da leitura ou escrita anterior. Mantém as regras de contas diferentes, mesma"
+              + " moeda e data financeira compatível com o saldo inicial; ao mudar para"
+              + " `PLANEJADA`, `efetivadoEm` é limpo.")
   @APIResponseSchema(
       value = TransferenciaResponse.class,
       responseCode = "200",
       responseDescription = "Transferência atualizada com sucesso.")
   @APIResponse(
+      responseCode = "400",
+      description = "DADOS_INVALIDOS: campo ausente, desconhecido ou formato inválido.")
+  @APIResponse(
       responseCode = "404",
       description = "Transferência ou conta relacionada não encontrada.")
+  @APIResponse(
+      responseCode = "409",
+      description = "VERSAO_DESATUALIZADA: a transferência foi alterada por outra operação.")
   @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
   TransferenciaResponse alterar(
       @PathParam("id")

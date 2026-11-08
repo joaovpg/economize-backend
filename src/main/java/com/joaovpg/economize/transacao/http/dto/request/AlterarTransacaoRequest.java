@@ -69,10 +69,9 @@ public record AlterarTransacaoRequest(
         @NotBlank String versaoEdicao,
     @Schema(
             description =
-                "Repetição ou parcelamento; null mantém a transação simples ou, em ocorrência de"
-                    + " série com SOMENTE_ESTA, a torna simples.",
-            nullable = true,
-            required = true)
+                "Repetição ou parcelamento; null mantém a transação simples. Quando informada, a"
+                    + " transação simples passa a ser a primeira ocorrência da nova série.",
+            nullable = true)
         @JsonProperty(required = true)
         @Valid RepeticaoTransacaoRequest repeticao,
     @Schema(description = "Não se aplica a transação simples e deve ser omitido.") JsonNode escopo,
@@ -80,10 +79,6 @@ public record AlterarTransacaoRequest(
         JsonNode politicaSobreposicao,
     @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
         JsonNode resolucoesSobreposicao) {
-  public boolean repeticaoInformada() {
-    return repeticao != null;
-  }
-
   public boolean escopoInformado() {
     return escopo != null;
   }

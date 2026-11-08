@@ -45,7 +45,8 @@
 - Destino nova série (`repeticao` preenchida): a ocorrência original é suprimida, a linha materializada da origem é removida e a nova série é criada via `CriarSerieTransacao`. Se a ocorrência estava efetivada, a primeira ocorrência da nova série mantém `efetivadoEm`.
 - Revisão: o grupo de origem é bloqueado e incrementado a cada PUT/DELETE de ocorrência destacada (`AlterarTransacao` e `ExcluirTransacao` também incrementam a revisão da origem quando a simples tem `segmentoOrigem`).
 - Versão obsoleta: 409 `VERSAO_DESATUALIZADA`, comparando a revisão do grupo mais a versão do registro, sob bloqueio pessimista do grupo antes de qualquer gravação. Falhas de validação não deixam gravação parcial (testado).
-- `PUT` de transação simples passa a normalizar `valor` para 4 casas decimais (igual ao `POST`).
+- Ao converter ocorrência destacada (simples com `segmentoOrigem`) em série, os campos de origem são limpos para não violar a constraint `CK006_07`; a identidade passa a ser a da nova série.
+- Ocorrência destacada editada ou excluída pela rota simples incrementa a revisão do grupo de origem.
 - Testes: `AlterarOcorrenciaSerieResourceTest` (12 casos HTTP: projeção, materialização, supressão, saldo, efetivada, nova série, versão, propriedade, escopo, falha sem gravação, parcelas, exclusão de destacada) e `DestacarOcorrenciaSerieMigrationTest` (constraints da migration).
 
 **Decisões tomadas sem cobertura explícita do ticket**

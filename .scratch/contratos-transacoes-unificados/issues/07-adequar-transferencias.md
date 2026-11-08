@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Referências na spec** (`spec.md`):
 - Contratos HTTP: `POST /api/transferencias` e `PUT /api/transferencias/{transferenciaId}`
@@ -36,3 +36,13 @@
 
 **Como verificar:**
 - Testes HTTP com PostgreSQL real: criação, edição, contas de terceiros e inativas, concorrência e atomicidade.
+
+## Comments
+
+- Implementado sobre a V5 existente (transferência já tinha `@Version`, bloqueio pessimista e rejeição de campos desconhecidos via `fail-on-unknown-properties`). Acrescentado: `versaoEdicao` na escrita e na resposta (PUT exige; versão obsoleta retorna 409 `VERSAO_DESATUALIZADA` após o bloqueio); `transferenciaId` no lugar de `id`; `Location` absoluto no POST (201); `observacoes` obrigatória no PUT (chave presente, anulável), opcional no POST, conforme a spec.
+- Mapeamento de `DADOS_INVALIDOS` para `/transferencias` (campos desconhecidos e ausentes) estendido nos mappers de `transacao/http` e `shared/http/JsonProblemPostProcessor`. Os mappers ainda estão no pacote de transação; movê-los para `shared` fica fora deste ticket.
+- Flush antes de montar o resultado do PUT, para devolver a versão pós-atualização.
+- Migration `V9__adiar_verificacao_vinculos_lados_transferencia.sql`: as FKs compostas `FK007_04`/`FK007_05` passam a `DEFERRABLE INITIALLY DEFERRED`. Sem isso, trocar a conta de um lado falha, porque a FK exige a conta anterior até o commit. Coberta por `TransferenciaVinculosMigrationTest` e pelo teste HTTP de troca de conta.
+- Testes HTTP em `TransferenciaResourceTest`: contrato completo e Location, campos fora do contrato e ausentes, versão obsoleta, contas de terceiros/inativas/data do saldo, efetivação/correção/replanejamento com mesmo instante nos dois lados, leitura sem IDs internos, falha sem alteração parcial, concorrência com mesma versão (200/409).
+- Ajuste em `TransacaoResourceTest` (helper `criarTransferencia`): lê `transferenciaId`.
+- Não atendido: a regra de moedas diferentes (`MOEDAS_TRANSFERENCIA_DIFERENTES`) não é alcançável pela API, porque `ContaValidation.moeda` aceita apenas `BRL`. Não há teste HTTP para ela; a proteção existe na aplicação e no trigger `FN007_VALIDAR_TRANSFERENCIA`.

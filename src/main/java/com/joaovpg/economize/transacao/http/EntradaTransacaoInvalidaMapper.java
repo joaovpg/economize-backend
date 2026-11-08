@@ -20,7 +20,7 @@ public class EntradaTransacaoInvalidaMapper implements ExceptionMapper<Mismatche
 
   @Override
   public Response toResponse(MismatchedInputException exception) {
-    if (!uriInfo.getPath().matches("/?(?:api/)?transacoes(?:/.*)?")) {
+    if (!uriInfo.getPath().matches("/?(?:api/)?(?:transacoes|transferencias)(?:/.*)?")) {
       return new BuiltinMismatchedInputExceptionMapper().toResponse(exception);
     }
 

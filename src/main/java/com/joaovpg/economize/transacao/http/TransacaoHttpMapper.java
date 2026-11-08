@@ -26,7 +26,6 @@ import org.mapstruct.ValueMappings;
 interface TransacaoHttpMapper {
   CriarTransacao.Comando toCommand(UUID usuarioId, CriarTransacaoRequest request);
 
-  @Mapping(target = "repeticaoInformada", expression = "java(request.repeticaoInformada())")
   @Mapping(target = "escopoInformado", expression = "java(request.escopoInformado())")
   @Mapping(target = "resolucaoInformada", expression = "java(request.resolucaoInformada())")
   AlterarTransacao.Comando toCommand(UUID usuarioId, AlterarTransacaoRequest request);

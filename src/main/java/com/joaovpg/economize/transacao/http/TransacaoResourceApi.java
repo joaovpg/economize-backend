@@ -125,13 +125,16 @@ public interface TransacaoResourceApi {
   @Tag(name = "Transações")
   @Operation(
       operationId = "alterarTransacao",
-      summary = "Altera uma transação simples",
+      summary = "Altera uma transação simples ou a converte em série",
       description =
           "Atualiza uma transação simples do usuário autenticado. Transações vinculadas a "
-              + "transferências, recorrências ou parcelamentos devem ser alteradas pelo recurso "
-              + "de origem. Ao mudar para `EFETIVADA`, a data financeira não pode estar no futuro; "
+              + "transferências ou já pertencentes a uma série devem ser alteradas pelo recurso "
+              + "de origem. Com `repeticao` informada, a transação simples torna-se a primeira "
+              + "ocorrência de uma repetição ou parcelamento, sem cópia, e a resposta traz a nova "
+              + "chave. Ao mudar para `EFETIVADA`, a data financeira não pode estar no futuro; "
               + "ao voltar para `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, "
-              + "inclusive os anuláveis e `repeticao: null`, e a `versaoEdicao` vigente.")
+              + "inclusive os anuláveis e `repeticao` (`null` mantém a transação simples), e a "
+              + "`versaoEdicao` vigente.")
   @APIResponseSchema(
       value = ItemResponse.class,
       responseCode = "200",

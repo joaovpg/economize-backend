@@ -1,5 +1,6 @@
 package com.joaovpg.economize.transferencia.http.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.joaovpg.economize.transferencia.SituacaoTransferencia;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -34,9 +35,12 @@ public record AlterarTransferenciaRequest(
             required = true)
         @NotBlank @Size(max = 255) String descricao,
     @Schema(
-            description = "Observação opcional copiada para os dois lados.",
+            description =
+                "Observação copiada para os dois lados; envie null para removê-la. A chave é"
+                    + " obrigatória.",
             maxLength = 2000,
             nullable = true)
+        @JsonProperty(required = true)
         @Size(max = 2000) String observacoes,
     @Schema(
             description = "Valor positivo movimentado entre as contas, com até 4 casas decimais.",
@@ -50,4 +54,8 @@ public record AlterarTransferenciaRequest(
             examples = {"2026-03-01"},
             format = "date",
             required = true)
-        @NotNull LocalDate dataFinanceira) {}
+        @NotNull LocalDate dataFinanceira,
+    @Schema(
+            description = "Versão opaca obtida na leitura ou na escrita anterior da transferência.",
+            required = true)
+        @NotBlank String versaoEdicao) {}
