@@ -20,8 +20,9 @@
 - Versão obsoleta: `409 VERSAO_DESATUALIZADA`, sem dados financeiros.
 - Toda a conversão é atômica: falha não deixa transação parcialmente convertida.
 
-**Questão em aberto (decidir antes de implementar):**
-- A spec define colisão de sobreposição entre candidatas e ocorrências protegidas de uma série existente. Uma transação simples não pertence a série, então pode não haver colisão nesta conversão. A spec também diz que o par `politicaSobreposicao` + `resolucoesSobreposicao` é obrigatório quando a edição "cria um novo trecho". Falta dizer se converter simples em série conta como novo trecho. Enquanto isso não for definido, a issue deve ser tratada como bloqueada nesse ponto.
+**Decisão sobre a questão de sobreposição (registrada pelo orquestrador):**
+- Converter transação simples em repetição ou parcelamento **não** cria "novo trecho": não corta nem substitui uma série existente. Portanto o par `politicaSobreposicao` + `resolucoesSobreposicao` deve ser **omitido**; se enviado nessa edição, rejeitar com `400 DADOS_INVALIDOS`.
+- Não há ocorrências protegidas de série a colidir nesta conversão; a regra de sobreposição não se aplica aqui.
 
 **Estado observado no código** (em 2026-11-08):
 - Depende da issue 03, que ainda não existe. Não há caminho de conversão no código.

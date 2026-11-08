@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Unificar cadastro e edição de transações simples; 02: Consultar séries existentes com configuração estruturada.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Referências na spec** (`spec.md`):
 - Contratos HTTP: `POST /api/transacoes`
@@ -53,3 +53,7 @@
 **Como verificar:**
 - `.\mvnw.cmd -Dtest=TransacaoResourceTest test` e, para um caso isolado, `.\mvnw.cmd -Dtest=TransacaoResourceTest#metodo test`.
 - Antes de concluir: `.\mvnw.cmd verify -B`.
+
+## Comments
+
+Concluída na verificação de 2026-11-08 sobre `edacff1`: `verify` passa com 205 testes; `CriarRepeticaoTransacaoResourceTest` tem 68 testes cobrindo combinações válidas e inválidas (`rejeitaCombinacoesInvalidasComOCodigoDaEspecificacao`), término em data e após ocorrências, numeração de parcelas, ajuste de dias 29–31, efetivação materializada uma única vez, propriedade e atomicidade. A conferência foi feita pelos nomes e pelo resultado dos testes, não por revisão linha a linha da matriz completa.

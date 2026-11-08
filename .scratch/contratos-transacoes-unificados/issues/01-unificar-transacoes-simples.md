@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Referências na spec** (`spec.md`):
 - Contratos HTTP: `POST /api/transacoes` e `PUT /api/transacoes/{chaveEdicao}`
@@ -38,3 +38,7 @@
 **Como verificar:**
 - `.\mvnw.cmd -Dtest=TransacaoResourceTest test`, incluindo testes de concorrência e rollback com PostgreSQL real.
 - Antes de concluir: `.\mvnw.cmd verify -B`.
+
+## Comments
+
+Concluída na verificação de 2026-11-08 sobre `edacff1`: `verify` passa com 205 testes (`TransacaoResourceTest`: 52, incluindo concorrência, isolamento e rollback). `Location` aponta para `/api/transacoes/{chaveEdicao}` (asserção em `TransacaoResourceTest`). Os critérios marcados foram conferidos contra os testes existentes.
