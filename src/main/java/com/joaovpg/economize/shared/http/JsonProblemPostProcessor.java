@@ -29,7 +29,8 @@ public class JsonProblemPostProcessor implements ProblemPostProcessor {
 
     return problem.getStatusCode() == 400
         && instance != null
-        && instance.getPath().startsWith("/transacoes")
+        && (instance.getPath().startsWith("/transacoes")
+            || instance.getPath().startsWith("/transferencias"))
         && (type == null || "about:blank".equals(type.toString()));
   }
 

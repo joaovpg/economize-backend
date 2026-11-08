@@ -7,12 +7,16 @@ import com.joaovpg.economize.transferencia.application.ExcluirTransferencia;
 import com.joaovpg.economize.transferencia.http.dto.request.AlterarTransferenciaRequest;
 import com.joaovpg.economize.transferencia.http.dto.request.CriarTransferenciaRequest;
 import com.joaovpg.economize.transferencia.http.dto.response.TransferenciaResponse;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.UriInfo;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.resteasy.reactive.RestResponse;
 
 @LogHttpErrors
 public class TransferenciaResource implements TransferenciaResourceApi {
+  @Context UriInfo uriInfo;
+
   private final CriarTransferencia criarTransferencia;
   private final AlterarTransferencia alterarTransferencia;
   private final ExcluirTransferencia excluirTransferencia;
@@ -35,7 +39,12 @@ public class TransferenciaResource implements TransferenciaResourceApi {
   @Override
   public RestResponse<TransferenciaResponse> criar(CriarTransferenciaRequest request) {
     var resultado = criarTransferencia.executar(mapper.toCommand(usuarioId(), request));
-    return RestResponse.status(RestResponse.Status.CREATED, mapper.toResponse(resultado));
+    var location =
+        uriInfo.getBaseUriBuilder().path("transferencias").path(resultado.id().toString()).build();
+    return RestResponse.ResponseBuilder.create(
+            RestResponse.Status.CREATED, mapper.toResponse(resultado))
+        .location(location)
+        .build();
   }
 
   @Override

@@ -1674,7 +1674,7 @@ class TransacaoResourceTest {
         .statusCode(201)
         .extract()
         .jsonPath()
-        .getUUID("id");
+        .getUUID("transferenciaId");
   }
 
   private UUID persistirTransacao(
