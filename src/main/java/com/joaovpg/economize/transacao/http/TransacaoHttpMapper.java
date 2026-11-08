@@ -9,11 +9,14 @@ import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
+import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
+import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.RepeticaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
+import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
 import java.time.DayOfWeek;
 import java.util.UUID;
 import org.mapstruct.Mapper;
@@ -61,6 +64,57 @@ interface TransacaoHttpMapper {
       return null;
     }
     return escopo.isTextual() ? escopo.asText() : escopo.toString();
+  }
+
+  /** Converte a prévia; a política e o período são validados pelo caso de uso. */
+  default PreverAlteracaoTransacao.Comando toCommandPrevia(
+      UUID usuarioId, PreviaEdicaoTransacaoRequest request) {
+    var alteracao = request.alteracao();
+    return new PreverAlteracaoTransacao.Comando(
+        usuarioId,
+        alteracao.versaoEdicao(),
+        escopoTexto(alteracao.escopo()),
+        alteracao.escopoInformado(),
+        alteracao.contaId(),
+        alteracao.categoriaId(),
+        alteracao.situacao(),
+        alteracao.tipo(),
+        alteracao.descricao(),
+        alteracao.observacoes(),
+        alteracao.valor(),
+        alteracao.dataFinanceira(),
+        toRepeticao(alteracao.repeticao()),
+        request.periodo().inicio(),
+        request.periodo().fim(),
+        request.politicaSobreposicao());
+  }
+
+  default PreviaEdicaoTransacaoResponse toResponse(PreverAlteracaoTransacao.Resultado resultado) {
+    return new PreviaEdicaoTransacaoResponse(
+        resultado.versaoEdicao(),
+        new PreviaEdicaoTransacaoResponse.PeriodoResponse(resultado.inicio(), resultado.fim()),
+        resultado.politicaSobreposicao(),
+        resultado.itensPreservados().stream().map(item -> toResponse(item)).toList(),
+        resultado.ocorrenciasNovas().stream()
+            .map(
+                candidata ->
+                    new PreviaEdicaoTransacaoResponse.CandidataResponse(
+                        candidata.dataOriginal(),
+                        candidata.dataFinanceira(),
+                        candidata.valor(),
+                        candidata.numeroParcela()))
+            .toList(),
+        resultado.sobreposicoes().stream()
+            .map(
+                sobreposicao ->
+                    new PreviaEdicaoTransacaoResponse.SobreposicaoResponse(
+                        sobreposicao.dataOriginalCandidata(),
+                        sobreposicao.dataFinanceira(),
+                        sobreposicao.chavesPreservadas(),
+                        sobreposicao.resolucaoSugerida(),
+                        sobreposicao.resolucoesPermitidas()))
+            .toList(),
+        resultado.quantidadeSobreposicoesForaPeriodo());
   }
 
   ConsultarTransacoes.Comando toCommand(UUID usuarioId, ConsultaTransacoesRequest request);

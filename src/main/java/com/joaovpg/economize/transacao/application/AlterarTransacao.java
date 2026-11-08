@@ -1,9 +1,7 @@
 package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.categoria.Categoria;
-import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.conta.ContaFinanceira;
-import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.application.CriarSerieTransacao;
 import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
@@ -19,35 +17,30 @@ import com.joaovpg.economize.transacao.TransacaoRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
 public class AlterarTransacao {
   private final TransacaoRepository transacaoRepository;
-  private final ContaFinanceiraRepository contaRepository;
-  private final CategoriaRepository categoriaRepository;
   private final CriarSerieTransacao criarSerie;
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final RevisarSerieRecorrencia revisarSerie;
+  private final RegrasEdicaoTransacao regras;
 
   public AlterarTransacao(
       TransacaoRepository transacaoRepository,
-      ContaFinanceiraRepository contaRepository,
-      CategoriaRepository categoriaRepository,
       CriarSerieTransacao criarSerie,
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
-      RevisarSerieRecorrencia revisarSerie) {
+      RevisarSerieRecorrencia revisarSerie,
+      RegrasEdicaoTransacao regras) {
     this.transacaoRepository = transacaoRepository;
-    this.contaRepository = contaRepository;
-    this.categoriaRepository = categoriaRepository;
     this.criarSerie = criarSerie;
     this.resolverOcorrencias = resolverOcorrencias;
     this.revisarSerie = revisarSerie;
+    this.regras = regras;
   }
 
   @Transactional
@@ -65,22 +58,13 @@ public class AlterarTransacao {
           "VERSAO_DESATUALIZADA", "A transacao foi alterada por outra operacao");
     }
 
-    var conta = resolverConta(transacao, comando);
-    var categoria = resolverCategoria(transacao, comando);
-
-    if (comando.dataFinanceira().isBefore(conta.getDataSaldoInicial())) {
-      throw new RegraNegocioException(
-          "DATA_FINANCEIRA_ANTERIOR_SALDO_INICIAL",
-          "A data financeira nao pode ser anterior a data do saldo inicial da conta");
-    }
-
-    if (comando.situacao() == SituacaoTransacao.EFETIVADA
-        && comando
-            .dataFinanceira()
-            .isAfter(LocalDate.now(ZoneId.of(transacao.getUsuario().getTimezone())))) {
-      throw new RegraNegocioException(
-          "DATA_FINANCEIRA_FUTURA", "Uma transacao efetivada nao pode ter data financeira futura");
-    }
+    var conta = regras.resolverConta(transacao.getConta(), comando.contaId(), comando.usuarioId());
+    regras.validarMesmaMoeda(transacao.getConta(), conta);
+    var categoria =
+        regras.resolverCategoria(
+            transacao.getCategoria(), comando.categoriaId(), comando.usuarioId());
+    regras.validarDatas(
+        conta, transacao.getUsuario(), comando.dataFinanceira(), comando.situacao());
 
     if (transacao.getSegmentoOrigem() != null) {
       revisarSerie.revisar(transacao.getSegmentoOrigem().getGrupo().getId(), comando.usuarioId());
@@ -165,37 +149,6 @@ public class AlterarTransacao {
     return comando.observacoes() == null ? null : comando.observacoes().strip();
   }
 
-  private ContaFinanceira resolverConta(Transacao transacao, Comando comando) {
-    if (transacao.getConta().getId().equals(comando.contaId())) {
-      return transacao.getConta();
-    }
-
-    var conta =
-        contaRepository
-            .buscarAtivaDoUsuario(comando.contaId(), comando.usuarioId())
-            .orElseThrow(() -> recursoNaoEncontrado("Conta"));
-
-    if (!conta.getMoeda().equals(transacao.getConta().getMoeda())) {
-      throw new RegraNegocioException(
-          "MOEDA_CONTA_INCOMPATIVEL", "A nova conta deve usar a mesma moeda da conta atual");
-    }
-
-    return conta;
-  }
-
-  private Categoria resolverCategoria(Transacao transacao, Comando comando) {
-    if (comando.categoriaId() == null) {
-      return null;
-    }
-    if (transacao.getCategoria() != null
-        && transacao.getCategoria().getId().equals(comando.categoriaId())) {
-      return transacao.getCategoria();
-    }
-    return categoriaRepository
-        .buscarAtivaDoUsuario(comando.categoriaId(), comando.usuarioId())
-        .orElseThrow(() -> recursoNaoEncontrado("Categoria"));
-  }
-
   private void validarTransacaoSimples(Transacao transacao) {
     if (transacaoRepository.estaVinculadaATransferencia(transacao.getId())
         || transacao.getGrupoRecorrencia() != null
@@ -217,35 +170,14 @@ public class AlterarTransacao {
       throw new RegraNegocioException(
           "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao nao se aplica a transacao simples");
     }
-    if (comando.contaId() == null) {
-      throw new RegraNegocioException("CONTA_OBRIGATORIA", "Conta obrigatoria");
-    }
-    if (comando.situacao() == null) {
-      throw new RegraNegocioException(
-          "SITUACAO_TRANSACAO_INVALIDA", "Situacao da transacao invalida");
-    }
-    if (comando.tipo() == null) {
-      throw new RegraNegocioException("TIPO_TRANSACAO_INVALIDO", "Tipo da transacao invalido");
-    }
-    if (comando.valor() == null
-        || comando.valor().signum() <= 0
-        || comando.valor().scale() > 4
-        || comando.valor().setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
-      throw new RegraNegocioException("VALOR_TRANSACAO_INVALIDO", "Valor da transacao invalido");
-    }
-    if (comando.descricao() == null
-        || comando.descricao().isBlank()
-        || comando.descricao().strip().length() > 255) {
-      throw new RegraNegocioException(
-          "DESCRICAO_TRANSACAO_INVALIDA", "Descricao da transacao invalida");
-    }
-    if (comando.observacoes() != null && comando.observacoes().length() > 2000) {
-      throw new RegraNegocioException(
-          "OBSERVACOES_TRANSACAO_INVALIDAS", "Observacoes da transacao invalidas");
-    }
-    if (comando.dataFinanceira() == null) {
-      throw new RegraNegocioException("DATA_FINANCEIRA_OBRIGATORIA", "Data financeira obrigatoria");
-    }
+    regras.validarCamposComuns(
+        comando.contaId(),
+        comando.situacao(),
+        comando.tipo(),
+        comando.valor(),
+        comando.descricao(),
+        comando.observacoes(),
+        comando.dataFinanceira());
   }
 
   private RecursoNaoEncontradoException recursoNaoEncontrado(String recurso) {

@@ -36,6 +36,38 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
         .firstResultOptional();
   }
 
+  /** Leitura sem bloqueio para prévias; não autoriza gravação sem nova comparação. */
+  public Optional<Transacao> buscarOcorrenciaDoUsuario(
+      UUID segmentoId, LocalDate identificador, UUID usuarioId) {
+    return find(
+            "segmentoRecorrencia.id = ?1 and identificadorRecorrencia = ?2 and usuario.id = ?3",
+            segmentoId,
+            identificador,
+            usuarioId)
+        .firstResultOptional();
+  }
+
+  /**
+   * Ocorrências materializadas e protegidas (individualizadas ou efetivadas) de um grupo, cuja
+   * identidade original é igual ou posterior à data informada, na ordem da data financeira.
+   */
+  public List<Transacao> listarProtegidasDoGrupoAPartirDe(
+      UUID grupoId, UUID usuarioId, LocalDate dataOriginal) {
+    return getEntityManager()
+        .createQuery(
+            "select t from Transacao t join fetch t.segmentoRecorrencia s"
+                + " where s.grupo.id = :grupoId and t.usuario.id = :usuarioId"
+                + " and t.identificadorRecorrencia >= :dataOriginal"
+                + " and (t.excecaoRecorrencia = true or t.situacao = :efetivada)"
+                + " order by t.dataFinanceira, t.identificadorRecorrencia, t.id",
+            Transacao.class)
+        .setParameter("grupoId", grupoId)
+        .setParameter("usuarioId", usuarioId)
+        .setParameter("dataOriginal", dataOriginal)
+        .setParameter("efetivada", SituacaoTransacao.EFETIVADA)
+        .getResultList();
+  }
+
   public List<Transacao> listarOcorrenciasDoSegmentoAPartirDe(
       UUID segmentoId, LocalDate inicio, UUID usuarioId) {
     return find(

@@ -17,10 +17,10 @@ import java.util.Set;
  * Valida a configuração estruturada de uma repetição ou parcelamento e a traduz para a regra usada
  * pelo motor. As combinações aceitas seguem a especificação de contratos unificados.
  */
-final class RepeticaoValidacao {
+public final class RepeticaoValidacao {
   private RepeticaoValidacao() {}
 
-  static RegraRecorrencia validar(RepeticaoRecorrencia repeticao, LocalDate inicio) {
+  public static RegraRecorrencia validar(RepeticaoRecorrencia repeticao, LocalDate inicio) {
     var parcelamento = repeticao.parcelamento();
     var termino = repeticao.termino();
     if (parcelamento != null) {

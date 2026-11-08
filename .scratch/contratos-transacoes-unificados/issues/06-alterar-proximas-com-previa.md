@@ -58,3 +58,31 @@
 
 **Como verificar:**
 - Testes HTTP com PostgreSQL real: colisões com datas deslocadas, múltiplas preservadas, ambas as decisões, série indefinida, prévia obsoleta entre prévia e PUT, concorrência entre escritores e saldos.
+
+## Comments
+
+**06a concluído** (prévia, somente leitura). O status deste ticket continua `ready-for-agent` até o 06b.
+
+**Feito**
+- `POST /api/transacoes/{chaveEdicao}/previa-edicao`, com corpo `{ alteracao, periodo, politicaSobreposicao }` e resposta 200 com os campos da spec. Serve chave de ocorrência de série (`1:r:`) e chave de transação simples (`1:s:`).
+- Caso de uso `PreverAlteracaoTransacao` (`executarOcorrencia` e `executarSimples`). Não grava, não usa lock pessimista, não altera saldos e não gera token.
+- Protegidas: registros do grupo com data original igual ou posterior ao corte, individualizados ou efetivados, excluída a própria selecionada. Colisão é igualdade de data financeira. Só é relatada dentro do período. `quantidadeSobreposicoesForaPeriodo` conta datas financeiras distintas fora do período que coincidem com protegidas, testando cada data pontualmente contra a regra, sem expandir a repetição.
+- Reuso: `RegrasEdicaoTransacao` (campos, conta, categoria e datas) passou a ser usado também por `AlterarOcorrenciaSerie` e `AlterarTransacao`. A localização de ocorrência saiu de `AlterarOcorrenciaSerie` para `LocalizarOcorrenciaRecorrente`. `RepeticaoValidacao` ficou público. Os PUTs mantêm o comportamento, e as suítes existentes passam.
+- Testes: `PreverAlteracaoTransacaoResourceTest` (11 casos HTTP): prévia sem colisão sem gravação, colisão com data deslocada, selecionada que não concorre consigo, várias preservadas com chaves em ordem lexicográfica, contagem fora do período em série indefinida, transação simples, versão obsoleta, período/política/campos inválidos, escopo inválido, propriedade e chave inválida.
+
+**Decisões tomadas sem o ticket cobrir**
+- Protegidas consideradas em todo o grupo, não só no segmento selecionado, porque segmentos posteriores também são afetados pelo corte.
+- `itensPreservados` e `sobreposicoes` ficam limitados ao período. `itensPreservados` usa o item de leitura (`ItemResponse`).
+- A candidata correspondente à selecionada usa como `dataOriginal` a própria data financeira, como em `iniciarNovaSerie`.
+- Alteração de série para destino simples aplica a regra de moeda da conversão para simples, como no PUT.
+- `politicaSobreposicao` diferente de `MANTER_SOMENTE_PRESERVADA` retorna 400 `DADOS_INVALIDOS` no campo `politicaSobreposicao`, e não 422.
+- Escopo ausente, `SOMENTE_ESTA` ou outro valor em ocorrência de série retorna 422 `ESCOPO_INVALIDO`. Escopo informado em transação simples também retorna 422.
+- Não há validação de início igual ou posterior à data original, que existia no legado THIS_AND_FUTURE. A spec não exige; decidir no 06b.
+- Enum `ResolucaoSobreposicao` criado em `transacao` e usado na requisição e na resposta da prévia. O PUT do 06b deve reutilizá-lo.
+
+**Falta para o 06b**
+- PUT com `politicaSobreposicao` e `resolucoesSobreposicao`. Duplicata, resolução desconhecida ou data que não é candidata sobreposta retornam 422 `RESOLUCAO_SOBREPOSICAO_INVALIDA`. O par é obrigatório só ao criar novo trecho.
+- `ESTA_E_AS_PROXIMAS` no PUT: corte pela data original, supressão durável dos candidatos suprimidos, preservação das protegidas e revisão do grupo sob bloqueio. A prévia deve ser recalculada sob o mesmo bloqueio.
+- Conversões entre recorrência e parcelamento, conforme a matriz da spec, com numeração e novo grupo ao alterar o total.
+- Testes de prévia obsoleta entre prévia e PUT, concorrência e saldos.
+- Enquanto isso, o PUT continua respondendo 422 `ESCOPO_INVALIDO` para `ESTA_E_AS_PROXIMAS`.

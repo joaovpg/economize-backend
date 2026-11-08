@@ -1,13 +1,9 @@
 package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.categoria.Categoria;
-import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.conta.ContaFinanceira;
-import com.joaovpg.economize.conta.ContaFinanceiraRepository;
-import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
@@ -15,8 +11,8 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.CriarSerieTransacao;
+import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
 import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
@@ -30,7 +26,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,34 +45,28 @@ public class AlterarOcorrenciaSerie {
   private final GrupoRecorrenciaRepository grupoRepository;
   private final TransacaoRepository transacaoRepository;
   private final SupressaoRecorrenciaRepository supressaoRepository;
-  private final ContaFinanceiraRepository contaRepository;
-  private final CategoriaRepository categoriaRepository;
   private final CriarSerieTransacao criarSerie;
-  private final ExpansorRecorrencia expansor;
-  private final LeitorRruleRecorrencia leitorRrule;
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
+  private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
+  private final RegrasEdicaoTransacao regras;
 
   public AlterarOcorrenciaSerie(
       SegmentoRecorrenciaRepository segmentoRepository,
       GrupoRecorrenciaRepository grupoRepository,
       TransacaoRepository transacaoRepository,
       SupressaoRecorrenciaRepository supressaoRepository,
-      ContaFinanceiraRepository contaRepository,
-      CategoriaRepository categoriaRepository,
       CriarSerieTransacao criarSerie,
-      ExpansorRecorrencia expansor,
-      LeitorRruleRecorrencia leitorRrule,
-      ResolverOcorrenciasRecorrentes resolverOcorrencias) {
+      ResolverOcorrenciasRecorrentes resolverOcorrencias,
+      LocalizarOcorrenciaRecorrente localizarOcorrencia,
+      RegrasEdicaoTransacao regras) {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
     this.transacaoRepository = transacaoRepository;
     this.supressaoRepository = supressaoRepository;
-    this.contaRepository = contaRepository;
-    this.categoriaRepository = categoriaRepository;
     this.criarSerie = criarSerie;
-    this.expansor = expansor;
-    this.leitorRrule = leitorRrule;
     this.resolverOcorrencias = resolverOcorrencias;
+    this.localizarOcorrencia = localizarOcorrencia;
+    this.regras = regras;
   }
 
   @Transactional
@@ -100,7 +89,9 @@ public class AlterarOcorrenciaSerie {
         transacaoRepository.buscarOcorrenciaDoUsuarioParaEdicao(
             segmento.getId(), comando.dataOriginal(), comando.usuarioId());
 
-    var ocorrencia = localizarOcorrencia(segmento, comando, materializada.isPresent());
+    var ocorrencia =
+        localizarOcorrencia.executar(
+            segmento, comando.dataOriginal(), comando.usuarioId(), materializada.isPresent());
     var versaoAtual =
         IdentidadeEdicaoTransacao.versaoRecorrencia(
             grupo.getRevisaoSerie(), materializada.map(Transacao::getVersao).orElse(null));
@@ -112,20 +103,13 @@ public class AlterarOcorrenciaSerie {
     var atual = materializada.orElse(null);
     var usuario = segmento.getUsuario();
     var contaAtual = atual != null ? atual.getConta() : segmento.getConta();
-    var conta = resolverConta(contaAtual, comando);
+    var conta = regras.resolverConta(contaAtual, comando.contaId(), comando.usuarioId());
     var categoria =
-        resolverCategoria(atual != null ? atual.getCategoria() : segmento.getCategoria(), comando);
-
-    if (comando.dataFinanceira().isBefore(conta.getDataSaldoInicial())) {
-      throw new RegraNegocioException(
-          "DATA_FINANCEIRA_ANTERIOR_SALDO_INICIAL",
-          "A data financeira nao pode ser anterior a data do saldo inicial da conta");
-    }
-    if (comando.situacao() == SituacaoTransacao.EFETIVADA
-        && comando.dataFinanceira().isAfter(LocalDate.now(ZoneId.of(usuario.getTimezone())))) {
-      throw new RegraNegocioException(
-          "DATA_FINANCEIRA_FUTURA", "Uma transacao efetivada nao pode ter data financeira futura");
-    }
+        regras.resolverCategoria(
+            atual != null ? atual.getCategoria() : segmento.getCategoria(),
+            comando.categoriaId(),
+            comando.usuarioId());
+    regras.validarDatas(conta, usuario, comando.dataFinanceira(), comando.situacao());
 
     var dados =
         new Dados(
@@ -140,10 +124,7 @@ public class AlterarOcorrenciaSerie {
             efetivadoEm(comando.situacao(), atual));
 
     if (comando.repeticao() == null) {
-      if (!conta.getMoeda().equals(contaAtual.getMoeda())) {
-        throw new RegraNegocioException(
-            "MOEDA_CONTA_INCOMPATIVEL", "A nova conta deve usar a mesma moeda da conta atual");
-      }
+      regras.validarMesmaMoeda(contaAtual, conta);
       return individualizarComoSimples(segmento, grupo, atual, comando, dados, ocorrencia);
     }
     return iniciarNovaSerie(segmento, grupo, atual, comando, dados);
@@ -243,34 +224,6 @@ public class AlterarOcorrenciaSerie {
     transacao.setEfetivadoEm(dados.efetivadoEm());
   }
 
-  /**
-   * Localiza a ocorrência pela data original. Uma ocorrência materializada é sempre localizável;
-   * uma virtual precisa estar projetada e sem supressão.
-   */
-  private OcorrenciaRecorrencia localizarOcorrencia(
-      SegmentoRecorrencia segmento, Comando comando, boolean materializada) {
-    var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
-    var ocorrencia =
-        expansor
-            .expandir(
-                regra, segmento.getInicio(), comando.dataOriginal(), segmento.getPoliticaData())
-            .stream()
-            .filter(item -> item.dataOriginal().equals(comando.dataOriginal()))
-            .findFirst();
-    if (materializada) {
-      return ocorrencia.orElseThrow(() -> naoEncontrada("Ocorrencia"));
-    }
-    if (ocorrencia.isEmpty()
-        || (segmento.getFim() != null && segmento.getFim().isBefore(comando.dataOriginal()))
-        || segmento.getStatus() == StatusRecorrencia.CANCELADO
-        || segmento.getGrupo().getStatus() == StatusRecorrencia.CANCELADO
-        || supressaoRepository.existe(
-            segmento.getId(), comando.dataOriginal(), comando.usuarioId())) {
-      throw naoEncontrada("Ocorrencia");
-    }
-    return ocorrencia.get();
-  }
-
   private void criarSupressao(
       SegmentoRecorrencia segmento, LocalDate dataOriginal, UUID usuarioId) {
     if (supressaoRepository.existe(segmento.getId(), dataOriginal, usuarioId)) {
@@ -303,27 +256,6 @@ public class AlterarOcorrenciaSerie {
     return Instant.now().truncatedTo(ChronoUnit.MICROS);
   }
 
-  private ContaFinanceira resolverConta(ContaFinanceira contaAtual, Comando comando) {
-    if (comando.contaId().equals(contaAtual.getId())) {
-      return contaAtual;
-    }
-    return contaRepository
-        .buscarAtivaDoUsuario(comando.contaId(), comando.usuarioId())
-        .orElseThrow(() -> naoEncontrada("Conta"));
-  }
-
-  private Categoria resolverCategoria(Categoria categoriaAtual, Comando comando) {
-    if (comando.categoriaId() == null) {
-      return null;
-    }
-    if (categoriaAtual != null && comando.categoriaId().equals(categoriaAtual.getId())) {
-      return categoriaAtual;
-    }
-    return categoriaRepository
-        .buscarAtivaDoUsuario(comando.categoriaId(), comando.usuarioId())
-        .orElseThrow(() -> naoEncontrada("Categoria"));
-  }
-
   private void validar(Comando comando) {
     if (!ESCOPO_APLICAVEL.equals(comando.escopo())) {
       throw new RegraNegocioException(
@@ -333,36 +265,14 @@ public class AlterarOcorrenciaSerie {
       throw new RegraNegocioException(
           "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao nao se aplica a esta alteracao");
     }
-    if (comando.contaId() == null) {
-      throw new RegraNegocioException("CONTA_OBRIGATORIA", "Conta obrigatoria");
-    }
-    if (comando.situacao() == null) {
-      throw new RegraNegocioException(
-          "SITUACAO_TRANSACAO_INVALIDA", "Situacao da transacao invalida");
-    }
-    if (comando.tipo() != TipoTransacao.RECEITA && comando.tipo() != TipoTransacao.DESPESA) {
-      throw new RegraNegocioException(
-          "TIPO_TRANSACAO_INVALIDO", "Recorrencias aceitam somente receita ou despesa");
-    }
-    if (comando.valor() == null
-        || comando.valor().signum() <= 0
-        || comando.valor().scale() > 4
-        || comando.valor().setScale(4, RoundingMode.UNNECESSARY).precision() > 19) {
-      throw new RegraNegocioException("VALOR_TRANSACAO_INVALIDO", "Valor da transacao invalido");
-    }
-    if (comando.descricao() == null
-        || comando.descricao().isBlank()
-        || comando.descricao().strip().length() > 255) {
-      throw new RegraNegocioException(
-          "DESCRICAO_TRANSACAO_INVALIDA", "Descricao da transacao invalida");
-    }
-    if (comando.observacoes() != null && comando.observacoes().length() > 2000) {
-      throw new RegraNegocioException(
-          "OBSERVACOES_TRANSACAO_INVALIDAS", "Observacoes da transacao invalidas");
-    }
-    if (comando.dataFinanceira() == null) {
-      throw new RegraNegocioException("DATA_FINANCEIRA_OBRIGATORIA", "Data financeira obrigatoria");
-    }
+    regras.validarCamposComuns(
+        comando.contaId(),
+        comando.situacao(),
+        comando.tipo(),
+        comando.valor(),
+        comando.descricao(),
+        comando.observacoes(),
+        comando.dataFinanceira());
   }
 
   private static RecursoNaoEncontradoException naoEncontrada(String recurso) {

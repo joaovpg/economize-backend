@@ -2,8 +2,10 @@ package com.joaovpg.economize.transacao.http;
 
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
+import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
+import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -166,6 +168,54 @@ public interface TransacaoResourceApi {
                       mediaType = MediaType.APPLICATION_JSON,
                       schema = @Schema(implementation = AlterarTransacaoRequest.class)))
           AlterarTransacaoRequest request);
+
+  @POST
+  @Path("/{chaveEdicao}/previa-edicao")
+  @RolesAllowed("usuario")
+  @Tag(name = "Transações")
+  @Operation(
+      operationId = "previarEdicaoTransacao",
+      summary = "Calcula a prévia de uma alteração e suas sobreposições",
+      description =
+          "Calcula, sem gravar nada, as ocorrências que a alteração produziria no período e as"
+              + " colisões com ocorrências protegidas posteriores ao corte. Uma colisão existe"
+              + " quando a data financeira de uma nova ocorrência coincide com a de uma ocorrência"
+              + " protegida. A prévia não gera token: o PUT recalcula e revalida. Para transação"
+              + " simples, omita `escopo`; para ocorrência de série, informe `ESTA_E_AS_PROXIMAS`.")
+  @APIResponseSchema(
+      value = PreviaEdicaoTransacaoResponse.class,
+      responseCode = "200",
+      responseDescription = "Prévia calculada sem gravação.")
+  @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: campo ausente ou desconhecido, período fora de 1 a 12 meses ou"
+              + " política não aceita nesta operação.")
+  @APIResponse(
+      responseCode = "404",
+      description = "Transação, série ou ocorrência não encontrada para o usuário autenticado.")
+  @APIResponse(
+      responseCode = "409",
+      description = "VERSAO_DESATUALIZADA: a versão informada não é a vigente.")
+  @APIResponse(
+      responseCode = "422",
+      description = "Regra violada; exemplos: ESCOPO_INVALIDO ou REPETICAO_INVALIDA.")
+  PreviaEdicaoTransacaoResponse previaEdicao(
+      @PathParam("chaveEdicao")
+          @Parameter(
+              name = "chaveEdicao",
+              in = ParameterIn.PATH,
+              description = "Chave opaca da transação simples ou da ocorrência de série.",
+              required = true,
+              schema = @Schema(type = SchemaType.STRING))
+          String chaveEdicao,
+      @Valid @RequestBody(
+              description = "Alteração proposta, período e política geral de sobreposição.",
+              content =
+                  @Content(
+                      mediaType = MediaType.APPLICATION_JSON,
+                      schema = @Schema(implementation = PreviaEdicaoTransacaoRequest.class)))
+          PreviaEdicaoTransacaoRequest request);
 
   @POST
   @RolesAllowed("usuario")
