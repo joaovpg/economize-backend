@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -67,20 +68,17 @@ public record AlterarTransacaoRequest(
     @Schema(description = "Versão opaca obtida na consulta ou escrita anterior.", required = true)
         @NotBlank String versaoEdicao,
     @Schema(
-            description = "Deve ser null para transação simples.",
-            ref = "#/components/schemas/NullValue",
-            required = true)
+            description =
+                "Repetição ou parcelamento; null mantém a transação simples. Quando informada, a"
+                    + " transação simples passa a ser a primeira ocorrência da nova série.",
+            nullable = true)
         @JsonProperty(required = true)
-        JsonNode repeticao,
+        @Valid RepeticaoTransacaoRequest repeticao,
     @Schema(description = "Não se aplica a transação simples e deve ser omitido.") JsonNode escopo,
     @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
         JsonNode politicaSobreposicao,
     @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
         JsonNode resolucoesSobreposicao) {
-  public boolean repeticaoInformada() {
-    return repeticao != null && !repeticao.isNull();
-  }
-
   public boolean escopoInformado() {
     return escopo != null;
   }
