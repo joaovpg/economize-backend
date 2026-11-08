@@ -63,7 +63,9 @@ public class MecanismoAutenticacaoCookie implements HttpAuthenticationMechanism 
                   .addRoles(jwt.getGroups())
                   .build());
     } catch (ParseException exception) {
-      return Uni.createFrom().failure(exception);
+      // Token inválido ou expirado é tratado como ausência de autenticação: o recurso responde 401,
+      // e não 500 (falha interna) como aconteceria com uma falha propagada.
+      return Uni.createFrom().nullItem();
     }
   }
 
