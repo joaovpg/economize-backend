@@ -346,6 +346,7 @@ public class GerenciarOcorrenciaRecorrente {
     novoSegmento.setFim(regraNova.ate());
     novoSegmento.setRrule(regraNova.rrule());
     novoSegmento.setTotalOcorrencias(regraNova.quantidadeOcorrencias());
+    novoSegmento.setPoliticaData(segmento.getPoliticaData());
     if (segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO) {
       var primeiraParcela = numeroParcela(segmento, ocorrencia);
       novoSegmento.setNumeroPrimeiraParcela(primeiraParcela);
@@ -440,6 +441,7 @@ public class GerenciarOcorrenciaRecorrente {
     novoSegmento.setTotalOcorrencias(regraNova.quantidadeOcorrencias());
     novoSegmento.setNumeroPrimeiraParcela(primeiraParcela);
     novoSegmento.setQuantidadeTotalOriginal(novaQuantidade);
+    novoSegmento.setPoliticaData(PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES);
     novoSegmento.setStatus(StatusRecorrencia.ATIVO);
     segmentoRepository.persist(novoSegmento);
 
@@ -670,9 +672,7 @@ public class GerenciarOcorrenciaRecorrente {
   }
 
   private PoliticaDataOcorrencia politica(SegmentoRecorrencia segmento) {
-    return segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-        ? PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-        : PoliticaDataOcorrencia.PADRAO;
+    return segmento.getPoliticaData();
   }
 
   private int numeroParcela(SegmentoRecorrencia segmento, OcorrenciaRecorrencia ocorrencia) {
@@ -752,9 +752,7 @@ public class GerenciarOcorrenciaRecorrente {
           totalParcelas,
           segmento.getRrule(),
           segmento.getInicio(),
-          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-              : PoliticaDataOcorrencia.PADRAO);
+          segmento.getPoliticaData());
     }
 
     static Resultado deSegmento(SegmentoRecorrencia segmento) {
@@ -783,9 +781,7 @@ public class GerenciarOcorrenciaRecorrente {
           totalParcelas,
           segmento.getRrule(),
           segmento.getInicio(),
-          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-              : PoliticaDataOcorrencia.PADRAO);
+          segmento.getPoliticaData());
     }
   }
 }

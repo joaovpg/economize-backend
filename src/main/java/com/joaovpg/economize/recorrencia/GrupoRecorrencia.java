@@ -36,4 +36,7 @@ public class GrupoRecorrencia extends EntidadeBase {
   @Enumerated(EnumType.STRING)
   @Column(name = "STR_STATUS", nullable = false, length = 20)
   private StatusRecorrencia status;
+
+  @Column(name = "VER_REVISAO_SERIE", nullable = false)
+  private long revisaoSerie;
 }

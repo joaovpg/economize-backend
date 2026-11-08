@@ -37,7 +37,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -313,10 +312,7 @@ class TransacaoResourceTest {
                 }));
       }
       inicio.countDown();
-      var codigos =
-          Stream.of(respostas.get(0).get(), respostas.get(1).get())
-              .sorted()
-              .toList();
+      var codigos = Stream.of(respostas.get(0).get(), respostas.get(1).get()).sorted().toList();
       assertEquals(java.util.List.of(200, 409), codigos);
     }
   }
@@ -339,8 +335,8 @@ class TransacaoResourceTest {
         .when()
         .post("/api/transacoes")
         .then()
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
     var criada =
         given()
             .auth()

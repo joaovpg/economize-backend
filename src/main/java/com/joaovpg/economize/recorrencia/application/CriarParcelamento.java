@@ -103,6 +103,7 @@ public class CriarParcelamento {
     segmento.setTotalOcorrencias(quantidadeRestante);
     segmento.setNumeroPrimeiraParcela(comando.numeroPrimeiraParcela());
     segmento.setQuantidadeTotalOriginal(comando.quantidadeTotalOriginal());
+    segmento.setPoliticaData(PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES);
     segmento.setStatus(StatusRecorrencia.ATIVO);
     segmentoRepository.persist(segmento);
 

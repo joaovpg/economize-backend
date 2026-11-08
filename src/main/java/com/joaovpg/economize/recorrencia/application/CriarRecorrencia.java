@@ -87,6 +87,7 @@ public class CriarRecorrencia {
     segmento.setFim(comando.ate());
     segmento.setRrule(regra.rrule());
     segmento.setTotalOcorrencias(comando.quantidadeOcorrencias());
+    segmento.setPoliticaData(PoliticaDataOcorrencia.PADRAO);
     segmento.setStatus(StatusRecorrencia.ATIVO);
     segmentoRepository.persist(segmento);
 

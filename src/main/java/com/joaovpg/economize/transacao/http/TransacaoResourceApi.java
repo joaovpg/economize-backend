@@ -66,8 +66,8 @@ public interface TransacaoResourceApi {
                       value =
                           "{\"inicio\":\"2026-02\",\"fim\":\"2026-02\",\"saldoAbertura\":1000.0000,"
                               + "\"itens\":[{\"origem\":\"SALDO_INICIAL_CONTA\",\"operacaoId\":\"00000000-0000-0000-0000-000000000001\",\"situacao\":null,\"descricao\":\"Saldo"
-                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null},"
-                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null}]}")))
+                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"chaveEdicao\":null,\"versaoEdicao\":null,\"tipo\":null,\"virtual\":null,\"protegida\":null,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]},"
+                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"chaveEdicao\":\"chave-opaca\",\"versaoEdicao\":\"versao-opaca\",\"tipo\":\"DESPESA\",\"virtual\":false,\"protegida\":false,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]}]}")))
   @APIResponse(
       responseCode = "404",
       description = "Conta ou categoria informada não encontrada para o usuário autenticado.")
@@ -169,17 +169,29 @@ public interface TransacaoResourceApi {
   @Tag(name = "Transações")
   @Operation(
       operationId = "criarTransacao",
-      summary = "Cria uma transação simples",
+      summary = "Cria uma transação simples, repetida ou parcelada",
       description =
           "Cria uma receita ou despesa para uma conta ativa do usuário autenticado. A categoria "
               + "é opcional; a conta e a categoria, quando informada, devem pertencer ao usuário. "
-              + "Uma transação `EFETIVADA` não pode ter data financeira futura.")
+              + "Uma transação `EFETIVADA` não pode ter data financeira futura. Com `repeticao` "
+              + "nulo, cria uma transação simples. Com repetição ou parcelamento, cria a série "
+              + "e responde com a primeira ocorrência no mesmo formato da leitura: efetivada é "
+              + "materializada uma vez; planejada permanece virtual e é identificada pela chave "
+              + "do segmento e pela data original. `politicaData` é sempre explícita e devolvida.")
   @APIResponseSchema(
       value = ItemResponse.class,
       responseCode = "201",
-      responseDescription = "Transação criada com sucesso.")
+      responseDescription = "Transação ou primeira ocorrência criada, com Location.")
+  @APIResponse(
+      responseCode = "400",
+      description = "DADOS_INVALIDOS: campo ausente ou desconhecido.")
   @APIResponse(responseCode = "404", description = "Conta ou categoria informada não encontrada.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
+  @APIResponse(
+      responseCode = "422",
+      description =
+          "Regra violada; exemplos: REPETICAO_INVALIDA (frequência, dias, política, início ou "
+              + "término incompatíveis), PARCELAMENTO_INVALIDO (numeração ou término com "
+              + "parcelamento) ou DATA_FINANCEIRA_FUTURA.")
   RestResponse<ItemResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transação simples.",

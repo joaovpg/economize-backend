@@ -75,12 +75,15 @@ class RecorrenciaResourceTest {
         .body("itens[0].origem", equalTo("TRANSACAO_RECORRENTE"))
         .body("itens[0].operacaoId", org.hamcrest.Matchers.nullValue())
         .body("itens[0].descricao", equalTo("Salario"))
-        .body("itens[0].numeroParcela", org.hamcrest.Matchers.nullValue())
-        .body("itens[0].totalParcelas", org.hamcrest.Matchers.nullValue())
-        .body("itens[0].segmentoRecorrenciaId", equalTo(segmentoId.toString()))
-        .body("itens[0].rrule", equalTo("FREQ=MONTHLY;BYMONTHDAY=10;COUNT=3"))
-        .body("itens[0].inicioRecorrencia", equalTo("2026-01-10"))
-        .body("itens[0].politicaDataOcorrencia", equalTo("PADRAO"));
+        .body("itens[0].serie.numeroParcela", org.hamcrest.Matchers.nullValue())
+        .body("itens[0].serie.totalParcelas", org.hamcrest.Matchers.nullValue())
+        .body("itens[0].serie.segmentoId", equalTo(segmentoId.toString()))
+        .body("itens[0].serie.inicioSegmento", equalTo("2026-01-10"))
+        .body("itens[0].repeticao.frequencia", equalTo("MENSAL"))
+        .body("itens[0].repeticao.diasMes", org.hamcrest.Matchers.contains(10))
+        .body("itens[0].repeticao.termino.tipo", equalTo("APOS_OCORRENCIAS"))
+        .body("itens[0].repeticao.termino.quantidade", equalTo(3))
+        .body("itens[0].repeticao.politicaData", equalTo("PADRAO"));
   }
 
   @Test
@@ -274,12 +277,12 @@ class RecorrenciaResourceTest {
     assertEquals("Seguro", primeiro.get("descricao"));
     assertEquals("Seguro", segundo.get("descricao"));
     assertEquals("Seguro", terceiro.get("descricao"));
-    assertEquals(1, primeiro.get("numeroParcela"));
-    assertEquals(2, segundo.get("numeroParcela"));
-    assertEquals(3, terceiro.get("numeroParcela"));
-    assertEquals(3, primeiro.get("totalParcelas"));
-    assertEquals(3, segundo.get("totalParcelas"));
-    assertEquals(3, terceiro.get("totalParcelas"));
+    assertEquals(1, serie(primeiro).get("numeroParcela"));
+    assertEquals(2, serie(segundo).get("numeroParcela"));
+    assertEquals(3, serie(terceiro).get("numeroParcela"));
+    assertEquals(3, serie(primeiro).get("totalParcelas"));
+    assertEquals(3, serie(segundo).get("totalParcelas"));
+    assertEquals(3, serie(terceiro).get("totalParcelas"));
   }
 
   @Test
@@ -360,11 +363,11 @@ class RecorrenciaResourceTest {
         .then()
         .statusCode(200)
         .body("itens[1].descricao", equalTo("Compra"))
-        .body("itens[1].numeroParcela", equalTo(2))
-        .body("itens[1].totalParcelas", equalTo(3))
+        .body("itens[1].serie.numeroParcela", equalTo(2))
+        .body("itens[1].serie.totalParcelas", equalTo(3))
         .body("itens[2].descricao", equalTo("Compra ajustada"))
-        .body("itens[2].numeroParcela", equalTo(3))
-        .body("itens[2].totalParcelas", equalTo(3));
+        .body("itens[2].serie.numeroParcela", equalTo(3))
+        .body("itens[2].serie.totalParcelas", equalTo(3));
   }
 
   @Test
@@ -496,7 +499,7 @@ class RecorrenciaResourceTest {
         .body("itens[0].dataFinanceira", equalTo("2026-01-10"))
         .body("itens[1].dataFinanceira", equalTo("2026-01-11"))
         .body("itens[2].dataFinanceira", equalTo("2026-01-12"))
-        .body("itens[2].segmentoRecorrenciaId", equalTo(novoSegmentoId.toString()))
+        .body("itens[2].serie.segmentoId", equalTo(novoSegmentoId.toString()))
         .body("itens[2].valor", equalTo(-25.0f));
   }
 
@@ -709,16 +712,16 @@ class RecorrenciaResourceTest {
         .body("itens[2].descricao", equalTo("Curso ampliado"))
         .body("itens[3].descricao", equalTo("Curso ampliado"))
         .body("itens[4].descricao", equalTo("Curso ampliado"))
-        .body("itens[0].numeroParcela", equalTo(1))
-        .body("itens[1].numeroParcela", equalTo(2))
-        .body("itens[2].numeroParcela", equalTo(3))
-        .body("itens[3].numeroParcela", equalTo(4))
-        .body("itens[4].numeroParcela", equalTo(5))
-        .body("itens[0].totalParcelas", equalTo(3))
-        .body("itens[1].totalParcelas", equalTo(5))
-        .body("itens[2].totalParcelas", equalTo(5))
-        .body("itens[3].totalParcelas", equalTo(5))
-        .body("itens[4].totalParcelas", equalTo(5));
+        .body("itens[0].serie.numeroParcela", equalTo(1))
+        .body("itens[1].serie.numeroParcela", equalTo(2))
+        .body("itens[2].serie.numeroParcela", equalTo(3))
+        .body("itens[3].serie.numeroParcela", equalTo(4))
+        .body("itens[4].serie.numeroParcela", equalTo(5))
+        .body("itens[0].serie.totalParcelas", equalTo(3))
+        .body("itens[1].serie.totalParcelas", equalTo(5))
+        .body("itens[2].serie.totalParcelas", equalTo(5))
+        .body("itens[3].serie.totalParcelas", equalTo(5))
+        .body("itens[4].serie.totalParcelas", equalTo(5));
   }
 
   @Test
@@ -770,10 +773,14 @@ class RecorrenciaResourceTest {
         .body("itens", hasSize(2))
         .body("itens[0].descricao", equalTo("Compra"))
         .body("itens[1].descricao", equalTo("Compra"))
-        .body("itens[0].numeroParcela", equalTo(1))
-        .body("itens[1].numeroParcela", equalTo(3))
-        .body("itens[0].totalParcelas", equalTo(3))
-        .body("itens[1].totalParcelas", equalTo(3));
+        .body("itens[0].serie.numeroParcela", equalTo(1))
+        .body("itens[1].serie.numeroParcela", equalTo(3))
+        .body("itens[0].serie.totalParcelas", equalTo(3))
+        .body("itens[1].serie.totalParcelas", equalTo(3));
+  }
+
+  private static java.util.Map<?, ?> serie(java.util.Map<?, ?> item) {
+    return (java.util.Map<?, ?>) item.get("serie");
   }
 
   private ValidatableResponse criarRecorrencia(String token) {

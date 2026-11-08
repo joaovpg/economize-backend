@@ -55,7 +55,9 @@ No contrato HTTP de Categorias, a Situacao e representada pelo campo booleano `a
 
 Um grupo preserva a origem comum e seu tipo, `RECORRENCIA` ou `PARCELAMENTO`. Cada segmento possui dados financeiros proprios, DTSTART, periodo opcional e uma RRULE canonica sem o prefixo `RRULE:`. O motor aceita `DAILY`, `WEEKLY`, `MONTHLY` e `YEARLY`, alem de `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY` e `BYMONTHDAY` no subconjunto definido pela aplicacao.
 
-A consulta unificada retorna a RRULE com o DTSTART do Segmento e a politica de datas. Recorrencias usam `PADRAO`; Parcelamentos usam `AJUSTAR_ULTIMO_DIA_MES` para reproduzir datas mensais e anuais inexistentes no cliente.
+A politica de datas fica em cada Segmento (`STR_POLITICA_DATA`), para que um segmento preserve sua politica mesmo quando a modalidade muda. Os segmentos existentes receberam a politica pelo tipo do grupo na migration V8: Recorrencias usam `PADRAO`; Parcelamentos usam `AJUSTAR_ULTIMO_DIA_MES` para reproduzir datas mensais e anuais inexistentes no cliente.
+
+A consulta unificada devolve a configuracao estruturada da repeticao (frequencia, intervalo, dias, politica, termino e parcelamento), traduzida da RRULE sem recalcular datas, inclusive para inicio fora do primeiro dia da semana ou do mes e para mensal sem dias. Cada grupo guarda `VER_REVISAO_SERIE`, a revisao compartilhada que compoe as versoes de edicao das ocorrencias da serie.
 
 Ocorrencias virtuais sao expandidas em memoria e nao geram Transacoes por efeito colateral. A identidade logica e `Segmento de recorrencia + Data original da ocorrencia`. Efetivar ou editar `ONLY_THIS` materializa uma excecao ligada ao mesmo Grupo, Segmento e data original; corrigir uma Transacao efetivada preserva seu instante de efetivacao. Excluir uma ocorrencia virtual grava uma Supressao de recorrencia. Excluir explicitamente uma Transacao materializada remove a Transacao e grava a Supressao na mesma operacao, para que a virtual nao reapareca.
 

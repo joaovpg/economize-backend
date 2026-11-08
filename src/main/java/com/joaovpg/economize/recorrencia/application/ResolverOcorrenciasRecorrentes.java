@@ -3,15 +3,21 @@ package com.joaovpg.economize.recorrencia.application;
 import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
 import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.RegraRecorrencia;
+import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
+import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import com.joaovpg.economize.recorrencia.enums.TipoGrupoRecorrencia;
+import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.OrigemItemConsulta;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
+import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +26,9 @@ import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ResolverOcorrenciasRecorrentes {
+  private static final List<EscopoEdicaoTransacao> ESCOPOS_DE_SERIE =
+      List.of(EscopoEdicaoTransacao.SOMENTE_ESTA, EscopoEdicaoTransacao.ESTA_E_AS_PROXIMAS);
+
   private final ExpansorRecorrencia expansor;
   private final LeitorRruleRecorrencia leitorRrule;
 
@@ -50,7 +59,7 @@ public class ResolverOcorrenciasRecorrentes {
     var resultados = new java.util.ArrayList<Resultado>();
     for (var transacao : transacoes) {
       if (estaNoIntervalo(transacao.getDataFinanceira(), inicio, fim)) {
-        resultados.add(Resultado.materializada(transacao, expansor));
+        resultados.add(materializada(transacao));
       }
     }
     for (var segmento : segmentos) {
@@ -62,11 +71,9 @@ public class ResolverOcorrenciasRecorrentes {
       if (limite.isBefore(segmento.getInicio())) {
         continue;
       }
-      var politica =
-          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-              : PoliticaDataOcorrencia.PADRAO;
-      for (var ocorrencia : expansor.expandir(regra, segmento.getInicio(), limite, politica)) {
+      var repeticao = RepeticaoRecorrencia.de(segmento, regra);
+      for (var ocorrencia :
+          expansor.expandir(regra, segmento.getInicio(), limite, segmento.getPoliticaData())) {
         if (inicio != null && ocorrencia.dataOriginal().isBefore(inicio)) {
           continue;
         }
@@ -74,7 +81,7 @@ public class ResolverOcorrenciasRecorrentes {
         if (supridas.contains(chave) || materializadas.containsKey(chave)) {
           continue;
         }
-        resultados.add(Resultado.virtual(segmento, ocorrencia));
+        resultados.add(virtual(segmento, repeticao, ocorrencia));
       }
     }
     return resultados;
@@ -91,46 +98,17 @@ public class ResolverOcorrenciasRecorrentes {
         transacao.getSegmentoRecorrencia().getId(), transacao.getIdentificadorRecorrencia());
   }
 
-  public record Resultado(
-      OrigemItemConsulta origem,
-      UUID operacaoId,
-      SituacaoTransacao situacao,
-      String descricao,
-      String observacoes,
-      BigDecimal valor,
-      LocalDate dataFinanceira,
-      java.time.Instant efetivadoEm,
-      UUID contaId,
-      UUID categoriaId,
-      UUID contaContraparteId,
-      UUID grupoRecorrenciaId,
-      UUID segmentoRecorrenciaId,
-      LocalDate dataOriginalRecorrencia,
-      Integer numeroParcela,
-      Integer totalParcelas,
-      String rrule,
-      LocalDate inicioRecorrencia,
-      PoliticaDataOcorrencia politicaDataOcorrencia) {
-    static Resultado materializada(Transacao transacao, ExpansorRecorrencia expansor) {
-      var segmento = transacao.getSegmentoRecorrencia();
-      var grupo = transacao.getGrupoRecorrencia();
-      if (grupo == null && segmento != null) {
-        grupo = segmento.getGrupo();
-      }
-      var origem =
-          grupo != null && grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? OrigemItemConsulta.PARCELA
-              : OrigemItemConsulta.TRANSACAO_RECORRENTE;
-      var numeroParcela =
-          segmento == null || segmento.getNumeroPrimeiraParcela() == null
-              ? null
-              : segmento.getNumeroPrimeiraParcela()
-                  + ocorrenciaNumero(expansor, segmento, transacao.getIdentificadorRecorrencia())
-                  - 1;
-      var totalParcelas =
-          segmento == null || grupo == null || grupo.getTipo() != TipoGrupoRecorrencia.PARCELAMENTO
-              ? null
-              : segmento.getQuantidadeTotalOriginal();
+  private Resultado materializada(Transacao transacao) {
+    var segmento = transacao.getSegmentoRecorrencia();
+    var grupo = transacao.getGrupoRecorrencia();
+    if (grupo == null && segmento != null) {
+      grupo = segmento.getGrupo();
+    }
+    var origem =
+        grupo != null && grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
+            ? OrigemItemConsulta.PARCELA
+            : OrigemItemConsulta.TRANSACAO_RECORRENTE;
+    if (segmento == null) {
       return new Resultado(
           origem,
           transacao.getId(),
@@ -141,86 +119,139 @@ public class ResolverOcorrenciasRecorrentes {
           transacao.getDataFinanceira(),
           transacao.getEfetivadoEm(),
           transacao.getConta().getId(),
-          transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
+          categoriaId(transacao),
+          transacao.getTipo(),
+          false,
+          protegida(transacao),
+          IdentidadeEdicaoTransacao.chave(transacao.getId()),
+          IdentidadeEdicaoTransacao.versao(transacao.getVersao()),
           null,
-          grupo == null ? null : grupo.getId(),
-          segmento == null ? null : segmento.getId(),
-          transacao.getIdentificadorRecorrencia(),
-          numeroParcela,
-          totalParcelas,
-          segmento == null ? null : segmento.getRrule(),
-          segmento == null ? null : segmento.getInicio(),
-          segmento == null ? null : politica(segmento));
-    }
-
-    static Resultado virtual(SegmentoRecorrencia segmento, OcorrenciaRecorrencia ocorrencia) {
-      var numeroParcela =
-          segmento.getNumeroPrimeiraParcela() == null
-              ? null
-              : segmento.getNumeroPrimeiraParcela() + ocorrencia.numeroOcorrencia() - 1;
-      var origem =
-          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? OrigemItemConsulta.PARCELA
-              : OrigemItemConsulta.TRANSACAO_RECORRENTE;
-      var totalParcelas =
-          segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-              ? segmento.getQuantidadeTotalOriginal()
-              : null;
-      return new Resultado(
-          origem,
           null,
-          SituacaoTransacao.PLANEJADA,
-          segmento.getDescricao(),
-          segmento.getObservacoes(),
-          segmento.getTipo() == com.joaovpg.economize.transacao.TipoTransacao.RECEITA
-              ? segmento.getValor()
-              : segmento.getValor().negate(),
-          ocorrencia.dataOriginal(),
-          null,
-          segmento.getConta().getId(),
-          segmento.getCategoria() == null ? null : segmento.getCategoria().getId(),
-          null,
-          segmento.getGrupo().getId(),
-          segmento.getId(),
-          ocorrencia.dataOriginal(),
-          numeroParcela,
-          totalParcelas,
-          segmento.getRrule(),
-          segmento.getInicio(),
-          politica(segmento));
+          List.of());
     }
-
-    private static PoliticaDataOcorrencia politica(SegmentoRecorrencia segmento) {
-      return segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.PARCELAMENTO
-          ? PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-          : PoliticaDataOcorrencia.PADRAO;
-    }
-
-    private static BigDecimal impacto(Transacao transacao) {
-      return transacao.getTipo() == com.joaovpg.economize.transacao.TipoTransacao.RECEITA
-          ? transacao.getValor()
-          : transacao.getValor().negate();
-    }
-
-    private static int ocorrenciaNumero(
-        ExpansorRecorrencia expansor, SegmentoRecorrencia segmento, LocalDate data) {
-      var regra =
-          new LeitorRruleRecorrencia().lerSegmento(segmento.getInicio(), segmento.getRrule());
-      var resultado =
-          expansor.expandir(
-              regra,
-              segmento.getInicio(),
-              data,
-              segmento.getNumeroPrimeiraParcela() == null
-                  ? PoliticaDataOcorrencia.PADRAO
-                  : PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES);
-      return resultado.stream()
-          .filter(ocorrencia -> ocorrencia.dataOriginal().equals(data))
-          .mapToInt(OcorrenciaRecorrencia::numeroOcorrencia)
-          .findFirst()
-          .orElse(1);
-    }
+    var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
+    var numeroParcela =
+        segmento.getNumeroPrimeiraParcela() == null
+            ? null
+            : segmento.getNumeroPrimeiraParcela()
+                + ocorrenciaNumero(segmento, regra, transacao.getIdentificadorRecorrencia())
+                - 1;
+    var totalParcelas =
+        grupo.getTipo() != TipoGrupoRecorrencia.PARCELAMENTO
+            ? null
+            : segmento.getQuantidadeTotalOriginal();
+    return new Resultado(
+        origem,
+        transacao.getId(),
+        transacao.getSituacao(),
+        transacao.getDescricao(),
+        transacao.getObservacoes(),
+        impacto(transacao),
+        transacao.getDataFinanceira(),
+        transacao.getEfetivadoEm(),
+        transacao.getConta().getId(),
+        categoriaId(transacao),
+        transacao.getTipo(),
+        false,
+        protegida(transacao),
+        IdentidadeEdicaoTransacao.chaveRecorrencia(
+            segmento.getId(), transacao.getIdentificadorRecorrencia()),
+        IdentidadeEdicaoTransacao.versaoRecorrencia(grupo.getRevisaoSerie(), transacao.getVersao()),
+        new SerieRecorrencia(
+            grupo.getId(),
+            segmento.getId(),
+            segmento.getInicio(),
+            transacao.getIdentificadorRecorrencia(),
+            numeroParcela,
+            totalParcelas),
+        RepeticaoRecorrencia.de(segmento, regra),
+        ESCOPOS_DE_SERIE);
   }
+
+  private Resultado virtual(
+      SegmentoRecorrencia segmento,
+      RepeticaoRecorrencia repeticao,
+      OcorrenciaRecorrencia ocorrencia) {
+    var grupo = segmento.getGrupo();
+    var numeroParcela =
+        segmento.getNumeroPrimeiraParcela() == null
+            ? null
+            : segmento.getNumeroPrimeiraParcela() + ocorrencia.numeroOcorrencia() - 1;
+    var parcelado = grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO;
+    return new Resultado(
+        parcelado ? OrigemItemConsulta.PARCELA : OrigemItemConsulta.TRANSACAO_RECORRENTE,
+        null,
+        SituacaoTransacao.PLANEJADA,
+        segmento.getDescricao(),
+        segmento.getObservacoes(),
+        segmento.getTipo() == TipoTransacao.RECEITA
+            ? segmento.getValor()
+            : segmento.getValor().negate(),
+        ocorrencia.dataOriginal(),
+        null,
+        segmento.getConta().getId(),
+        segmento.getCategoria() == null ? null : segmento.getCategoria().getId(),
+        segmento.getTipo(),
+        true,
+        false,
+        IdentidadeEdicaoTransacao.chaveRecorrencia(segmento.getId(), ocorrencia.dataOriginal()),
+        IdentidadeEdicaoTransacao.versaoRecorrencia(grupo.getRevisaoSerie(), null),
+        new SerieRecorrencia(
+            grupo.getId(),
+            segmento.getId(),
+            segmento.getInicio(),
+            ocorrencia.dataOriginal(),
+            numeroParcela,
+            parcelado ? segmento.getQuantidadeTotalOriginal() : null),
+        repeticao,
+        ESCOPOS_DE_SERIE);
+  }
+
+  private static UUID categoriaId(Transacao transacao) {
+    return transacao.getCategoria() == null ? null : transacao.getCategoria().getId();
+  }
+
+  private static boolean protegida(Transacao transacao) {
+    return transacao.isExcecaoRecorrencia()
+        || transacao.getSituacao() == SituacaoTransacao.EFETIVADA;
+  }
+
+  private static BigDecimal impacto(Transacao transacao) {
+    return transacao.getTipo() == TipoTransacao.RECEITA
+        ? transacao.getValor()
+        : transacao.getValor().negate();
+  }
+
+  private int ocorrenciaNumero(
+      SegmentoRecorrencia segmento, RegraRecorrencia regra, LocalDate data) {
+    var resultado =
+        expansor.expandir(regra, segmento.getInicio(), data, segmento.getPoliticaData());
+    return resultado.stream()
+        .filter(ocorrencia -> ocorrencia.dataOriginal().equals(data))
+        .mapToInt(OcorrenciaRecorrencia::numeroOcorrencia)
+        .findFirst()
+        .orElse(1);
+  }
+
+  public record Resultado(
+      OrigemItemConsulta origem,
+      UUID operacaoId,
+      SituacaoTransacao situacao,
+      String descricao,
+      String observacoes,
+      BigDecimal valor,
+      LocalDate dataFinanceira,
+      Instant efetivadoEm,
+      UUID contaId,
+      UUID categoriaId,
+      TipoTransacao tipo,
+      boolean virtual,
+      boolean protegida,
+      String chaveEdicao,
+      String versaoEdicao,
+      SerieRecorrencia serie,
+      RepeticaoRecorrencia repeticao,
+      List<EscopoEdicaoTransacao> escoposDisponiveis) {}
 
   private record Chave(UUID segmentoId, LocalDate dataOriginal) {}
 }
