@@ -48,18 +48,22 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
   }
 
   /**
-   * Ocorrências materializadas e protegidas (individualizadas ou efetivadas) de um grupo, cuja
-   * identidade original é igual ou posterior à data informada, na ordem da data financeira.
+   * Registros protegidos de um grupo com data original igual ou posterior à data informada, na
+   * ordem da data financeira: materializados do grupo (individualizados ou efetivados) e transações
+   * desligadas da série cuja origem pertence ao grupo.
    */
   public List<Transacao> listarProtegidasDoGrupoAPartirDe(
       UUID grupoId, UUID usuarioId, LocalDate dataOriginal) {
     return getEntityManager()
         .createQuery(
-            "select t from Transacao t join fetch t.segmentoRecorrencia s"
-                + " where s.grupo.id = :grupoId and t.usuario.id = :usuarioId"
-                + " and t.identificadorRecorrencia >= :dataOriginal"
-                + " and (t.excecaoRecorrencia = true or t.situacao = :efetivada)"
-                + " order by t.dataFinanceira, t.identificadorRecorrencia, t.id",
+            "select t from Transacao t"
+                + " left join fetch t.segmentoRecorrencia s"
+                + " left join fetch t.segmentoOrigem o"
+                + " where t.usuario.id = :usuarioId and ("
+                + " (s.grupo.id = :grupoId and t.identificadorRecorrencia >= :dataOriginal"
+                + " and (t.excecaoRecorrencia = true or t.situacao = :efetivada))"
+                + " or (o.grupo.id = :grupoId and t.dataOriginalOrigem >= :dataOriginal))"
+                + " order by t.dataFinanceira, t.id",
             Transacao.class)
         .setParameter("grupoId", grupoId)
         .setParameter("usuarioId", usuarioId)

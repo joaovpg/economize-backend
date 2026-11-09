@@ -370,12 +370,7 @@ class AlterarOcorrenciaSerieResourceTest {
     var versao = (String) outubro.get("versaoEdicao");
 
     for (var escopo :
-        new String[] {
-          SEM_ESCOPO,
-          "\"escopo\":null,",
-          "\"escopo\":\"ESTA_E_AS_PROXIMAS\",",
-          "\"escopo\":\"THIS_AND_FUTURE\","
-        }) {
+        new String[] {SEM_ESCOPO, "\"escopo\":null,", "\"escopo\":\"THIS_AND_FUTURE\","}) {
       alterar(token, chave, alteracao(versao, escopo, "null", "PLANEJADA", "2026-10-12", "80"))
           .statusCode(422)
           .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));

@@ -4,16 +4,23 @@ import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
+import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
+import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
+import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.usuario.Usuario;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
@@ -26,11 +33,55 @@ public class RegrasEdicaoTransacao {
 
   private final ContaFinanceiraRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
+  private final SupressaoRecorrenciaRepository supressaoRepository;
 
   public RegrasEdicaoTransacao(
-      ContaFinanceiraRepository contaRepository, CategoriaRepository categoriaRepository) {
+      ContaFinanceiraRepository contaRepository,
+      CategoriaRepository categoriaRepository,
+      SupressaoRecorrenciaRepository supressaoRepository) {
     this.contaRepository = contaRepository;
     this.categoriaRepository = categoriaRepository;
+    this.supressaoRepository = supressaoRepository;
+  }
+
+  /**
+   * Instante de efetivação de uma alteração: planejada não tem instante; uma efetivada preserva o
+   * instante anterior quando já estava efetivada, ou registra o momento da efetivação.
+   */
+  public static Instant efetivadoEm(SituacaoTransacao situacao, Transacao atual) {
+    if (situacao == SituacaoTransacao.PLANEJADA) {
+      return null;
+    }
+    if (atual != null
+        && atual.getSituacao() == SituacaoTransacao.EFETIVADA
+        && atual.getEfetivadoEm() != null) {
+      return atual.getEfetivadoEm();
+    }
+    return Instant.now().truncatedTo(ChronoUnit.MICROS);
+  }
+
+  /** Número da parcela da ocorrência no segmento, ou nulo quando a série não é um parcelamento. */
+  public static Integer numeroParcela(
+      SegmentoRecorrencia segmento, OcorrenciaRecorrencia ocorrencia) {
+    return segmento.getNumeroPrimeiraParcela() == null
+        ? null
+        : segmento.getNumeroPrimeiraParcela() + ocorrencia.numeroOcorrencia() - 1;
+  }
+
+  /**
+   * Suprime a ocorrência virtual de uma data original, de forma durável, quando ainda não existe.
+   */
+  public void registrarSupressao(
+      SegmentoRecorrencia segmento, LocalDate dataOriginal, UUID usuarioId) {
+    if (supressaoRepository.existe(segmento.getId(), dataOriginal, usuarioId)) {
+      return;
+    }
+    var supressao = new SupressaoRecorrencia();
+    supressao.setUsuario(segmento.getUsuario());
+    supressao.setGrupo(segmento.getGrupo());
+    supressao.setSegmento(segmento);
+    supressao.setIdentificadorRecorrencia(dataOriginal);
+    supressaoRepository.persist(supressao);
   }
 
   public void validarCamposComuns(

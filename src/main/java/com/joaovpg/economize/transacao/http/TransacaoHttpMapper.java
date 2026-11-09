@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
+import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.ResolucaoSobreposicao;
+import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
 import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
@@ -17,7 +20,11 @@ import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoReq
 import com.joaovpg.economize.transacao.http.dto.request.RepeticaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
 import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
+import java.time.DateTimeException;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -27,6 +34,8 @@ import org.mapstruct.ValueMappings;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.CDI)
 interface TransacaoHttpMapper {
+  int MAXIMO_ESCOLHAS_SOBREPOSICAO = 256;
+
   CriarTransacao.Comando toCommand(UUID usuarioId, CriarTransacaoRequest request);
 
   @Mapping(target = "escopoInformado", expression = "java(request.escopoInformado())")
@@ -57,6 +66,91 @@ interface TransacaoHttpMapper {
         request.valor(),
         request.dataFinanceira(),
         toRepeticao(request.repeticao()));
+  }
+
+  /**
+   * Converte a alteração com ESTA_E_AS_PROXIMAS. Política e escolhas chegam como nós JSON para que
+   * a presença explícita de {@code null} seja distinguida de omissão; valores malformados são 400.
+   */
+  default AlterarEstaEAsProximas.Comando toCommandEstaEAsProximas(
+      UUID usuarioId,
+      IdentidadeEdicaoTransacao.ChaveOcorrencia chave,
+      AlterarTransacaoRequest request) {
+    return new AlterarEstaEAsProximas.Comando(
+        usuarioId,
+        chave.segmentoId(),
+        chave.dataOriginal(),
+        request.versaoEdicao(),
+        request.contaId(),
+        request.categoriaId(),
+        request.situacao(),
+        request.tipo(),
+        request.descricao(),
+        request.observacoes(),
+        request.valor(),
+        request.dataFinanceira(),
+        toRepeticao(request.repeticao()),
+        converterPolitica(request.politicaSobreposicao()),
+        converterEscolhas(request.resolucoesSobreposicao()),
+        request.resolucaoInformada());
+  }
+
+  default ResolucaoSobreposicao converterPolitica(JsonNode politica) {
+    if (politica == null || politica.isNull()) {
+      return null;
+    }
+    try {
+      if (politica.isTextual()) {
+        return ResolucaoSobreposicao.valueOf(politica.asText());
+      }
+    } catch (IllegalArgumentException exception) {
+      // Valor fora do domínio é tratado abaixo como dado inválido.
+    }
+    throw new ValidacaoException("politicaSobreposicao", "Politica de sobreposicao invalida");
+  }
+
+  /** Converte as escolhas, rejeitando campos desconhecidos e listas acima do limite sem truncar. */
+  default List<AlterarEstaEAsProximas.Comando.Escolha> converterEscolhas(JsonNode escolhas) {
+    if (escolhas == null || escolhas.isNull()) {
+      return null;
+    }
+    if (!escolhas.isArray()) {
+      throw new ValidacaoException("resolucoesSobreposicao", "Lista de escolhas invalida");
+    }
+    if (escolhas.size() > MAXIMO_ESCOLHAS_SOBREPOSICAO) {
+      throw new ValidacaoException(
+          "resolucoesSobreposicao",
+          "A lista de escolhas excede o limite de " + MAXIMO_ESCOLHAS_SOBREPOSICAO + " itens");
+    }
+    var convertidas = new ArrayList<AlterarEstaEAsProximas.Comando.Escolha>();
+    for (var escolha : escolhas) {
+      convertidas.add(converterEscolha(escolha));
+    }
+    return convertidas;
+  }
+
+  private AlterarEstaEAsProximas.Comando.Escolha converterEscolha(JsonNode escolha) {
+    var invalida = new ValidacaoException("resolucoesSobreposicao", "Escolha invalida");
+    if (!escolha.isObject()) {
+      throw invalida;
+    }
+    var data = escolha.get("dataOriginalCandidata");
+    var resolucao = escolha.get("resolucao");
+    var campos = new java.util.HashSet<String>();
+    escolha.fieldNames().forEachRemaining(campos::add);
+    if (!campos.equals(java.util.Set.of("dataOriginalCandidata", "resolucao"))
+        || data == null
+        || !data.isTextual()
+        || resolucao == null
+        || !resolucao.isTextual()) {
+      throw invalida;
+    }
+    try {
+      return new AlterarEstaEAsProximas.Comando.Escolha(
+          LocalDate.parse(data.asText()), resolucao.asText());
+    } catch (DateTimeException exception) {
+      throw invalida;
+    }
   }
 
   default String escopoTexto(JsonNode escopo) {

@@ -74,10 +74,24 @@ public record AlterarTransacaoRequest(
             nullable = true)
         @JsonProperty(required = true)
         @Valid RepeticaoTransacaoRequest repeticao,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitido.") JsonNode escopo,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+    @Schema(
+            description =
+                "Obrigatório para ocorrência de série (SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS); deve"
+                    + " ser omitido para transação simples.")
+        JsonNode escopo,
+    @Schema(
+            description =
+                "Política geral de sobreposição (MANTER_SOMENTE_PRESERVADA ou MANTER_AMBAS);"
+                    + " obrigatória somente ao criar novo trecho com ESTA_E_AS_PROXIMAS e omitida"
+                    + " nas demais alterações.",
+            nullable = true)
         JsonNode politicaSobreposicao,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+    @Schema(
+            description =
+                "Escolhas específicas por data original candidata; obrigatória somente ao criar"
+                    + " novo trecho com ESTA_E_AS_PROXIMAS, com [] para aplicar apenas a política"
+                    + " geral.",
+            nullable = true)
         JsonNode resolucoesSobreposicao) {
   public boolean escopoInformado() {
     return escopo != null;

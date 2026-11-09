@@ -3,6 +3,7 @@ package com.joaovpg.economize.transacao.http;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
 import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
@@ -27,9 +28,12 @@ import org.jboss.resteasy.reactive.RestResponse;
 
 @LogHttpErrors
 public class TransacaoResource implements TransacaoResourceApi {
+  private static final String ESCOPO_ESTA_E_AS_PROXIMAS = "ESTA_E_AS_PROXIMAS";
+
   private final CriarTransacao criarTransacao;
   private final AlterarTransacao alterarTransacao;
   private final AlterarOcorrenciaSerie alterarOcorrenciaSerie;
+  private final AlterarEstaEAsProximas alterarEstaEAsProximas;
   private final ExcluirTransacao excluirTransacao;
   private final ConsultarTransacoes consultarTransacoes;
   private final PreverAlteracaoTransacao preverAlteracaoTransacao;
@@ -40,6 +44,7 @@ public class TransacaoResource implements TransacaoResourceApi {
       CriarTransacao criarTransacao,
       AlterarTransacao alterarTransacao,
       AlterarOcorrenciaSerie alterarOcorrenciaSerie,
+      AlterarEstaEAsProximas alterarEstaEAsProximas,
       ExcluirTransacao excluirTransacao,
       ConsultarTransacoes consultarTransacoes,
       PreverAlteracaoTransacao preverAlteracaoTransacao,
@@ -48,6 +53,7 @@ public class TransacaoResource implements TransacaoResourceApi {
     this.criarTransacao = criarTransacao;
     this.alterarTransacao = alterarTransacao;
     this.alterarOcorrenciaSerie = alterarOcorrenciaSerie;
+    this.alterarEstaEAsProximas = alterarEstaEAsProximas;
     this.excluirTransacao = excluirTransacao;
     this.consultarTransacoes = consultarTransacoes;
     this.preverAlteracaoTransacao = preverAlteracaoTransacao;
@@ -93,6 +99,10 @@ public class TransacaoResource implements TransacaoResourceApi {
     var usuarioId = UUID.fromString(token.getSubject());
     if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
       var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      if (ESCOPO_ESTA_E_AS_PROXIMAS.equals(mapper.escopoTexto(request.escopo()))) {
+        var comando = mapper.toCommandEstaEAsProximas(usuarioId, chave, request);
+        return mapper.toResponse(alterarEstaEAsProximas.executar(comando));
+      }
       var comando = mapper.toCommandOcorrencia(usuarioId, chave, request);
       return mapper.toResponse(alterarOcorrenciaSerie.executar(comando));
     }

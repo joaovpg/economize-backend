@@ -86,3 +86,38 @@
 - Conversões entre recorrência e parcelamento, conforme a matriz da spec, com numeração e novo grupo ao alterar o total.
 - Testes de prévia obsoleta entre prévia e PUT, concorrência e saldos.
 - Enquanto isso, o PUT continua respondendo 422 `ESCOPO_INVALIDO` para `ESTA_E_AS_PROXIMAS`.
+
+**06b concluído** (PUT com `ESTA_E_AS_PROXIMAS`, resoluções de sobreposição e conversões). O status deste ticket continua `ready-for-agent`: dois critérios abaixo não foram atendidos.
+
+**Feito**
+- `PUT /api/transacoes/{chaveEdicao}` com `escopo: ESTA_E_AS_PROXIMAS` para ocorrência de série, no caso de uso `AlterarEstaEAsProximas`. O despacho em `TransacaoResource` é por escopo; `SOMENTE_ESTA` segue em `AlterarOcorrenciaSerie`.
+- Destino simples: encerra a projeção pela data original (`fim` = data original − 1, ou `CANCELADO` se a data original é o início), desliga a ocorrência com origem (`ID_SEGMENTO_ORIGEM`, data original e número da parcela) e suprime a original. Protegidas posteriores permanecem.
+- Destino repetição ou parcelamento: cria o novo trecho com `CriarSerieTransacao.executarNoGrupo`. Reaproveita o grupo quando a modalidade e o total não mudam (recorrência→recorrência; parcelamento→parcelamento com o mesmo total). Cria novo grupo na troca de modalidade ou na mudança de total. Parcelamento→recorrência exige término; recorrência→parcelamento exige numeração e total.
+- Parcelamento→parcelamento: a numeração enviada deve ser a da ocorrência selecionada (`422 PARCELAMENTO_INVALIDO` caso contrário).
+- Colisões: protegidas do grupo com data original ≥ corte cuja data financeira coincide com uma data da nova regra. A verificação é pontual sobre as protegidas (finitas), sem expandir a repetição; cobre séries indefinidas.
+- Resoluções: escolha específica prevalece sobre a política geral; duplicada, desconhecida ou não candidata → `422 RESOLUCAO_SOBREPOSICAO_INVALIDA`. `MANTER_SOMENTE_PRESERVADA` suprime o candidato de forma durável (`TB008`); `MANTER_AMBAS` mantém os dois impactos.
+- Atomicidade: bloqueio pessimista do grupo, comparação de versão e gravação na mesma transação; falha não grava nada (testado com escolhas inválidas seguidas de PUT válido com a mesma versão).
+- Revisão do grupo incrementada; grupo novo começa em 0.
+- `TransacaoRepository.listarProtegidasDoGrupoAPartirDe` passou a incluir transações desligadas cuja origem pertence ao grupo (protegidas por definição). Sem isso, individualizações não entravam nas colisões. A prévia usa a mesma consulta.
+- `RegrasEdicaoTransacao` recebeu `efetivadoEm`, `numeroParcela` e `registrarSupressao`, usados por `AlterarOcorrenciaSerie` e pelo novo caso de uso (sem duplicação).
+- Forma mensal PADRAO sem dias do mês (`diasMes: []`) é aceita no PUT somente quando o segmento de origem já a possui; novas séries continuam exigindo dias.
+- Testes: `AlterarEstaEAsProximasResourceTest` (26 casos HTTP com PostgreSQL real), cobrindo corte para simples com saldo, preservação de individualizada e efetivada posteriores, nova repetição no mesmo grupo, exigência de política e escolhas, escolhas em destino simples, colisão com data deslocada, escolha específica sobre a política geral, ambas as decisões, escolhas inválidas sem alteração, versão obsoleta, início anterior à data original, conversões nos dois sentidos, mudança de total com novo grupo, colisão distante em série indefinida, várias protegidas na mesma data, prévia e PUT com a mesma sobreposição, forma mensal ancorada e escritores concorrentes com a mesma versão. `AlterarOcorrenciaSerieResourceTest` deixou de esperar 422 para `ESTA_E_AS_PROXIMAS`.
+
+**Decisões tomadas sem o ticket cobrir**
+- Início da nova regra anterior à data original: `422 REPETICAO_INVALIDA`, no PUT e na prévia. Evita duplicar ocorrências do segmento antigo, que continua projetado até o corte.
+- A primeira ocorrência (selecionada) não é suprimida pela resolução. Se a data dela coincidir com protegida, ambas permanecem, qualquer que seja a escolha.
+- Destino simples: a prévia não lista candidatas nem sobreposições; o PUT rejeita o par de resoluções com `422 RESOLUCAO_SOBREPOSICAO_INVALIDA` (mesmo critério de 05).
+- Edição a partir de segmento antigo do grupo continua com `422 SEGMENTO_NAO_ATUAL` (regra legada mantida).
+- Chave da ocorrência cortada: após o PUT a chave antiga não tem recurso editável e responde `404`, conforme a spec. Um escritor concorrente com a mesma chave recebe `404` (ou `409`), e só uma escrita é aplicada.
+- Política geral aceita `MANTER_SOMENTE_PRESERVADA` e `MANTER_AMBAS` no PUT. Na prévia continua valendo somente `MANTER_SOMENTE_PRESERVADA` (400 para o outro valor, decisão de 06a).
+- `politicaSobreposicao`, `resolucoesSobreposicao` e `resolucao` são validados no caso de uso: valor fora do domínio ou campo desconhecido responde 400 `DADOS_INVALIDOS`; resolução desconhecida responde 422, conforme a spec.
+- Lista de escolhas limitada a 256 itens (400, sem truncar).
+
+**Pendências (tickets 05 e 03)**
+- Vínculo histórico da nova série com a origem (pendência de 05, em ESTA_E_AS_PROXIMAS): o histórico é preservado pelo segmento encerrado (com `fim`) no mesmo grupo quando a modalidade não muda, e pelas protegidas, que permanecem como estão. A nova primeira ocorrência não guarda vínculo com a ocorrência cortada. A spec não exige esse vínculo explícito; `CK006_07` impede registrar origem em registro de série, então registrá-lo exigiria migration e decisão de modelo. O comportamento de `SOMENTE_ESTA` não foi alterado.
+- Dia da data de início em regras semanais e mensais (pendência de 03): já era exigido por `RegraRecorrencia` (construtor de nova ocorrência), que `RepeticaoValidacao` usa em POST e PUT. Foram incluídos testes de regressão (`regraSemanalDeveIncluirDiaDaDataDeInicio`, `regraMensalPadraoDeveIncluirDiaDaDataDeInicio`). Nenhuma mudança de código foi necessária.
+
+**Critérios não atendidos**
+- Limite do corpo da requisição: não há limite configurado além do padrão do Quarkus (413, não 400). Só a lista de escolhas tem limite de 400.
+- Concorrência entre escritores: há um teste com duas threads e mesma versão, mas a prévia obsoleta entre prévia e PUT não tem teste próprio; a proteção é a mesma comparação de versão.
+- OpenAPI com os novos códigos de erro e rotas antigas: ticket 08.

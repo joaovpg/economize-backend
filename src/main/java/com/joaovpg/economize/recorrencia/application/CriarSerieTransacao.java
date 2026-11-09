@@ -4,6 +4,7 @@ import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
+import com.joaovpg.economize.recorrencia.RegraRecorrencia;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
@@ -32,10 +33,8 @@ public class CriarSerieTransacao {
   }
 
   public SegmentoRecorrencia executar(Comando comando) {
-    var repeticao = comando.repeticao();
-    var regra = RepeticaoValidacao.validar(repeticao, comando.dataFinanceira());
-    var parcelamento = repeticao.parcelamento();
-    var parcelado = parcelamento != null;
+    var regra = RepeticaoValidacao.validar(comando.repeticao(), comando.dataFinanceira());
+    var parcelado = comando.repeticao().parcelamento() != null;
 
     var grupo = new GrupoRecorrencia();
     grupo.setUsuario(comando.usuario());
@@ -43,6 +42,17 @@ public class CriarSerieTransacao {
     grupo.setTipo(parcelado ? TipoGrupoRecorrencia.PARCELAMENTO : TipoGrupoRecorrencia.RECORRENCIA);
     grupo.setStatus(StatusRecorrencia.ATIVO);
     grupoRepository.persist(grupo);
+    return executarNoGrupo(grupo, comando, regra);
+  }
+
+  /**
+   * Cria um segmento num grupo já existente ou recém-criado, com uma regra validada pelo chamador.
+   * O tipo do grupo deve corresponder à modalidade da repetição.
+   */
+  public SegmentoRecorrencia executarNoGrupo(
+      GrupoRecorrencia grupo, Comando comando, RegraRecorrencia regra) {
+    var repeticao = comando.repeticao();
+    var parcelamento = repeticao.parcelamento();
 
     var segmento = new SegmentoRecorrencia();
     segmento.setUsuario(comando.usuario());
@@ -57,7 +67,7 @@ public class CriarSerieTransacao {
     segmento.setFim(regra.ate());
     segmento.setRrule(regra.rrule());
     segmento.setTotalOcorrencias(regra.quantidadeOcorrencias());
-    if (parcelado) {
+    if (parcelamento != null) {
       segmento.setNumeroPrimeiraParcela(parcelamento.numeroPrimeiraParcela());
       segmento.setQuantidadeTotalOriginal(parcelamento.totalParcelas());
     }

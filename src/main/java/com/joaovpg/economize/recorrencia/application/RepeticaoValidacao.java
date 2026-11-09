@@ -21,6 +21,15 @@ public final class RepeticaoValidacao {
   private RepeticaoValidacao() {}
 
   public static RegraRecorrencia validar(RepeticaoRecorrencia repeticao, LocalDate inicio) {
+    return validar(repeticao, inicio, false);
+  }
+
+  /**
+   * Valida a repetição. {@code aceitarMensalAncoradaSemDias} admite a forma mensal PADRAO sem dias
+   * do mês, usada apenas por segmentos existentes que já a possuíam; novas séries exigem os dias.
+   */
+  public static RegraRecorrencia validar(
+      RepeticaoRecorrencia repeticao, LocalDate inicio, boolean aceitarMensalAncoradaSemDias) {
     var parcelamento = repeticao.parcelamento();
     var termino = repeticao.termino();
     if (parcelamento != null) {
@@ -45,7 +54,8 @@ public final class RepeticaoValidacao {
         parcelamento != null,
         inicio,
         diasSemana,
-        diasMes);
+        diasMes,
+        aceitarMensalAncoradaSemDias);
 
     LocalDate ate = null;
     Integer quantidade = null;
@@ -130,7 +140,8 @@ public final class RepeticaoValidacao {
       boolean parcelado,
       LocalDate inicio,
       List<DayOfWeek> diasSemana,
-      List<Integer> diasMes) {
+      List<Integer> diasMes,
+      boolean aceitarMensalAncoradaSemDias) {
     var semDias = diasSemana.isEmpty() && diasMes.isEmpty();
     if (politica == PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
         && !(semDias
@@ -154,7 +165,7 @@ public final class RepeticaoValidacao {
         exigir(diasSemana.isEmpty(), "A repeticao mensal nao aceita dias da semana");
         if (parcelado) {
           exigir(diasMes.isEmpty(), "O parcelamento mensal nao aceita dias do mes");
-        } else if (politica == PoliticaDataOcorrencia.PADRAO) {
+        } else if (politica == PoliticaDataOcorrencia.PADRAO && !aceitarMensalAncoradaSemDias) {
           exigir(!diasMes.isEmpty(), "A repeticao mensal sem parcelamento exige dias do mes");
         }
       }

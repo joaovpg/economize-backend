@@ -46,6 +46,7 @@ public class ResolverOcorrenciasRecorrentes {
       LocalDate fim) {
     var materializadas =
         transacoes.stream()
+            .filter(transacao -> transacao.getSegmentoRecorrencia() != null)
             .collect(
                 Collectors.toMap(
                     this::chaveTransacao, Function.identity(), (primeira, _) -> primeira));

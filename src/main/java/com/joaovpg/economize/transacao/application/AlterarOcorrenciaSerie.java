@@ -8,8 +8,6 @@ import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
-import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.CriarSerieTransacao;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
 import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
@@ -26,7 +24,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,7 +41,6 @@ public class AlterarOcorrenciaSerie {
   private final SegmentoRecorrenciaRepository segmentoRepository;
   private final GrupoRecorrenciaRepository grupoRepository;
   private final TransacaoRepository transacaoRepository;
-  private final SupressaoRecorrenciaRepository supressaoRepository;
   private final CriarSerieTransacao criarSerie;
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
@@ -54,7 +50,6 @@ public class AlterarOcorrenciaSerie {
       SegmentoRecorrenciaRepository segmentoRepository,
       GrupoRecorrenciaRepository grupoRepository,
       TransacaoRepository transacaoRepository,
-      SupressaoRecorrenciaRepository supressaoRepository,
       CriarSerieTransacao criarSerie,
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
       LocalizarOcorrenciaRecorrente localizarOcorrencia,
@@ -62,7 +57,6 @@ public class AlterarOcorrenciaSerie {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
     this.transacaoRepository = transacaoRepository;
-    this.supressaoRepository = supressaoRepository;
     this.criarSerie = criarSerie;
     this.resolverOcorrencias = resolverOcorrencias;
     this.localizarOcorrencia = localizarOcorrencia;
@@ -121,7 +115,7 @@ public class AlterarOcorrenciaSerie {
             comando.valor().setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY),
             comando.dataFinanceira(),
             comando.situacao(),
-            efetivadoEm(comando.situacao(), atual));
+            RegrasEdicaoTransacao.efetivadoEm(comando.situacao(), atual));
 
     if (comando.repeticao() == null) {
       regras.validarMesmaMoeda(contaAtual, conta);
@@ -150,12 +144,12 @@ public class AlterarOcorrenciaSerie {
     preencherSimples(transacao, dados);
     transacao.setSegmentoOrigem(segmento);
     transacao.setDataOriginalOrigem(comando.dataOriginal());
-    transacao.setNumeroParcelaOrigem(numeroParcela(segmento, ocorrencia));
+    transacao.setNumeroParcelaOrigem(RegrasEdicaoTransacao.numeroParcela(segmento, ocorrencia));
     if (atual == null) {
       transacaoRepository.persist(transacao);
     }
 
-    criarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
+    regras.registrarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
     grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
     transacaoRepository.flush();
     return ConsultarTransacoes.itemTransacaoSimples(transacao);
@@ -170,7 +164,7 @@ public class AlterarOcorrenciaSerie {
     if (atual != null) {
       transacaoRepository.delete(atual);
     }
-    criarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
+    regras.registrarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
     grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
 
     var novoSegmento =
@@ -222,38 +216,6 @@ public class AlterarOcorrenciaSerie {
     transacao.setValor(dados.valor());
     transacao.setDataFinanceira(dados.dataFinanceira());
     transacao.setEfetivadoEm(dados.efetivadoEm());
-  }
-
-  private void criarSupressao(
-      SegmentoRecorrencia segmento, LocalDate dataOriginal, UUID usuarioId) {
-    if (supressaoRepository.existe(segmento.getId(), dataOriginal, usuarioId)) {
-      return;
-    }
-    var supressao = new SupressaoRecorrencia();
-    supressao.setUsuario(segmento.getUsuario());
-    supressao.setGrupo(segmento.getGrupo());
-    supressao.setSegmento(segmento);
-    supressao.setIdentificadorRecorrencia(dataOriginal);
-    supressaoRepository.persist(supressao);
-  }
-
-  private static Integer numeroParcela(
-      SegmentoRecorrencia segmento, OcorrenciaRecorrencia ocorrencia) {
-    return segmento.getNumeroPrimeiraParcela() == null
-        ? null
-        : segmento.getNumeroPrimeiraParcela() + ocorrencia.numeroOcorrencia() - 1;
-  }
-
-  private static Instant efetivadoEm(SituacaoTransacao situacao, Transacao atual) {
-    if (situacao == SituacaoTransacao.PLANEJADA) {
-      return null;
-    }
-    if (atual != null
-        && atual.getSituacao() == SituacaoTransacao.EFETIVADA
-        && atual.getEfetivadoEm() != null) {
-      return atual.getEfetivadoEm();
-    }
-    return Instant.now().truncatedTo(ChronoUnit.MICROS);
   }
 
   private void validar(Comando comando) {

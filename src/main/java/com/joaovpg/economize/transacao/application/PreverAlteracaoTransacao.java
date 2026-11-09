@@ -132,7 +132,13 @@ public class PreverAlteracaoTransacao {
       regras.validarMesmaMoeda(contaAtual, conta);
     }
 
-    var projecao = projecaoDoComando(comando, comando.dataFinanceira());
+    if (comando.repeticao() != null && comando.dataFinanceira().isBefore(chave.dataOriginal())) {
+      throw new RegraNegocioException(
+          "REPETICAO_INVALIDA", "A nova regra deve iniciar na data da ocorrencia ou depois dela");
+    }
+    // Transação simples resultante não gera candidatas nem sobreposições na série.
+    var projecao =
+        comando.repeticao() == null ? null : projecaoDoComando(comando, comando.dataFinanceira());
     var protegidas =
         transacaoRepository
             .listarProtegidasDoGrupoAPartirDe(
@@ -148,7 +154,10 @@ public class PreverAlteracaoTransacao {
     var inicioPeriodo = comando.inicio().atDay(1);
     var fimPeriodo = comando.fim().atEndOfMonth();
 
-    var candidatas = candidatasEntre(projecao, inicioPeriodo, fimPeriodo);
+    var candidatas =
+        projecao == null
+            ? List.<Candidata>of()
+            : candidatasEntre(projecao, inicioPeriodo, fimPeriodo);
     var protegidasNoPeriodo =
         protegidas.stream()
             .filter(protegida -> dentro(protegida.getDataFinanceira(), inicioPeriodo, fimPeriodo))
@@ -181,12 +190,14 @@ public class PreverAlteracaoTransacao {
             .toList();
 
     var quantidadeForaDoPeriodo =
-        protegidas.stream()
-            .map(Transacao::getDataFinanceira)
-            .filter(data -> !dentro(data, inicioPeriodo, fimPeriodo))
-            .distinct()
-            .filter(data -> contem(projecao, data))
-            .count();
+        projecao == null
+            ? 0
+            : protegidas.stream()
+                .map(Transacao::getDataFinanceira)
+                .filter(data -> !dentro(data, inicioPeriodo, fimPeriodo))
+                .distinct()
+                .filter(data -> contem(projecao, data))
+                .count();
 
     return new Resultado(
         versaoAtual,
