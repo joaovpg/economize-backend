@@ -20,7 +20,7 @@ public class ExcluirTransacao {
   }
 
   @Transactional
-  public void executar(UUID usuarioId, UUID transacaoId) {
+  public void executar(UUID usuarioId, UUID transacaoId, String escopo) {
     var transacao =
         transacaoRepository
             .buscarDoUsuario(transacaoId, usuarioId)
@@ -36,6 +36,10 @@ public class ExcluirTransacao {
           "TRANSACAO_NAO_SIMPLES", "A transacao deve ser manipulada pelo modulo de origem");
     }
 
+    if (escopo != null) {
+      throw new RegraNegocioException(
+          "ESCOPO_INVALIDO", "Escopo nao se aplica a transacao simples");
+    }
     if (transacao.getSegmentoOrigem() != null) {
       revisarSerie.revisar(transacao.getSegmentoOrigem().getGrupo().getId(), usuarioId);
     }

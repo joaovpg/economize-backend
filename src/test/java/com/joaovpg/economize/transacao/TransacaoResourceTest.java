@@ -838,7 +838,11 @@ class TransacaoResourceTest {
 
   @Test
   void exigeAutenticacaoParaExcluirTransacao() {
-    given().when().delete("/api/transacoes/{id}", UUID.randomUUID()).then().statusCode(401);
+    given()
+        .when()
+        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(UUID.randomUUID()))
+        .then()
+        .statusCode(401);
   }
 
   @Test
@@ -1486,7 +1490,7 @@ class TransacaoResourceTest {
         .auth()
         .oauth2(token)
         .when()
-        .delete("/api/transacoes/{id}", transacaoId)
+        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(transacaoId))
         .then()
         .statusCode(204);
 
@@ -1733,7 +1737,12 @@ class TransacaoResourceTest {
 
   private io.restassured.response.ValidatableResponse excluirTransacao(
       String token, UUID transacaoId) {
-    return given().auth().oauth2(token).when().delete("/api/transacoes/{id}", transacaoId).then();
+    return given()
+        .auth()
+        .oauth2(token)
+        .when()
+        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(transacaoId))
+        .then();
   }
 
   private io.restassured.response.ValidatableResponse alterarTransacao(

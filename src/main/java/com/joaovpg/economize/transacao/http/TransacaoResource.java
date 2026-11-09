@@ -8,6 +8,7 @@ import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
+import com.joaovpg.economize.transacao.application.ExcluirOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.ExcluirTransacao;
 import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
@@ -35,6 +36,7 @@ public class TransacaoResource implements TransacaoResourceApi {
   private final AlterarOcorrenciaSerie alterarOcorrenciaSerie;
   private final AlterarEstaEAsProximas alterarEstaEAsProximas;
   private final ExcluirTransacao excluirTransacao;
+  private final ExcluirOcorrenciaSerie excluirOcorrenciaSerie;
   private final ConsultarTransacoes consultarTransacoes;
   private final PreverAlteracaoTransacao preverAlteracaoTransacao;
   private final TransacaoHttpMapper mapper;
@@ -46,6 +48,7 @@ public class TransacaoResource implements TransacaoResourceApi {
       AlterarOcorrenciaSerie alterarOcorrenciaSerie,
       AlterarEstaEAsProximas alterarEstaEAsProximas,
       ExcluirTransacao excluirTransacao,
+      ExcluirOcorrenciaSerie excluirOcorrenciaSerie,
       ConsultarTransacoes consultarTransacoes,
       PreverAlteracaoTransacao preverAlteracaoTransacao,
       TransacaoHttpMapper mapper,
@@ -55,6 +58,7 @@ public class TransacaoResource implements TransacaoResourceApi {
     this.alterarOcorrenciaSerie = alterarOcorrenciaSerie;
     this.alterarEstaEAsProximas = alterarEstaEAsProximas;
     this.excluirTransacao = excluirTransacao;
+    this.excluirOcorrenciaSerie = excluirOcorrenciaSerie;
     this.consultarTransacoes = consultarTransacoes;
     this.preverAlteracaoTransacao = preverAlteracaoTransacao;
     this.mapper = mapper;
@@ -137,8 +141,15 @@ public class TransacaoResource implements TransacaoResourceApi {
   }
 
   @Override
-  public RestResponse<Void> excluir(UUID id) {
-    excluirTransacao.executar(UUID.fromString(token.getSubject()), id);
+  public RestResponse<Void> excluir(String chaveEdicao, String escopo) {
+    var usuarioId = UUID.fromString(token.getSubject());
+    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
+      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      excluirOcorrenciaSerie.executar(usuarioId, chave.segmentoId(), chave.dataOriginal(), escopo);
+    } else {
+      var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
+      excluirTransacao.executar(usuarioId, id, escopo);
+    }
     return RestResponse.noContent();
   }
 }

@@ -531,7 +531,7 @@ class AlterarOcorrenciaSerieResourceTest {
         .auth()
         .oauth2(token)
         .when()
-        .delete("/api/transacoes/{id}", destacada.get("operacaoId"))
+        .delete("/api/transacoes/{chaveEdicao}", destacada.get("chaveEdicao"))
         .then()
         .statusCode(204);
 

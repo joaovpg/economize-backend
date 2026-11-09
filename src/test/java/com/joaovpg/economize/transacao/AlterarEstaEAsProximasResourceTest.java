@@ -215,8 +215,7 @@ class AlterarEstaEAsProximasResourceTest {
     consultar(token, "2026-10", "2026-10")
         .statusCode(200)
         .body(
-            "itens.find { it.dataFinanceira == '2026-10-10' }.origem",
-            equalTo("TRANSACAO_RECORRENTE"))
+            "itens.find { it.dataFinanceira == '2026-10-10' }.origem", equalTo("TRANSACAO_SIMPLES"))
         .body("itens.find { it.dataFinanceira == '2026-10-10' }.situacao", equalTo("EFETIVADA"))
         .body(
             "itens.find { it.dataFinanceira == '2026-10-10' }.valor",
@@ -1111,15 +1110,20 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   private ValidatableResponse efetivarOcorrencia(String token, Object segmentoId, String data) {
-    return given()
-        .auth()
-        .oauth2(token)
-        .contentType("application/json")
-        .body("{}")
-        .when()
-        .post(
-            "/api/recorrencias/{segmentoId}/ocorrencias/{dataOriginal}/efetivar", segmentoId, data)
-        .then();
+    var mes = data.substring(0, 7);
+    var item = itemDe(token, mes, mes, data);
+    return alterar(
+        token,
+        (String) item.get("chaveEdicao"),
+        alteracao(
+            (String) item.get("versaoEdicao"),
+            "SOMENTE_ESTA",
+            "null",
+            "EFETIVADA",
+            data,
+            "100.00",
+            null,
+            null));
   }
 
   private ValidatableResponse criar(String token, String corpo) {

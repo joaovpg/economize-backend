@@ -1,5 +1,6 @@
 package com.joaovpg.economize.transacao.http;
 
+import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
@@ -129,14 +130,18 @@ public interface TransacaoResourceApi {
       operationId = "alterarTransacao",
       summary = "Altera uma transação simples ou a converte em série",
       description =
-          "Atualiza uma transação simples do usuário autenticado. Transações vinculadas a "
-              + "transferências ou já pertencentes a uma série devem ser alteradas pelo recurso "
-              + "de origem. Com `repeticao` informada, a transação simples torna-se a primeira "
-              + "ocorrência de uma repetição ou parcelamento, sem cópia, e a resposta traz a nova "
-              + "chave. Ao mudar para `EFETIVADA`, a data financeira não pode estar no futuro; "
-              + "ao voltar para `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, "
-              + "inclusive os anuláveis e `repeticao` (`null` mantém a transação simples), e a "
-              + "`versaoEdicao` vigente.")
+          "Atualiza uma transação simples ou uma ocorrência de série, identificadas pela"
+              + " `chaveEdicao`. Para transação simples, omita `escopo`. Para ocorrência de série,"
+              + " informe `SOMENTE_ESTA` (apenas a ocorrência) ou `ESTA_E_AS_PROXIMAS` (a"
+              + " ocorrência e as seguintes). Ao criar um novo trecho com `ESTA_E_AS_PROXIMAS`,"
+              + " informe `politicaSobreposicao` e `resolucoesSobreposicao`. Com `repeticao`"
+              + " informada, a transação simples torna-se a primeira ocorrência de uma repetição ou"
+              + " parcelamento, sem cópia, e a resposta traz a nova chave. Ao mudar para"
+              + " `EFETIVADA`, a data financeira não pode estar no futuro; ao voltar para"
+              + " `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, inclusive os"
+              + " anuláveis e `repeticao` (`null` mantém a transação simples ou, em ocorrência de"
+              + " série, a converte em transação simples), e a `versaoEdicao` vigente. Use `POST"
+              + " .../previa-edicao` antes para conhecer as sobreposições.")
   @APIResponseSchema(
       value = ItemResponse.class,
       responseCode = "200",
@@ -148,10 +153,17 @@ public interface TransacaoResourceApi {
       responseCode = "409",
       description = "VERSAO_DESATUALIZADA: a transação foi alterada por outra operação.")
   @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: JSON malformado, campo desconhecido ou ausente, política de "
+              + "sobreposição fora do domínio, lista de escolhas acima do limite ou corpo acima do "
+              + "limite.")
+  @APIResponse(
       responseCode = "422",
       description =
-          "Regra violada; exemplos: ESCOPO_INVALIDO, DATA_FINANCEIRA_FUTURA ou "
-              + "MOEDA_CONTA_INCOMPATIVEL.")
+          "Regra violada; exemplos: ESCOPO_INVALIDO, DATA_FINANCEIRA_FUTURA, "
+              + "MOEDA_CONTA_INCOMPATIVEL, REPETICAO_INVALIDA, PARCELAMENTO_INVALIDO ou "
+              + "RESOLUCAO_SOBREPOSICAO_INVALIDA.")
   ItemResponse alterar(
       @PathParam("chaveEdicao")
           @Parameter(
@@ -264,28 +276,46 @@ public interface TransacaoResourceApi {
           CriarTransacaoRequest request);
 
   @DELETE
-  @Path("/{id}")
+  @Path("/{chaveEdicao}")
   @RolesAllowed("usuario")
   @Tag(name = "Transações")
   @Operation(
       operationId = "excluirTransacao",
-      summary = "Exclui uma transação simples",
+      summary = "Exclui uma transação simples ou uma ocorrência de série",
       description =
-          "Exclui somente uma transação simples pertencente ao usuário autenticado. Transações de"
-              + " transferências, recorrências e parcelamentos não devem ser removidas por esta"
-              + " rota.")
-  @APIResponse(responseCode = "204", description = "Transação excluída com sucesso.")
-  @APIResponse(responseCode = "404", description = "Transação não encontrada.")
+          "Com a chave de uma transação simples, exclui a transação e não aceita `escopo`. Com a"
+              + " chave de uma ocorrência de série, `escopo` é obrigatório: `SOMENTE_ESTA` remove a"
+              + " ocorrência e a suprime de forma durável; `ESTA_E_AS_PROXIMAS` remove a ocorrência"
+              + " e encerra a projeção a partir dela, preservando as ocorrências protegidas"
+              + " posteriores. Toda exclusão de série revisa o grupo. A exclusão não exige versão;"
+              + " transferências são excluídas pela rota de transferências.")
+  @APIResponse(responseCode = "204", description = "Exclusão realizada com sucesso.")
+  @APIResponse(
+      responseCode = "404",
+      description =
+          "RECURSO_NAO_ENCONTRADO: chave inexistente, inválida, desativada ou de outro usuário.")
   @APIResponse(
       responseCode = "422",
-      description = "Transação não é simples ou outra regra foi violada.")
+      description =
+          "Regra violada; exemplos: ESCOPO_INVALIDO (ausente, não suportado ou informado em"
+              + " transação simples) ou TRANSACAO_NAO_SIMPLES (transação vinculada a transferência"
+              + " ou série que deve ser excluída pelo recurso de origem).")
   RestResponse<Void> excluir(
-      @PathParam("id")
+      @PathParam("chaveEdicao")
           @Parameter(
-              name = "id",
+              name = "chaveEdicao",
               in = ParameterIn.PATH,
-              description = "Identificador da transação simples.",
+              description = "Chave opaca da transação simples ou da ocorrência de série.",
               required = true,
-              schema = @Schema(implementation = UUID.class))
-          UUID id);
+              schema = @Schema(type = SchemaType.STRING))
+          String chaveEdicao,
+      @QueryParam("escopo")
+          @Parameter(
+              name = "escopo",
+              in = ParameterIn.QUERY,
+              description =
+                  "Obrigatório para ocorrência de série: SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS."
+                      + " Omitido para transação simples.",
+              schema = @Schema(implementation = EscopoEdicaoTransacao.class))
+          String escopo);
 }
