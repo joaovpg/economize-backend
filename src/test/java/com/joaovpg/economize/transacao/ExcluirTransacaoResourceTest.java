@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 class ExcluirTransacaoResourceTest {
   private static final ZoneId FUSO = ZoneId.of("Pacific/Pago_Pago");
   private static final String INICIO = "2026-09-10";
+  private static final String VERSAO_DESATUALIZADA = "urn:economize:problem:VERSAO_DESATUALIZADA";
   private static final String MENSAL_DIA_10 =
       repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
   private static final String DIARIA_QUATRO =
@@ -94,11 +95,12 @@ class ExcluirTransacaoResourceTest {
   @Test
   void excluiTransacaoSimplesPelaChaveEDevolveNaoEncontradoNaRepeticao() {
     var token = autenticar();
-    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201);
-    String chave = criada.extract().path("chaveEdicao");
+    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201).extract();
+    String chave = criada.path("chaveEdicao");
+    String versao = criada.path("versaoEdicao");
 
-    excluir(token, chave, null).statusCode(204);
-    excluir(token, chave, null)
+    excluir(token, chave, versao, null).statusCode(204);
+    excluir(token, chave, versao, null)
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
     consultar(token, "2026-09", "2026-09").statusCode(200).body("itens", empty());
@@ -107,14 +109,15 @@ class ExcluirTransacaoResourceTest {
   @Test
   void rejeitaEscopoEmTransacaoSimplesEIdentificadorAntigoDeUuid() {
     var token = autenticar();
-    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201);
-    String chave = criada.extract().path("chaveEdicao");
-    String id = criada.extract().path("operacaoId");
+    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201).extract();
+    String chave = criada.path("chaveEdicao");
+    String id = criada.path("operacaoId");
+    String versao = criada.path("versaoEdicao");
 
-    excluir(token, chave, "SOMENTE_ESTA")
+    excluir(token, chave, versao, "SOMENTE_ESTA")
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
-    excluir(token, id, null)
+    excluir(token, id, "versao-qualquer", null)
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
     consultar(token, "2026-09", "2026-09").statusCode(200).body("itens", hasSize(1));
@@ -124,18 +127,20 @@ class ExcluirTransacaoResourceTest {
   void exigeEscopoValidoParaOcorrenciaDeSerieSemAliasesEmIngles() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    var chave = itemDe(token, "2026-10", "2026-10", "2026-10-10").get("chaveEdicao");
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    String chave = (String) outubro.get("chaveEdicao");
+    String versao = (String) outubro.get("versaoEdicao");
 
-    excluir(token, (String) chave, null)
+    excluir(token, chave, versao, null)
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
-    excluir(token, (String) chave, "ONLY_THIS")
+    excluir(token, chave, versao, "ONLY_THIS")
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
-    excluir(token, (String) chave, "THIS_AND_FUTURE")
+    excluir(token, chave, versao, "THIS_AND_FUTURE")
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
-    excluir(token, (String) chave, "FUTURO")
+    excluir(token, chave, versao, "FUTURO")
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
     consultar(token, "2026-10", "2026-10").statusCode(200).body("itens", hasSize(1));
@@ -147,7 +152,12 @@ class ExcluirTransacaoResourceTest {
     criar(token, corpo("PLANEJADA", "2026-01-10", PARCELAS_TRES)).statusCode(201);
     var fevereiro = itemDe(token, "2026-02", "2026-02", "2026-02-10");
 
-    excluir(token, (String) fevereiro.get("chaveEdicao"), "SOMENTE_ESTA").statusCode(204);
+    excluir(
+            token,
+            (String) fevereiro.get("chaveEdicao"),
+            (String) fevereiro.get("versaoEdicao"),
+            "SOMENTE_ESTA")
+        .statusCode(204);
 
     consultar(token, "2026-01", "2026-03")
         .statusCode(200)
@@ -158,7 +168,11 @@ class ExcluirTransacaoResourceTest {
         .body("itens[1].serie.numeroParcela", equalTo(3))
         .body("itens[0].serie.totalParcelas", equalTo(3))
         .body("itens[1].serie.totalParcelas", equalTo(3));
-    excluir(token, (String) fevereiro.get("chaveEdicao"), "SOMENTE_ESTA")
+    excluir(
+            token,
+            (String) fevereiro.get("chaveEdicao"),
+            (String) fevereiro.get("versaoEdicao"),
+            "SOMENTE_ESTA")
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
   }
@@ -171,7 +185,12 @@ class ExcluirTransacaoResourceTest {
     var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
     var versaoAntes = novembro.get("versaoEdicao");
 
-    excluir(token, (String) outubro.get("chaveEdicao"), "SOMENTE_ESTA").statusCode(204);
+    excluir(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            (String) outubro.get("versaoEdicao"),
+            "SOMENTE_ESTA")
+        .statusCode(204);
 
     var novembroDepois = itemDe(token, "2026-11", "2026-11", "2026-11-10");
     assertNotEquals(versaoAntes, novembroDepois.get("versaoEdicao"));
@@ -197,8 +216,14 @@ class ExcluirTransacaoResourceTest {
                 "2026-11-08",
                 "100"))
         .statusCode(200);
+    outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
 
-    excluir(token, (String) outubro.get("chaveEdicao"), "ESTA_E_AS_PROXIMAS").statusCode(204);
+    excluir(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            (String) outubro.get("versaoEdicao"),
+            "ESTA_E_AS_PROXIMAS")
+        .statusCode(204);
 
     consultar(token, "2026-09", "2026-12")
         .statusCode(200)
@@ -216,10 +241,11 @@ class ExcluirTransacaoResourceTest {
     var chave = (String) primeira.get("chaveEdicao");
     assertNotNull(primeira.get("efetivadoEm"));
 
-    excluir(token, chave, "ESTA_E_AS_PROXIMAS").statusCode(204);
+    excluir(token, chave, (String) primeira.get("versaoEdicao"), "ESTA_E_AS_PROXIMAS")
+        .statusCode(204);
 
     consultar(token, "2026-09", "2026-12").statusCode(200).body("itens", empty());
-    excluir(token, chave, "ESTA_E_AS_PROXIMAS")
+    excluir(token, chave, (String) primeira.get("versaoEdicao"), "ESTA_E_AS_PROXIMAS")
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
   }
@@ -230,7 +256,12 @@ class ExcluirTransacaoResourceTest {
     criar(token, corpo("EFETIVADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     var primeira = itemDe(token, "2026-09", "2026-09", INICIO);
 
-    excluir(token, (String) primeira.get("chaveEdicao"), "SOMENTE_ESTA").statusCode(204);
+    excluir(
+            token,
+            (String) primeira.get("chaveEdicao"),
+            (String) primeira.get("versaoEdicao"),
+            "SOMENTE_ESTA")
+        .statusCode(204);
 
     consultar(token, "2026-09", "2026-09").statusCode(200).body("itens", empty());
     consultar(token, "2026-10", "2026-10")
@@ -246,22 +277,19 @@ class ExcluirTransacaoResourceTest {
     criar(token, corpo("PLANEJADA", "2026-01-10", DIARIA_QUATRO)).statusCode(201);
 
     var dia12 = itemDe(token, "2026-01", "2026-01", "2026-01-12");
-    var intermediario =
-        alterar(
-                token,
-                (String) dia12.get("chaveEdicao"),
-                alteracao(
-                    (String) dia12.get("versaoEdicao"),
-                    "ESTA_E_AS_PROXIMAS",
-                    DIARIA_INDEFINIDA,
-                    "PLANEJADA",
-                    "2026-01-12",
-                    "25",
-                    "MANTER_SOMENTE_PRESERVADA",
-                    "[]"))
-            .statusCode(200)
-            .extract();
-    var chaveIntermediario = intermediario.path("chaveEdicao");
+    alterar(
+            token,
+            (String) dia12.get("chaveEdicao"),
+            alteracao(
+                (String) dia12.get("versaoEdicao"),
+                "ESTA_E_AS_PROXIMAS",
+                DIARIA_INDEFINIDA,
+                "PLANEJADA",
+                "2026-01-12",
+                "25",
+                "MANTER_SOMENTE_PRESERVADA",
+                "[]"))
+        .statusCode(200);
 
     var ultimo = itemDe(token, "2026-01", "2026-01", "2026-01-13");
     alterar(
@@ -291,7 +319,13 @@ class ExcluirTransacaoResourceTest {
         .statusCode(200)
         .body("situacao", equalTo("EFETIVADA"));
 
-    excluir(token, (String) chaveIntermediario, "ESTA_E_AS_PROXIMAS").statusCode(204);
+    var intermediario = itemDe(token, "2026-01", "2026-01", "2026-01-12");
+    excluir(
+            token,
+            (String) intermediario.get("chaveEdicao"),
+            (String) intermediario.get("versaoEdicao"),
+            "ESTA_E_AS_PROXIMAS")
+        .statusCode(204);
 
     consultar(token, "2026-01", "2026-01")
         .statusCode(200)
@@ -306,20 +340,94 @@ class ExcluirTransacaoResourceTest {
   void ocultaSerieAlheiaEChavesMalformadasOuInexistentes() {
     var tokenDono = autenticar();
     criar(tokenDono, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    var chave = (String) itemDe(tokenDono, "2026-10", "2026-10", "2026-10-10").get("chaveEdicao");
+    var outubro = itemDe(tokenDono, "2026-10", "2026-10", "2026-10-10");
+    String chave = (String) outubro.get("chaveEdicao");
+    String versao = (String) outubro.get("versaoEdicao");
     var tokenOutro = autenticarOutroUsuario();
 
-    excluir(tokenOutro, chave, "SOMENTE_ESTA")
+    excluir(tokenOutro, chave, versao, "SOMENTE_ESTA")
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
-    excluir(tokenOutro, UUID.randomUUID().toString(), null)
+    excluir(tokenOutro, UUID.randomUUID().toString(), "versao-qualquer", null)
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
-    excluir(tokenDono, "chave-invalida", "SOMENTE_ESTA")
+    excluir(tokenDono, "chave-invalida", "versao-qualquer", "SOMENTE_ESTA")
         .statusCode(404)
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
-    excluir(tokenDono, chave, "SOMENTE_ESTA").statusCode(204);
+    excluir(tokenDono, chave, versao, "SOMENTE_ESTA").statusCode(204);
     consultar(tokenDono, "2026-10", "2026-10").statusCode(200).body("itens", empty());
+  }
+
+  @Test
+  void excluirTransacaoSimplesComVersaoObsoletaRespondeConflitoSemApagar() {
+    var token = autenticar();
+    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201).extract();
+    String chave = criada.path("chaveEdicao");
+    String versaoOriginal = criada.path("versaoEdicao");
+    String versaoAtual =
+        alterar(token, chave, alteracao(versaoOriginal, null, "null", "PLANEJADA", INICIO, "120"))
+            .statusCode(200)
+            .extract()
+            .path("versaoEdicao");
+    assertNotEquals(versaoOriginal, versaoAtual);
+
+    excluir(token, chave, versaoOriginal, null)
+        .statusCode(409)
+        .body("type", equalTo(VERSAO_DESATUALIZADA));
+    consultar(token, "2026-09", "2026-09")
+        .statusCode(200)
+        .body("itens", hasSize(1))
+        .body("itens[0].versaoEdicao", equalTo(versaoAtual));
+
+    excluir(token, chave, versaoAtual, null).statusCode(204);
+    consultar(token, "2026-09", "2026-09").statusCode(200).body("itens", empty());
+  }
+
+  @Test
+  void exigeVersaoEdicaoParaExcluirSemApagar() {
+    var token = autenticar();
+    var criada = criar(token, corpo("PLANEJADA", INICIO, "null")).statusCode(201).extract();
+    String chave = criada.path("chaveEdicao");
+
+    given()
+        .auth()
+        .oauth2(token)
+        .when()
+        .delete("/api/transacoes/{chave}", chave)
+        .then()
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"))
+        .body("errors[0].field", equalTo("versaoEdicao"));
+    consultar(token, "2026-09", "2026-09").statusCode(200).body("itens", hasSize(1));
+  }
+
+  @Test
+  void excluirOcorrenciaDeSerieComRevisaoObsoletaRespondeConflitoSemApagar() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
+
+    alterar(
+            token,
+            (String) novembro.get("chaveEdicao"),
+            alteracao(
+                (String) novembro.get("versaoEdicao"),
+                "SOMENTE_ESTA",
+                "null",
+                "PLANEJADA",
+                "2026-11-10",
+                "100"))
+        .statusCode(200);
+
+    excluir(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            (String) outubro.get("versaoEdicao"),
+            "SOMENTE_ESTA")
+        .statusCode(409)
+        .body("type", equalTo(VERSAO_DESATUALIZADA));
+    consultar(token, "2026-10", "2026-10").statusCode(200).body("itens", hasSize(1));
   }
 
   @Test
@@ -349,8 +457,8 @@ class ExcluirTransacaoResourceTest {
         .then();
   }
 
-  private ValidatableResponse excluir(String token, String chave, String escopo) {
-    var requisicao = given().auth().oauth2(token);
+  private ValidatableResponse excluir(String token, String chave, String versao, String escopo) {
+    var requisicao = given().auth().oauth2(token).queryParam("versaoEdicao", versao);
     if (escopo != null) {
       requisicao = requisicao.queryParam("escopo", escopo);
     }

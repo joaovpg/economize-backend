@@ -29,31 +29,31 @@ public class AlterarTransacao {
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final RevisarSerieRecorrencia revisarSerie;
   private final RegrasEdicaoTransacao regras;
+  private final BloquearTransacaoSimples bloquearTransacao;
 
   public AlterarTransacao(
       TransacaoRepository transacaoRepository,
       CriarSerieTransacao criarSerie,
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
       RevisarSerieRecorrencia revisarSerie,
-      RegrasEdicaoTransacao regras) {
+      RegrasEdicaoTransacao regras,
+      BloquearTransacaoSimples bloquearTransacao) {
     this.transacaoRepository = transacaoRepository;
     this.criarSerie = criarSerie;
     this.resolverOcorrencias = resolverOcorrencias;
     this.revisarSerie = revisarSerie;
     this.regras = regras;
+    this.bloquearTransacao = bloquearTransacao;
   }
 
   @Transactional
   public ConsultarTransacoes.Item executar(UUID transacaoId, Comando comando) {
     validar(comando);
 
-    var transacao =
-        transacaoRepository
-            .buscarDoUsuarioParaEdicao(transacaoId, comando.usuarioId())
-            .orElseThrow(() -> recursoNaoEncontrado("Transacao"));
+    var transacao = bloquearTransacao.executar(transacaoId, comando.usuarioId());
 
     validarTransacaoSimples(transacao);
-    if (!IdentidadeEdicaoTransacao.versao(transacao.getVersao()).equals(comando.versaoEdicao())) {
+    if (!IdentidadeEdicaoTransacao.versaoSimples(transacao).equals(comando.versaoEdicao())) {
       throw new RegraNegocioException(
           "VERSAO_DESATUALIZADA", "A transacao foi alterada por outra operacao");
     }

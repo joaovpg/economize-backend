@@ -141,14 +141,18 @@ public class TransacaoResource implements TransacaoResourceApi {
   }
 
   @Override
-  public RestResponse<Void> excluir(String chaveEdicao, String escopo) {
+  public RestResponse<Void> excluir(String chaveEdicao, String escopo, String versaoEdicao) {
     var usuarioId = UUID.fromString(token.getSubject());
+    if (versaoEdicao == null || versaoEdicao.isBlank()) {
+      throw new ValidacaoException("versaoEdicao", "Versao de edicao obrigatoria para excluir");
+    }
     if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
       var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
-      excluirOcorrenciaSerie.executar(usuarioId, chave.segmentoId(), chave.dataOriginal(), escopo);
+      excluirOcorrenciaSerie.executar(
+          usuarioId, chave.segmentoId(), chave.dataOriginal(), escopo, versaoEdicao);
     } else {
       var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
-      excluirTransacao.executar(usuarioId, id, escopo);
+      excluirTransacao.executar(usuarioId, id, escopo, versaoEdicao);
     }
     return RestResponse.noContent();
   }

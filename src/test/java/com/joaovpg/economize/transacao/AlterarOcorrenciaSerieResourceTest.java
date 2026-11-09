@@ -530,6 +530,7 @@ class AlterarOcorrenciaSerieResourceTest {
     given()
         .auth()
         .oauth2(token)
+        .queryParam("versaoEdicao", destacada.get("versaoEdicao"))
         .when()
         .delete("/api/transacoes/{chaveEdicao}", destacada.get("chaveEdicao"))
         .then()

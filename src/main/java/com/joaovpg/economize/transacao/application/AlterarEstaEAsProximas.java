@@ -221,7 +221,7 @@ public class AlterarEstaEAsProximas {
                     segmento.getQuantidadeTotalOriginal()));
 
     var regra =
-        RepeticaoValidacao.validar(
+        RepeticaoValidacao.validarEdicao(
             repeticao,
             inicio,
             aceitaMensalAncoradaExistente(segmento, repeticao, destinoParcelado));

@@ -82,7 +82,7 @@ public class PreverAlteracaoTransacao {
             .buscarDoUsuario(transacaoId, comando.usuarioId())
             .orElseThrow(() -> naoEncontrada("Transacao"));
     validarTransacaoSimples(transacao);
-    var versaoAtual = IdentidadeEdicaoTransacao.versao(transacao.getVersao());
+    var versaoAtual = IdentidadeEdicaoTransacao.versaoSimples(transacao);
     verificarVersao(versaoAtual, comando, "A transacao foi alterada por outra operacao");
 
     var conta = regras.resolverConta(transacao.getConta(), comando.contaId(), comando.usuarioId());
@@ -91,7 +91,7 @@ public class PreverAlteracaoTransacao {
     regras.validarDatas(
         conta, transacao.getUsuario(), comando.dataFinanceira(), comando.situacao());
 
-    var projecao = projecaoDoComando(comando, comando.dataFinanceira());
+    var projecao = projecaoDoComando(comando, comando.dataFinanceira(), false);
     return calcular(versaoAtual, comando, projecao, List.of());
   }
 
@@ -138,7 +138,9 @@ public class PreverAlteracaoTransacao {
     }
     // Transação simples resultante não gera candidatas nem sobreposições na série.
     var projecao =
-        comando.repeticao() == null ? null : projecaoDoComando(comando, comando.dataFinanceira());
+        comando.repeticao() == null
+            ? null
+            : projecaoDoComando(comando, comando.dataFinanceira(), true);
     var protegidas =
         transacaoRepository
             .listarProtegidasDoGrupoAPartirDe(
@@ -210,7 +212,11 @@ public class PreverAlteracaoTransacao {
         quantidadeForaDoPeriodo);
   }
 
-  private Projecao projecaoDoComando(Comando comando, LocalDate inicio) {
+  /**
+   * Projeta a nova regra. Em novo trecho de série ({@code novoTrecho}) o início só precisa ser uma
+   * ocorrência da regra; na conversão de transação simples, ele é a primeira ocorrência.
+   */
+  private Projecao projecaoDoComando(Comando comando, LocalDate inicio, boolean novoTrecho) {
     var impacto =
         (comando.tipo() == TipoTransacao.RECEITA ? comando.valor() : comando.valor().negate())
             .setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY);
@@ -218,7 +224,10 @@ public class PreverAlteracaoTransacao {
       return new Projecao(inicio, null, null, null, impacto);
     }
     var repeticao = comando.repeticao();
-    var regra = RepeticaoValidacao.validar(repeticao, inicio);
+    var regra =
+        novoTrecho
+            ? RepeticaoValidacao.validarEdicao(repeticao, inicio, false)
+            : RepeticaoValidacao.validar(repeticao, inicio);
     var parcelamento = repeticao.parcelamento();
     return new Projecao(
         inicio,

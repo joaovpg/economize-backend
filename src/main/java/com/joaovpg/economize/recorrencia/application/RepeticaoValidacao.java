@@ -20,16 +20,27 @@ import java.util.Set;
 public final class RepeticaoValidacao {
   private RepeticaoValidacao() {}
 
+  /** Valida a criação de uma série: o início deve ser a primeira ocorrência da regra. */
   public static RegraRecorrencia validar(RepeticaoRecorrencia repeticao, LocalDate inicio) {
-    return validar(repeticao, inicio, false);
+    return validar(repeticao, inicio, false, true);
   }
 
   /**
-   * Valida a repetição. {@code aceitarMensalAncoradaSemDias} admite a forma mensal PADRAO sem dias
-   * do mês, usada apenas por segmentos existentes que já a possuíam; novas séries exigem os dias.
+   * Valida um novo trecho de série em edição: o início deve ser uma ocorrência da regra, sem
+   * precisar ser a primeira. {@code aceitarMensalAncoradaSemDias} admite a forma mensal PADRAO sem
+   * dias do mês, usada apenas por segmentos existentes que já a possuíam; novas séries exigem os
+   * dias.
    */
-  public static RegraRecorrencia validar(
+  public static RegraRecorrencia validarEdicao(
       RepeticaoRecorrencia repeticao, LocalDate inicio, boolean aceitarMensalAncoradaSemDias) {
+    return validar(repeticao, inicio, aceitarMensalAncoradaSemDias, false);
+  }
+
+  private static RegraRecorrencia validar(
+      RepeticaoRecorrencia repeticao,
+      LocalDate inicio,
+      boolean aceitarMensalAncoradaSemDias,
+      boolean exigirPrimeiraOcorrencia) {
     var parcelamento = repeticao.parcelamento();
     var termino = repeticao.termino();
     if (parcelamento != null) {
@@ -97,14 +108,23 @@ public final class RepeticaoValidacao {
     }
 
     try {
-      return new RegraRecorrencia(
-          inicio,
-          repeticao.frequencia(),
-          repeticao.intervalo(),
-          Set.copyOf(diasSemana),
-          Set.copyOf(diasMes),
-          quantidade,
-          ate);
+      return exigirPrimeiraOcorrencia
+          ? new RegraRecorrencia(
+              inicio,
+              repeticao.frequencia(),
+              repeticao.intervalo(),
+              Set.copyOf(diasSemana),
+              Set.copyOf(diasMes),
+              quantidade,
+              ate)
+          : RegraRecorrencia.paraSegmento(
+              inicio,
+              repeticao.frequencia(),
+              repeticao.intervalo(),
+              Set.copyOf(diasSemana),
+              Set.copyOf(diasMes),
+              quantidade,
+              ate);
     } catch (IllegalArgumentException exception) {
       throw repeticaoInvalida(exception.getMessage());
     }

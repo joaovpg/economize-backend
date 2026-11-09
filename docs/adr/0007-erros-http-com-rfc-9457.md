@@ -25,6 +25,8 @@ Os mapeadores de exceções de domínio permanecem próprios da aplicação para
 
 Os nomes legados `codigo`, `mensagem` e `campos` não são mantidos como aliases.
 
+Versão desatualizada (`urn:economize:problem:VERSAO_DESATUALIZADA`) responde `409 Conflict`, não `422`, e não contém dados financeiros. Perdas de corrida de versão na persistência (`OptimisticLockException`) recebem o mesmo problema.
+
 ## Consequências
 
 Clientes devem extrair códigos do sufixo de `type` e tratar `errors` como uma lista. A extensão fornece respostas padronizadas para exceções de infraestrutura, parsing JSON, segurança e problemas inesperados. O contrato específico de validação continua controlado pelo mapeador da aplicação.

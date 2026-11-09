@@ -1486,13 +1486,7 @@ class TransacaoResourceTest {
                         LocalDate.of(2026, 1, 15),
                         "Transacao excluida"));
 
-    given()
-        .auth()
-        .oauth2(token)
-        .when()
-        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(transacaoId))
-        .then()
-        .statusCode(204);
+    excluirTransacao(token, transacaoId).statusCode(204);
 
     requisicaoConsulta(token)
         .queryParam("inicio", "2026-01")
@@ -1740,9 +1734,21 @@ class TransacaoResourceTest {
     return given()
         .auth()
         .oauth2(token)
+        .queryParam("versaoEdicao", versaoPersistida(transacaoId))
         .when()
         .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(transacaoId))
         .then();
+  }
+
+  /** Versão vigente da transação persistida; inexistente resulta em valor qualquer. */
+  private String versaoPersistida(UUID transacaoId) {
+    return QuarkusTransaction.requiringNew()
+        .call(
+            () ->
+                transacaoRepository
+                    .findByIdOptional(transacaoId)
+                    .map(transacao -> IdentidadeEdicaoTransacao.versao(transacao.getVersao()))
+                    .orElse("versao-qualquer"));
   }
 
   private io.restassured.response.ValidatableResponse alterarTransacao(

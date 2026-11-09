@@ -10,7 +10,9 @@ import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.SituacaoTransacao;
+import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -44,7 +46,8 @@ public class ExcluirOcorrenciaSerie {
   }
 
   @Transactional
-  public void executar(UUID usuarioId, UUID segmentoId, LocalDate dataOriginal, String escopo) {
+  public void executar(
+      UUID usuarioId, UUID segmentoId, LocalDate dataOriginal, String escopo, String versaoEdicao) {
     var alcance = escopo(escopo);
 
     var grupoId =
@@ -64,6 +67,14 @@ public class ExcluirOcorrenciaSerie {
             segmentoId, dataOriginal, usuarioId);
     localizarOcorrencia.executar(segmento, dataOriginal, usuarioId, materializada.isPresent());
 
+    var versaoAtual =
+        IdentidadeEdicaoTransacao.versaoRecorrencia(
+            grupo.getRevisaoSerie(), materializada.map(Transacao::getVersao).orElse(null));
+    if (!versaoAtual.equals(versaoEdicao)) {
+      throw new RegraNegocioException(
+          "VERSAO_DESATUALIZADA", "A ocorrencia foi alterada por outra operacao");
+    }
+
     materializada.ifPresent(transacaoRepository::delete);
     if (alcance == EscopoEdicaoTransacao.SOMENTE_ESTA) {
       suprimir(segmento, dataOriginal, usuarioId);
@@ -71,6 +82,7 @@ public class ExcluirOcorrenciaSerie {
       encerrarAPartirDe(segmento, dataOriginal, usuarioId);
     }
     grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
+    transacaoRepository.flush();
   }
 
   private static EscopoEdicaoTransacao escopo(String texto) {

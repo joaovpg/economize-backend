@@ -552,6 +552,69 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
+  void editaNovoTrechoComInicioEmOcorrenciaDaRegraQueNaoEOMenorDiaDaSemana() {
+    var token = autenticar();
+    var semanalSegQua =
+        repeticao(
+            "SEMANAL",
+            "[\"SEGUNDA\",\"QUARTA\"]",
+            "[]",
+            "PADRAO",
+            "{\"tipo\":\"INDEFINIDO\"}",
+            "null");
+    criar(token, corpo("PLANEJADA", "2026-09-07", semanalSegQua)).statusCode(201);
+    var quarta = itemDe(token, "2026-09", "2026-09", "2026-09-09");
+
+    alterar(
+            token,
+            (String) quarta.get("chaveEdicao"),
+            alteracao(
+                (String) quarta.get("versaoEdicao"),
+                ESTA,
+                semanalSegQua,
+                "PLANEJADA",
+                "2026-09-09",
+                "100",
+                MANTER_PRESERVADA,
+                "[]"))
+        .statusCode(200);
+
+    consultar(token, "2026-09", "2026-09")
+        .statusCode(200)
+        .body(
+            "itens.find { it.dataFinanceira == '2026-09-09' }.repeticao.diasSemana",
+            org.hamcrest.Matchers.contains("SEGUNDA", "QUARTA"))
+        .body(
+            "itens.dataFinanceira",
+            org.hamcrest.Matchers.contains(
+                "2026-09-07",
+                "2026-09-09",
+                "2026-09-14",
+                "2026-09-16",
+                "2026-09-21",
+                "2026-09-23",
+                "2026-09-28",
+                "2026-09-30"));
+  }
+
+  @Test
+  void criacaoComInicioEmQuartaSemSerPrimeiraOcorrenciaContinuaRecusada() {
+    var token = autenticar();
+    var semanalSegQua =
+        repeticao(
+            "SEMANAL",
+            "[\"SEGUNDA\",\"QUARTA\"]",
+            "[]",
+            "PADRAO",
+            "{\"tipo\":\"INDEFINIDO\"}",
+            "null");
+
+    criar(token, corpo("PLANEJADA", "2026-09-09", semanalSegQua))
+        .statusCode(422)
+        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
+  }
+
+  @Test
   void corpoAcimaDoLimiteNoPutRetornaDadosInvalidosSemGravar() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);

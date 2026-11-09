@@ -1,5 +1,6 @@
 package com.joaovpg.economize.transferencia.http;
 
+import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
 import com.joaovpg.economize.transferencia.application.AlterarTransferencia;
 import com.joaovpg.economize.transferencia.application.CriarTransferencia;
@@ -54,8 +55,11 @@ public class TransferenciaResource implements TransferenciaResourceApi {
   }
 
   @Override
-  public RestResponse<Void> excluir(UUID id) {
-    excluirTransferencia.executar(usuarioId(), id);
+  public RestResponse<Void> excluir(UUID id, String versaoEdicao) {
+    if (versaoEdicao == null || versaoEdicao.isBlank()) {
+      throw new ValidacaoException("versaoEdicao", "Versao de edicao obrigatoria para excluir");
+    }
+    excluirTransferencia.executar(usuarioId(), id, versaoEdicao);
     return RestResponse.noContent();
   }
 

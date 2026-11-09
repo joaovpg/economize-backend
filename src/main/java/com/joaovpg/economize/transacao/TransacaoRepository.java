@@ -19,6 +19,22 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
     return find("id = ?1 and usuario.id = ?2", id, usuarioId).firstResultOptional();
   }
 
+  /**
+   * Grupo de origem de uma transação simples destacada de série, sem bloquear a transação. Serve
+   * para bloquear o grupo antes da transação, na mesma ordem das demais escritas de série.
+   */
+  public Optional<UUID> buscarGrupoOrigemDoUsuario(UUID id, UUID usuarioId) {
+    return getEntityManager()
+        .createQuery(
+            "select g.id from Transacao t join t.segmentoOrigem s join s.grupo g"
+                + " where t.id = :id and t.usuario.id = :usuarioId",
+            UUID.class)
+        .setParameter("id", id)
+        .setParameter("usuarioId", usuarioId)
+        .getResultStream()
+        .findFirst();
+  }
+
   public Optional<Transacao> buscarDoUsuarioParaEdicao(UUID id, UUID usuarioId) {
     return find("id = ?1 and usuario.id = ?2", id, usuarioId)
         .withLock(LockModeType.PESSIMISTIC_WRITE)

@@ -12,10 +12,12 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -124,9 +126,16 @@ public interface TransferenciaResourceApi {
       summary = "Exclui uma transferência",
       description =
           "Exclui a transferência do usuário autenticado e as duas transações internas que a "
-              + "representam no extrato.")
+              + "representam no extrato. Exige `versaoEdicao`; versão desatualizada responde 409.")
   @APIResponse(responseCode = "204", description = "Transferência excluída com sucesso.")
+  @APIResponse(
+      responseCode = "400",
+      description = "DADOS_INVALIDOS: `versaoEdicao` ausente ou vazio.")
   @APIResponse(responseCode = "404", description = "Transferência não encontrada.")
+  @APIResponse(
+      responseCode = "409",
+      description =
+          "VERSAO_DESATUALIZADA: a versão informada não é mais a vigente; nada é removido.")
   @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
   RestResponse<Void> excluir(
       @PathParam("id")
@@ -136,5 +145,14 @@ public interface TransferenciaResourceApi {
               description = "Identificador da transferência.",
               required = true,
               schema = @Schema(implementation = UUID.class))
-          UUID id);
+          UUID id,
+      @QueryParam("versaoEdicao")
+          @Parameter(
+              name = "versaoEdicao",
+              in = ParameterIn.QUERY,
+              required = true,
+              description =
+                  "Versão vigente da transferência, obtida na leitura ou na resposta de escrita.",
+              schema = @Schema(type = SchemaType.STRING))
+          String versaoEdicao);
 }

@@ -435,10 +435,58 @@ class TransferenciaResourceTest {
     given()
         .auth()
         .oauth2(outroToken)
+        .queryParam("versaoEdicao", "versao-qualquer")
         .when()
         .delete("/api/transferencias/{id}", transferenciaId)
         .then()
         .statusCode(404);
+  }
+
+  @Test
+  void excluirTransferenciaComVersaoObsoletaRespondeConflitoSemApagar() {
+    var data = LocalDate.now();
+    var criada = criarTransferencia("PLANEJADA", data).statusCode(201).extract();
+    var transferenciaId = UUID.fromString(criada.path("transferenciaId"));
+    String versaoOriginal = criada.path("versaoEdicao");
+    String versaoAtual =
+        alterarComCorpo(
+                token,
+                transferenciaId,
+                comVersao(
+                    corpo(contaOrigemId, contaDestinoId, "PLANEJADA", "Corrigida", data),
+                    versaoOriginal))
+            .statusCode(200)
+            .extract()
+            .path("versaoEdicao");
+
+    given()
+        .auth()
+        .oauth2(token)
+        .queryParam("versaoEdicao", versaoOriginal)
+        .when()
+        .delete("/api/transferencias/{id}", transferenciaId)
+        .then()
+        .statusCode(409)
+        .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"));
+    given()
+        .auth()
+        .oauth2(token)
+        .queryParam("inicio", YearMonth.from(data).toString())
+        .queryParam("fim", YearMonth.from(data).toString())
+        .when()
+        .get("/api/transacoes")
+        .then()
+        .statusCode(200)
+        .body("itens", hasSize(2));
+
+    given()
+        .auth()
+        .oauth2(token)
+        .queryParam("versaoEdicao", versaoAtual)
+        .when()
+        .delete("/api/transferencias/{id}", transferenciaId)
+        .then()
+        .statusCode(204);
   }
 
   @Test
@@ -448,17 +496,21 @@ class TransferenciaResourceTest {
     var transferenciaId = UUID.fromString(criada.path("transferenciaId"));
     editarConta(token, contaOrigemId, "Conta origem", false);
 
-    alterarComCorpo(
-            token,
-            transferenciaId,
-            comVersao(
-                corpo(contaOrigemId, contaDestinoId, "PLANEJADA", "Corrigida", data),
-                criada.path("versaoEdicao")))
-        .statusCode(200)
-        .body("descricao", equalTo("Corrigida"));
+    String versaoAtual =
+        alterarComCorpo(
+                token,
+                transferenciaId,
+                comVersao(
+                    corpo(contaOrigemId, contaDestinoId, "PLANEJADA", "Corrigida", data),
+                    criada.path("versaoEdicao")))
+            .statusCode(200)
+            .body("descricao", equalTo("Corrigida"))
+            .extract()
+            .path("versaoEdicao");
     given()
         .auth()
         .oauth2(token)
+        .queryParam("versaoEdicao", versaoAtual)
         .when()
         .delete("/api/transferencias/{id}", transferenciaId)
         .then()

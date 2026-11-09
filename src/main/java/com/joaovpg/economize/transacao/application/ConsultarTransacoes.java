@@ -305,7 +305,7 @@ public class ConsultarTransacoes {
         transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
         null,
         IdentidadeEdicaoTransacao.chave(transacao.getId()),
-        IdentidadeEdicaoTransacao.versao(transacao.getVersao()),
+        IdentidadeEdicaoTransacao.versaoSimples(transacao),
         transacao.getTipo(),
         false,
         transacao.getSegmentoOrigem() != null,

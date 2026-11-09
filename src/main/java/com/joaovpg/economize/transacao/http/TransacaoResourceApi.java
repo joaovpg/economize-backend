@@ -287,13 +287,23 @@ public interface TransacaoResourceApi {
               + " chave de uma ocorrência de série, `escopo` é obrigatório: `SOMENTE_ESTA` remove a"
               + " ocorrência e a suprime de forma durável; `ESTA_E_AS_PROXIMAS` remove a ocorrência"
               + " e encerra a projeção a partir dela, preservando as ocorrências protegidas"
-              + " posteriores. Toda exclusão de série revisa o grupo. A exclusão não exige versão;"
-              + " transferências são excluídas pela rota de transferências.")
+              + " posteriores. Toda exclusão de série revisa o grupo. Toda exclusão exige"
+              + " `versaoEdicao`, a versão vigente da transação ou da ocorrência; divergência"
+              + " responde 409 VERSAO_DESATUALIZADA sem remover dados. Transferências são excluídas"
+              + " pela rota de transferências.")
   @APIResponse(responseCode = "204", description = "Exclusão realizada com sucesso.")
+  @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: `versaoEdicao` ausente ou vazio, ou corpo fora do limite permitido.")
   @APIResponse(
       responseCode = "404",
       description =
           "RECURSO_NAO_ENCONTRADO: chave inexistente, inválida, desativada ou de outro usuário.")
+  @APIResponse(
+      responseCode = "409",
+      description =
+          "VERSAO_DESATUALIZADA: a versão informada não é mais a vigente; nada é removido.")
   @APIResponse(
       responseCode = "422",
       description =
@@ -317,5 +327,15 @@ public interface TransacaoResourceApi {
                   "Obrigatório para ocorrência de série: SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS."
                       + " Omitido para transação simples.",
               schema = @Schema(implementation = EscopoEdicaoTransacao.class))
-          String escopo);
+          String escopo,
+      @QueryParam("versaoEdicao")
+          @Parameter(
+              name = "versaoEdicao",
+              in = ParameterIn.QUERY,
+              required = true,
+              description =
+                  "Versão vigente da transação ou ocorrência, obtida na leitura ou na resposta de"
+                      + " escrita. Divergência responde 409 VERSAO_DESATUALIZADA.",
+              schema = @Schema(type = SchemaType.STRING))
+          String versaoEdicao);
 }

@@ -75,6 +75,18 @@ public final class IdentidadeEdicaoTransacao {
   }
 
   /**
+   * Versão exposta de uma transação simples. Uma destacada de série (com origem de segmento) inclui
+   * a revisão do grupo de origem, para que escritas na série a tornem desatualizada.
+   */
+  public static String versaoSimples(Transacao transacao) {
+    var origem = transacao.getSegmentoOrigem();
+    if (origem == null) {
+      return versao(transacao.getVersao());
+    }
+    return versaoRecorrencia(origem.getGrupo().getRevisaoSerie(), transacao.getVersao());
+  }
+
+  /**
    * Versão de uma ocorrência de série: revisão compartilhada do grupo e, quando a ocorrência já
    * estiver materializada, a versão do registro selecionado.
    */
