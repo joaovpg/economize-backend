@@ -38,6 +38,8 @@ class PreverAlteracaoTransacaoResourceTest {
   private static final String SOMENTE_ESTA = "\"escopo\":\"SOMENTE_ESTA\",";
   private static final String SEM_ESCOPO = "";
   private static final String INICIO = "2026-09-10";
+  // Acima do limite de corpo configurado em application.yaml (quarkus.http.limits.max-body-size).
+  private static final int TAMANHO_CORPO_ACIMA_DO_LIMITE = 70_000;
   private static final String MENSAL_DIA_10 =
       repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
   private static final String MENSAL_DIA_12 =
@@ -326,6 +328,33 @@ class PreverAlteracaoTransacaoResourceTest {
                 "MANTER_SOMENTE_PRESERVADA"))
         .statusCode(409)
         .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"));
+  }
+
+  @Test
+  void corpoDaPreviaAcimaDoLimiteRetornaDadosInvalidosSemGravar() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+    var corpo =
+        previaCorpo(
+            (String) outubro.get("versaoEdicao"),
+            ESTA_E_AS_PROXIMAS,
+            MENSAL_DIA_12,
+            "PLANEJADA",
+            "2026-10-12",
+            "80",
+            "2026-10",
+            "2026-12",
+            "MANTER_SOMENTE_PRESERVADA");
+    var acimaDoLimite = "{" + " ".repeat(TAMANHO_CORPO_ACIMA_DO_LIMITE) + corpo.substring(1);
+
+    previa(token, (String) outubro.get("chaveEdicao"), acimaDoLimite)
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
   }
 
   @Test

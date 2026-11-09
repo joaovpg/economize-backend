@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +56,8 @@ class AlterarEstaEAsProximasResourceTest {
   private static final String ESTA = "ESTA_E_AS_PROXIMAS";
   private static final String SOMENTE_ESTA = "SOMENTE_ESTA";
   private static final String INICIO = "2026-09-10";
+  // Acima do limite de corpo configurado em application.yaml (quarkus.http.limits.max-body-size).
+  private static final int TAMANHO_CORPO_ACIMA_DO_LIMITE = 70_000;
   private static final String MANTER_PRESERVADA = "MANTER_SOMENTE_PRESERVADA";
   private static final String MANTER_AMBAS = "MANTER_AMBAS";
   private static final String SEM_ESCOPO = null;
@@ -501,6 +504,109 @@ class AlterarEstaEAsProximasResourceTest {
         .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"))
         .body("valor", nullValue())
         .body("chaveEdicao", nullValue());
+  }
+
+  @Test
+  void previaComVersaoAnteriorAoPutRespondeConflitoSemGravarParcialmente() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var versao = (String) outubro.get("versaoEdicao");
+    var chave = (String) outubro.get("chaveEdicao");
+    previa(
+            token,
+            chave,
+            previaCorpo(
+                versao,
+                MENSAL_DIA_10,
+                ESTA,
+                "PLANEJADA",
+                "2026-10-10",
+                "120",
+                "2026-10",
+                "2026-12"))
+        .statusCode(200)
+        .body("versaoEdicao", equalTo(versao));
+    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+
+    alterar(
+            token,
+            chave,
+            alteracao(
+                versao,
+                ESTA,
+                MENSAL_DIA_10,
+                "PLANEJADA",
+                "2026-10-10",
+                "120",
+                MANTER_PRESERVADA,
+                "[]"))
+        .statusCode(409)
+        .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"))
+        .body("valor", nullValue())
+        .body("chaveEdicao", nullValue())
+        .body("dataFinanceira", nullValue());
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
+  }
+
+  @Test
+  void corpoAcimaDoLimiteNoPutRetornaDadosInvalidosSemGravar() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+    var corpo =
+        alteracao(
+            (String) outubro.get("versaoEdicao"),
+            ESTA,
+            MENSAL_DIA_10,
+            "PLANEJADA",
+            "2026-10-10",
+            "120",
+            MANTER_PRESERVADA,
+            "[]");
+    var acimaDoLimite = "{" + " ".repeat(TAMANHO_CORPO_ACIMA_DO_LIMITE) + corpo.substring(1);
+
+    alterar(token, (String) outubro.get("chaveEdicao"), acimaDoLimite)
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
+  }
+
+  @Test
+  void listaDeEscolhasAcimaDoLimiteRetornaDadosInvalidosSemGravar() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+    var acimaDoLimite =
+        escolhas(
+            Collections.nCopies(257, escolha("2026-12-10", MANTER_AMBAS)).toArray(String[]::new));
+
+    alterar(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            alteracao(
+                (String) outubro.get("versaoEdicao"),
+                ESTA,
+                MENSAL_DIA_10,
+                "PLANEJADA",
+                "2026-10-10",
+                "120",
+                MANTER_PRESERVADA,
+                acimaDoLimite))
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"))
+        .body("errors[0].field", equalTo("resolucoesSobreposicao"));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
   }
 
   @Test

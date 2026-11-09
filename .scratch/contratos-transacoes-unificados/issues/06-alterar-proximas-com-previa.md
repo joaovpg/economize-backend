@@ -4,7 +4,7 @@
 
 **Blocked by:** 05: Editar e converter uma única ocorrência.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Sugestão de divisão:** esta issue junta três entregas: (a) a prévia, somente leitura; (b) o PUT com resoluções de sobreposição; (c) conversões entre repetição e parcelamento. Considere dividir em 06a (a) e 06b (b e c), para reduzir o tamanho de cada ciclo.
 
@@ -121,3 +121,9 @@
 - Limite do corpo da requisição: não há limite configurado além do padrão do Quarkus (413, não 400). Só a lista de escolhas tem limite de 400.
 - Concorrência entre escritores: há um teste com duas threads e mesma versão, mas a prévia obsoleta entre prévia e PUT não tem teste próprio; a proteção é a mesma comparação de versão.
 - OpenAPI com os novos códigos de erro e rotas antigas: ticket 08.
+
+**Correções 06c** (fecham os dois critérios pendentes do 06b; status passa a `done`)
+- Limite do corpo: `quarkus.http.limits.max-body-size: 64K` explicitado em `application.yaml`. O padrão anterior do Quarkus era 10 MB. Corpo acima do limite em `/transacoes` e `/transferencias` responde 400 `DADOS_INVALIDOS` (`LimiteCorpoTransacaoHandler`, handler de rota executado antes do limite do Quarkus), sem gravação. O 413 do Quarkus permanece para outras rotas e para corpos sem `Content-Length` (chunked), que ainda não são convertidos para 400. Um JSON legítimo com 256 escolhas tem cerca de 25 KB.
+- Lista de escolhas acima de 256 itens: já respondia 400 `DADOS_INVALIDOS` no campo `resolucoesSobreposicao`. Coberto por teste com 257 itens, sem gravação.
+- Prévia obsoleta entre prévia e PUT: prévia com versão V, série alterada por outra escrita, PUT com V responde 409 `VERSAO_DESATUALIZADA` sem dados financeiros e sem gravação parcial (série igual antes e depois). O comportamento já estava correto; o teste foi acrescentado.
+- Testes: `AlterarEstaEAsProximasResourceTest` (29) e `PreverAlteracaoTransacaoResourceTest` (12) passam.
