@@ -1,6 +1,6 @@
 # Contratos unificados de transações e transferências
 
-Status: ready-for-agent
+Status: done
 
 ## Objetivo e contexto
 
