@@ -1,4 +1,4 @@
-package com.joaovpg.economize.persistencia;
+package com.joaovpg.economize.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
