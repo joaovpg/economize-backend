@@ -8,8 +8,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.UUID;
 
-final class ContaValidation {
-  private ContaValidation() {}
+final class ContaValidacao {
+  private ContaValidacao() {}
 
   static String nome(String nome) {
     if (nome == null || nome.isBlank() || nome.strip().length() > 120) {

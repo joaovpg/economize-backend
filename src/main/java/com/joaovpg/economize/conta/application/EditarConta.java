@@ -28,22 +28,22 @@ public class EditarConta {
       throw new RegraNegocioException("ATIVO_CONTA_INVALIDO", "Flag ativo da conta invalida");
     }
 
-    var nome = ContaValidation.nome(comando.nome());
-    var moeda = ContaValidation.moeda(comando.moeda());
-    var saldoInicial = ContaValidation.saldoInicial(comando.saldoInicial());
+    var nome = ContaValidacao.nome(comando.nome());
+    var moeda = ContaValidacao.moeda(comando.moeda());
+    var saldoInicial = ContaValidacao.saldoInicial(comando.saldoInicial());
     var dataSaldoInicial =
-        ContaValidation.dataSaldoInicial(
+        ContaValidacao.dataSaldoInicial(
             comando.dataSaldoInicial(), LocalDate.now(ZoneId.of(conta.getUsuario().getTimezone())));
-    ContaValidation.nomeDisponivel(contaRepository, comando.usuarioId(), nome, conta.getId());
-    ContaValidation.dadosIniciaisEditaveis(conta, moeda, saldoInicial, dataSaldoInicial);
+    ContaValidacao.nomeDisponivel(contaRepository, comando.usuarioId(), nome, conta.getId());
+    ContaValidacao.dadosIniciaisEditaveis(conta, moeda, saldoInicial, dataSaldoInicial);
 
     conta.setNome(nome);
     conta.setMoeda(moeda);
     conta.setSaldoInicial(saldoInicial);
     conta.setDataSaldoInicial(dataSaldoInicial);
     conta.setAtivo(comando.ativo());
-    ContaValidation.flush(contaRepository);
-    return ContaValidation.resultado(conta);
+    ContaValidacao.flush(contaRepository);
+    return ContaValidacao.resultado(conta);
   }
 
   public record Comando(

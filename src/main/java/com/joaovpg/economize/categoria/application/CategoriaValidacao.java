@@ -3,8 +3,8 @@ package com.joaovpg.economize.categoria.application;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import java.util.Locale;
 
-final class CategoriaValidation {
-  private CategoriaValidation() {}
+final class CategoriaValidacao {
+  private CategoriaValidacao() {}
 
   static String nome(String nome) {
     if (nome == null || nome.isBlank() || nome.strip().length() > 80) {
