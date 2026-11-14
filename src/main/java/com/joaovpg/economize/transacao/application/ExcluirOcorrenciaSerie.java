@@ -6,7 +6,7 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;

@@ -1,4 +1,4 @@
-package com.joaovpg.economize.recorrencia.enums;
+package com.joaovpg.economize.recorrencia.domain;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 

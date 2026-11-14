@@ -1,8 +1,6 @@
-package com.joaovpg.economize.recorrencia;
+package com.joaovpg.economize.recorrencia.domain;
 
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
-import com.joaovpg.economize.recorrencia.enums.TipoTermino;
+import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;

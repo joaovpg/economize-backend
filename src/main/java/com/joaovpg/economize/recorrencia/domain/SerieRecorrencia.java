@@ -1,4 +1,4 @@
-package com.joaovpg.economize.recorrencia;
+package com.joaovpg.economize.recorrencia.domain;
 
 import java.time.LocalDate;
 import java.util.UUID;

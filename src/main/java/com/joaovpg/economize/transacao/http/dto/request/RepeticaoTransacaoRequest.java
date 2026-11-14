@@ -1,8 +1,8 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
-import com.joaovpg.economize.recorrencia.enums.TipoTermino;
+import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.TipoTermino;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;

@@ -1,14 +1,14 @@
 package com.joaovpg.economize.transacao.application;
 
-import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
-import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.RegraRecorrencia;
-import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
-import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.TipoGrupoRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.SerieRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.TipoGrupoRecorrencia;
 import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.OrigemItemConsulta;

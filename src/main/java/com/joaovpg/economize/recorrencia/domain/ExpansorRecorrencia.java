@@ -1,7 +1,5 @@
-package com.joaovpg.economize.recorrencia;
+package com.joaovpg.economize.recorrencia.domain;
 
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.LocalDate;

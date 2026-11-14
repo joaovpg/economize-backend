@@ -1,11 +1,9 @@
-package com.joaovpg.economize.recorrencia;
+package com.joaovpg.economize.recorrencia.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.joaovpg.economize.recorrencia.adapter.Ical4jMotorRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;

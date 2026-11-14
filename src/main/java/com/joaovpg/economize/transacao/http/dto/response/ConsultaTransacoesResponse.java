@@ -1,8 +1,8 @@
 package com.joaovpg.economize.transacao.http.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
-import com.joaovpg.economize.recorrencia.enums.TipoTermino;
+import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.TipoTermino;
 import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.OrigemItemConsulta;
 import com.joaovpg.economize.transacao.SituacaoTransacao;

@@ -1,9 +1,9 @@
 package com.joaovpg.economize.transacao.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
-import com.joaovpg.economize.recorrencia.SerieRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.FrequenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.SerieRecorrencia;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.ResolucaoSobreposicao;

@@ -1,6 +1,6 @@
 package com.joaovpg.economize.recorrencia;
 
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.LockModeType;

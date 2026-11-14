@@ -1,6 +1,5 @@
-package com.joaovpg.economize.recorrencia;
+package com.joaovpg.economize.recorrencia.domain;
 
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.DayOfWeek;
 import java.time.LocalDate;

@@ -1,11 +1,11 @@
 package com.joaovpg.economize.recorrencia.application;
 
-import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
-import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.LocalDate;
 import java.util.UUID;

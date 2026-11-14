@@ -1,9 +1,9 @@
 package com.joaovpg.economize.recorrencia.application;
 
-import com.joaovpg.economize.recorrencia.RegraRecorrencia;
-import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.FrequenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.FrequenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import java.time.DayOfWeek;

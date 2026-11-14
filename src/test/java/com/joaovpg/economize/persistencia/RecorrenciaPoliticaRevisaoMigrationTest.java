@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
