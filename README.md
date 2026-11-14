@@ -286,6 +286,4 @@ Consulte a [documentação de build nativo do Quarkus](https://quarkus.io/guides
 
 - [Modelo financeiro](docs/modelo-financeiro.md)
 - [Roadmap](docs/roadmap.md)
-- [Instruções para agentes](AGENTS.md)
-
-Este repositório ainda não declara uma licença de uso.
+- [Instruções para agentes](AGENTS.md)s
