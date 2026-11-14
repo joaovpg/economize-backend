@@ -1,4 +1,4 @@
-package com.joaovpg.economize.shared.http.mappers;
+package com.joaovpg.economize.shared.http.erro;
 
 import io.quarkiverse.httpproblem.HttpProblem;
 import jakarta.annotation.Priority;

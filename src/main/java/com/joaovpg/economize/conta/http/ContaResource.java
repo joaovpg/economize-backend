@@ -6,7 +6,7 @@ import com.joaovpg.economize.conta.application.ListarContas;
 import com.joaovpg.economize.conta.http.dto.request.CadastrarContaRequest;
 import com.joaovpg.economize.conta.http.dto.request.EditarContaRequest;
 import com.joaovpg.economize.conta.http.dto.response.ContaResponse;
-import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
 import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;

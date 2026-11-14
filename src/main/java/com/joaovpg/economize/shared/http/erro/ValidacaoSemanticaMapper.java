@@ -1,4 +1,4 @@
-package com.joaovpg.economize.shared.http.mappers;
+package com.joaovpg.economize.shared.http.erro;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import io.quarkiverse.httpproblem.HttpProblem;

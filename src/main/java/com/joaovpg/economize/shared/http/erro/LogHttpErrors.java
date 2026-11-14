@@ -1,4 +1,4 @@
-package com.joaovpg.economize.shared.http;
+package com.joaovpg.economize.shared.http.erro;
 
 import jakarta.interceptor.InterceptorBinding;
 import java.lang.annotation.ElementType;

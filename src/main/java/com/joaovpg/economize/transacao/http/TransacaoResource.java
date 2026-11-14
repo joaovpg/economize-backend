@@ -1,7 +1,7 @@
 package com.joaovpg.economize.transacao.http;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
-import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
 import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
 import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;

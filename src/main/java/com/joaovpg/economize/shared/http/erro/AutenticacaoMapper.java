@@ -1,6 +1,6 @@
-package com.joaovpg.economize.shared.http.mappers;
+package com.joaovpg.economize.shared.http.erro;
 
-import com.joaovpg.economize.shared.exception.RegraNegocioException;
+import com.joaovpg.economize.shared.exception.AutenticacaoException;
 import io.quarkiverse.httpproblem.HttpProblem;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -10,15 +10,15 @@ import jakarta.ws.rs.ext.Provider;
 import java.net.URI;
 
 @Provider
-public class RegraNegocioMapper implements ExceptionMapper<RegraNegocioException> {
+public class AutenticacaoMapper implements ExceptionMapper<AutenticacaoException> {
   @Context UriInfo uriInfo;
 
   @Override
-  public Response toResponse(RegraNegocioException exception) {
+  public Response toResponse(AutenticacaoException exception) {
     return HttpProblem.builder()
         .withType(URI.create("urn:economize:problem:" + exception.codigo()))
-        .withTitle("Regra de negocio violada")
-        .withStatus("VERSAO_DESATUALIZADA".equals(exception.codigo()) ? 409 : 422)
+        .withTitle("Falha de autenticação")
+        .withStatus(Response.Status.UNAUTHORIZED)
         .withDetail(exception.getMessage())
         .withInstance(uriInfo.getRequestUri())
         .build()

@@ -1,4 +1,4 @@
-package com.joaovpg.economize.shared.http;
+package com.joaovpg.economize.shared.http.erro;
 
 import io.quarkiverse.httpproblem.HttpProblem;
 import io.quarkiverse.httpproblem.postprocessing.ProblemContext;

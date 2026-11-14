@@ -1,4 +1,4 @@
-package com.joaovpg.economize.shared.http;
+package com.joaovpg.economize.shared.http.erro;
 
 import com.joaovpg.economize.shared.exception.AutenticacaoException;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;

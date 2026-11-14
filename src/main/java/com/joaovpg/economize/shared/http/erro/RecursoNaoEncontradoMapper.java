@@ -1,6 +1,6 @@
-package com.joaovpg.economize.shared.http.mappers;
+package com.joaovpg.economize.shared.http.erro;
 
-import com.joaovpg.economize.shared.exception.CsrfException;
+import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import io.quarkiverse.httpproblem.HttpProblem;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -10,15 +10,15 @@ import jakarta.ws.rs.ext.Provider;
 import java.net.URI;
 
 @Provider
-public class CsrfMapper implements ExceptionMapper<CsrfException> {
+public class RecursoNaoEncontradoMapper implements ExceptionMapper<RecursoNaoEncontradoException> {
   @Context UriInfo uriInfo;
 
   @Override
-  public Response toResponse(CsrfException exception) {
+  public Response toResponse(RecursoNaoEncontradoException exception) {
     return HttpProblem.builder()
-        .withType(URI.create("urn:economize:problem:CSRF_TOKEN_INVALIDO"))
-        .withTitle("Falha de proteção CSRF")
-        .withStatus(Response.Status.FORBIDDEN)
+        .withType(URI.create("urn:economize:problem:" + exception.codigo()))
+        .withTitle("Recurso nao encontrado")
+        .withStatus(Response.Status.NOT_FOUND)
         .withDetail(exception.getMessage())
         .withInstance(uriInfo.getRequestUri())
         .build()

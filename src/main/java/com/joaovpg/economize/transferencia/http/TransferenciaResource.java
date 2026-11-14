@@ -1,7 +1,7 @@
 package com.joaovpg.economize.transferencia.http;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
-import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
 import com.joaovpg.economize.transferencia.application.AlterarTransferencia;
 import com.joaovpg.economize.transferencia.application.CriarTransferencia;
 import com.joaovpg.economize.transferencia.application.ExcluirTransferencia;
