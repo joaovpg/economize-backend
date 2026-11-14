@@ -6,7 +6,6 @@ import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
 import com.joaovpg.economize.recorrencia.application.RepeticaoValidacao;
-import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
 import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;

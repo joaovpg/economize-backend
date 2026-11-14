@@ -8,7 +8,6 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SerieRecorrencia;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
 import com.joaovpg.economize.recorrencia.enums.TipoGrupoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.ValidacaoException;

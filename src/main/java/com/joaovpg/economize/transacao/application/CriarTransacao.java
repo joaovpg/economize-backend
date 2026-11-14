@@ -6,8 +6,6 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
-import com.joaovpg.economize.recorrencia.application.CriarSerieTransacao;
-import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.SituacaoTransacao;

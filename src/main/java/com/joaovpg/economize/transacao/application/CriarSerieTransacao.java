@@ -1,4 +1,4 @@
-package com.joaovpg.economize.recorrencia.application;
+package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.conta.ContaFinanceira;
@@ -8,6 +8,7 @@ import com.joaovpg.economize.recorrencia.RegraRecorrencia;
 import com.joaovpg.economize.recorrencia.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
+import com.joaovpg.economize.recorrencia.application.RepeticaoValidacao;
 import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
 import com.joaovpg.economize.recorrencia.enums.TipoGrupoRecorrencia;
 import com.joaovpg.economize.transacao.TipoTransacao;

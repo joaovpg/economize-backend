@@ -1,4 +1,4 @@
-package com.joaovpg.economize.recorrencia.application;
+package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.recorrencia.ExpansorRecorrencia;
 import com.joaovpg.economize.recorrencia.LeitorRruleRecorrencia;
