@@ -34,6 +34,9 @@ quarkus:
     cors:
       enabled: true
       access-control-allow-credentials: true
+    limits:
+      # Maior corpo aceito. Acima disso, /transacoes e /transferencias respondem 400 DADOS_INVALIDOS.
+      max-body-size: 64K
 
 mp:
   jwt:

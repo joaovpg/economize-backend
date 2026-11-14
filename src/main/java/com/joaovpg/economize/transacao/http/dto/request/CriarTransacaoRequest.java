@@ -1,9 +1,9 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -63,12 +63,9 @@ public record CriarTransacaoRequest(
             required = true)
         @NotNull LocalDate dataFinanceira,
     @Schema(
-            description = "Deve ser null para transação simples.",
-            ref = "#/components/schemas/NullValue",
+            description =
+                "Repetição ou parcelamento da transação; nulo cria uma transação simples.",
+            nullable = true,
             required = true)
         @JsonProperty(required = true)
-        JsonNode repeticao) {
-  public boolean repeticaoInformada() {
-    return repeticao != null && !repeticao.isNull();
-  }
-}
+        @Valid RepeticaoTransacaoRequest repeticao) {}

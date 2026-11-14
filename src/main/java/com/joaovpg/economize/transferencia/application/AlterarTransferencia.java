@@ -4,9 +4,10 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.transferencia.SituacaoTransferencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -37,6 +38,11 @@ public class AlterarTransferencia {
         transferenciaRepository
             .buscarDoUsuarioParaEdicao(transferenciaId, comando.usuarioId())
             .orElseThrow(this::naoEncontrada);
+    if (!IdentidadeEdicaoTransacao.versao(transferencia.getVersao())
+        .equals(comando.versaoEdicao())) {
+      throw new RegraNegocioException(
+          "VERSAO_DESATUALIZADA", "A transferencia foi alterada por outra operacao");
+    }
     var origem =
         resolverConta(transferencia.getContaOrigem(), comando.contaOrigemId(), comando.usuarioId());
     var destino =
@@ -85,9 +91,11 @@ public class AlterarTransferencia {
         transferencia.getTransacaoSaida(), origem, TipoTransacao.DESPESA, comando, efetivadoEm);
     atualizarLado(
         transferencia.getTransacaoEntrada(), destino, TipoTransacao.RECEITA, comando, efetivadoEm);
+    transferenciaRepository.flush();
 
     return new TransferenciaResultado(
         transferencia.getId(),
+        IdentidadeEdicaoTransacao.versao(transferencia.getVersao()),
         origem.getId(),
         destino.getId(),
         transferencia.getSituacao(),
@@ -162,6 +170,7 @@ public class AlterarTransferencia {
 
   public record Comando(
       UUID usuarioId,
+      String versaoEdicao,
       UUID contaOrigemId,
       UUID contaDestinoId,
       SituacaoTransferencia situacao,

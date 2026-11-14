@@ -14,7 +14,7 @@ final class CategoriaConstraintHandler {
 
       if ("uk003_01_nome_raiz".equalsIgnoreCase(constraint)
           || "uk003_02_nome_irma".equalsIgnoreCase(constraint)) {
-        throw CategoriaValidation.nomeDuplicado();
+        throw CategoriaValidacao.nomeDuplicado();
       }
 
       throw exception;

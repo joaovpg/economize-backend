@@ -2,9 +2,10 @@ package com.joaovpg.economize.recorrencia;
 
 import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.conta.ContaFinanceira;
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.shared.persistence.EntidadeBase;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -72,6 +73,10 @@ public class SegmentoRecorrencia extends EntidadeBase {
 
   @Column(name = "INT_QUANTIDADE_TOTAL_ORIGINAL")
   private Integer quantidadeTotalOriginal;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "STR_POLITICA_DATA", nullable = false, length = 30)
+  private PoliticaDataOcorrencia politicaData;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "STR_STATUS", nullable = false, length = 20)

@@ -27,8 +27,15 @@
 - **Excecao recorrente**: ocorrencia persistida ou supressao que deixa de seguir os dados do Segmento sem perder a identidade de sua origem.
 - **Tipo de grupo**: classificacao do plano como `RECORRENCIA` ou `PARCELAMENTO`; os dois usam segmentos, mas somente o segundo possui numeracao de parcelas.
 - **Data original da ocorrencia**: data produzida pela RRULE que identifica uma ocorrencia junto com o Segmento, mesmo quando a Data financeira de uma excecao e alterada.
-- **Supressao de recorrencia**: registro da ausencia intencional de uma ocorrencia virtual; nao e uma Transacao. A exclusao explicita de uma Transacao materializada pode criar a Supressao atomicamente para impedir seu reaparecimento.
-- **Escopo de edicao**: alcance da alteracao de uma ocorrencia, `ONLY_THIS` ou `THIS_AND_FUTURE`; o segundo so vale para ocorrencia virtual.
+- **Supressao de recorrencia**: registro da ausencia intencional de uma ocorrencia virtual; nao e uma Transacao. A exclusao de uma ocorrencia de serie com escopo `SOMENTE_ESTA` grava a Supressao na mesma transacao de banco para impedir seu reaparecimento; na exclusao, `ESTA_E_AS_PROXIMAS` encerra a projecao por corte e nao grava Supressao. Na alteracao, a conversao da ocorrencia selecionada para transacao simples com `ESTA_E_AS_PROXIMAS` grava a Supressao da data original, e cada candidata descartada por `MANTER_SOMENTE_PRESERVADA` em novo trecho tambem e suprimida (ver ADR 0014).
+- **Escopo de edicao**: alcance de uma alteracao ou exclusao de ocorrencia de serie, `SOMENTE_ESTA` ou `ESTA_E_AS_PROXIMAS`. O segundo encerra a projecao a partir da data original do corte e preserva as ocorrencias protegidas posteriores.
+- **Ocorrencia protegida**: ocorrencia de serie individualizada ou efetivada. Alteracoes em lote com `ESTA_E_AS_PROXIMAS` nao as alteram nem as removem; somente a ocorrencia selecionada pode ser alterada ou excluida explicitamente.
+- **Chave de edicao**: identificador opaco e URL-safe de uma Transacao simples ou de uma ocorrencia de serie (segmento e data original). Nao autoriza acesso e nao revela dados financeiros; a ocorrencia destacada como transacao simples mantem a chave da propria Transacao.
+- **Versao de edicao**: token opaco comparado sob bloqueio antes de cada escrita. Para Transacao simples e Transferencia, corresponde a versao persistida; para ocorrencia de serie, combina a revisao da serie e a versao do registro materializado, quando existir.
+- **Revisao da serie**: contador compartilhado de um Grupo de recorrencia, incrementado por toda mutacao que possa afetar a serie, suas excecoes, supressoes, projecao, situacao, dados ou resolucoes de sobreposicao.
+- **Previa de edicao**: calculo sem gravacao das ocorrencias que uma alteracao produziria em um periodo, com as sobreposicoes encontradas. A previa nao gera token; o PUT recalcula e revalida.
+- **Sobreposicao**: conflito entre uma nova ocorrencia e uma ocorrencia protegida posterior ao corte que possuem a mesma Data financeira. Resolve-se por `MANTER_SOMENTE_PRESERVADA` (descarta a nova) ou `MANTER_AMBAS`, por escolha especifica da data original candidata ou pela politica geral.
+- **Conversao de ocorrencia**: troca de uma ocorrencia de serie por Transacao simples ou por nova repeticao ou parcelamento, conforme o escopo; a origem permanece como historico e a serie continua, exceto quando o escopo encerra a projecao.
 - **Parcelamento**: plano financeiro finito composto por parcelas numeradas, com valor por parcela e quantidade total original definidos na criacao.
 - **Parcela**: ocorrencia numerada de um Parcelamento, virtual enquanto apenas projetada e persistida quando efetivada ou individualizada.
 - **Numero da parcela**: posicao atual de uma Parcela dentro do Segmento de recorrencia que a originou; e exposto como `numeroParcela` e fica nulo para Recorrencias comuns.
@@ -43,3 +50,4 @@
 - `Service` nao nomeia um conceito do dominio e nao deve substituir uma intencao especifica.
 - Use `CadastrarCategoria`, `EditarCategoria` e `ListarCategorias` para as intencoes de gestao de categorias.
 - Use `CadastrarConta`, `EditarConta` e `ListarContas` para as intencoes de gestao de Contas financeiras.
+- Escopos publicos sao em portugues: `SOMENTE_ESTA` e `ESTA_E_AS_PROXIMAS`. Nao oferecer aliases em ingles dos escopos antigos (`ONLY_THIS`, `THIS_AND_FUTURE`).

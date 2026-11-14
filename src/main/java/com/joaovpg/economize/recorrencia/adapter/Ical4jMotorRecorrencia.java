@@ -1,8 +1,8 @@
 package com.joaovpg.economize.recorrencia.adapter;
 
-import com.joaovpg.economize.recorrencia.MotorRecorrencia;
-import com.joaovpg.economize.recorrencia.OcorrenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.RegraRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.MotorRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.LocalDate;
 import java.util.ArrayList;

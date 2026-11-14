@@ -21,8 +21,8 @@ public class CadastrarCategoria {
 
   @Transactional
   public Categoria executar(Comando comando) {
-    var nome = CategoriaValidation.nome(comando.nome());
-    var cor = CategoriaValidation.cor(comando.cor());
+    var nome = CategoriaValidacao.nome(comando.nome());
+    var cor = CategoriaValidacao.cor(comando.cor());
     var categoriaPai = comando.categoriaPaiId();
     var usuarioId = comando.usuarioId();
 
@@ -37,7 +37,7 @@ public class CadastrarCategoria {
                 .orElseThrow(CadastrarCategoria::naoEncontrada);
 
     if (categoriaRepository.existeComNomeNoMesmoNivel(usuarioId, categoriaPai, nome, null)) {
-      throw CategoriaValidation.nomeDuplicado();
+      throw CategoriaValidacao.nomeDuplicado();
     }
 
     var categoria = new Categoria();

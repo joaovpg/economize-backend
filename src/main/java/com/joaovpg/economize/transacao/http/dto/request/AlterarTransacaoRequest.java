@@ -2,8 +2,9 @@ package com.joaovpg.economize.transacao.http.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -67,20 +68,31 @@ public record AlterarTransacaoRequest(
     @Schema(description = "Versão opaca obtida na consulta ou escrita anterior.", required = true)
         @NotBlank String versaoEdicao,
     @Schema(
-            description = "Deve ser null para transação simples.",
-            ref = "#/components/schemas/NullValue",
-            required = true)
+            description =
+                "Repetição ou parcelamento; null mantém a transação simples. Quando informada, a"
+                    + " transação simples passa a ser a primeira ocorrência da nova série.",
+            nullable = true)
         @JsonProperty(required = true)
-        JsonNode repeticao,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitido.") JsonNode escopo,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+        @Valid RepeticaoTransacaoRequest repeticao,
+    @Schema(
+            description =
+                "Obrigatório para ocorrência de série (SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS); deve"
+                    + " ser omitido para transação simples.")
+        JsonNode escopo,
+    @Schema(
+            description =
+                "Política geral de sobreposição (MANTER_SOMENTE_PRESERVADA ou MANTER_AMBAS);"
+                    + " obrigatória somente ao criar novo trecho com ESTA_E_AS_PROXIMAS e omitida"
+                    + " nas demais alterações.",
+            nullable = true)
         JsonNode politicaSobreposicao,
-    @Schema(description = "Não se aplica a transação simples e deve ser omitida.")
+    @Schema(
+            description =
+                "Escolhas específicas por data original candidata; obrigatória somente ao criar"
+                    + " novo trecho com ESTA_E_AS_PROXIMAS, com [] para aplicar apenas a política"
+                    + " geral.",
+            nullable = true)
         JsonNode resolucoesSobreposicao) {
-  public boolean repeticaoInformada() {
-    return repeticao != null && !repeticao.isNull();
-  }
-
   public boolean escopoInformado() {
     return escopo != null;
   }

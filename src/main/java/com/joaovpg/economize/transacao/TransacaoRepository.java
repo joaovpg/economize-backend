@@ -1,5 +1,7 @@
 package com.joaovpg.economize.transacao;
 
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.LockModeType;
@@ -19,6 +21,22 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
     return find("id = ?1 and usuario.id = ?2", id, usuarioId).firstResultOptional();
   }
 
+  /**
+   * Grupo de origem de uma transação simples destacada de série, sem bloquear a transação. Serve
+   * para bloquear o grupo antes da transação, na mesma ordem das demais escritas de série.
+   */
+  public Optional<UUID> buscarGrupoOrigemDoUsuario(UUID id, UUID usuarioId) {
+    return getEntityManager()
+        .createQuery(
+            "select g.id from Transacao t join t.segmentoOrigem s join s.grupo g"
+                + " where t.id = :id and t.usuario.id = :usuarioId",
+            UUID.class)
+        .setParameter("id", id)
+        .setParameter("usuarioId", usuarioId)
+        .getResultStream()
+        .findFirst();
+  }
+
   public Optional<Transacao> buscarDoUsuarioParaEdicao(UUID id, UUID usuarioId) {
     return find("id = ?1 and usuario.id = ?2", id, usuarioId)
         .withLock(LockModeType.PESSIMISTIC_WRITE)
@@ -34,6 +52,42 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
             usuarioId)
         .withLock(LockModeType.PESSIMISTIC_WRITE)
         .firstResultOptional();
+  }
+
+  /** Leitura sem bloqueio para prévias; não autoriza gravação sem nova comparação. */
+  public Optional<Transacao> buscarOcorrenciaDoUsuario(
+      UUID segmentoId, LocalDate identificador, UUID usuarioId) {
+    return find(
+            "segmentoRecorrencia.id = ?1 and identificadorRecorrencia = ?2 and usuario.id = ?3",
+            segmentoId,
+            identificador,
+            usuarioId)
+        .firstResultOptional();
+  }
+
+  /**
+   * Registros protegidos de um grupo com data original igual ou posterior à data informada, na
+   * ordem da data financeira: materializados do grupo (individualizados ou efetivados) e transações
+   * desligadas da série cuja origem pertence ao grupo.
+   */
+  public List<Transacao> listarProtegidasDoGrupoAPartirDe(
+      UUID grupoId, UUID usuarioId, LocalDate dataOriginal) {
+    return getEntityManager()
+        .createQuery(
+            "select t from Transacao t"
+                + " left join fetch t.segmentoRecorrencia s"
+                + " left join fetch t.segmentoOrigem o"
+                + " where t.usuario.id = :usuarioId and ("
+                + " (s.grupo.id = :grupoId and t.identificadorRecorrencia >= :dataOriginal"
+                + " and (t.excecaoRecorrencia = true or t.situacao = :efetivada))"
+                + " or (o.grupo.id = :grupoId and t.dataOriginalOrigem >= :dataOriginal))"
+                + " order by t.dataFinanceira, t.id",
+            Transacao.class)
+        .setParameter("grupoId", grupoId)
+        .setParameter("usuarioId", usuarioId)
+        .setParameter("dataOriginal", dataOriginal)
+        .setParameter("efetivada", SituacaoTransacao.EFETIVADA)
+        .getResultList();
   }
 
   public List<Transacao> listarOcorrenciasDoSegmentoAPartirDe(

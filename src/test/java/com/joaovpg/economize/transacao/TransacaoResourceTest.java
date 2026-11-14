@@ -21,7 +21,10 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
@@ -37,7 +40,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -313,10 +315,7 @@ class TransacaoResourceTest {
                 }));
       }
       inicio.countDown();
-      var codigos =
-          Stream.of(respostas.get(0).get(), respostas.get(1).get())
-              .sorted()
-              .toList();
+      var codigos = Stream.of(respostas.get(0).get(), respostas.get(1).get()).sorted().toList();
       assertEquals(java.util.List.of(200, 409), codigos);
     }
   }
@@ -339,8 +338,8 @@ class TransacaoResourceTest {
         .when()
         .post("/api/transacoes")
         .then()
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
     var criada =
         given()
             .auth()
@@ -842,7 +841,11 @@ class TransacaoResourceTest {
 
   @Test
   void exigeAutenticacaoParaExcluirTransacao() {
-    given().when().delete("/api/transacoes/{id}", UUID.randomUUID()).then().statusCode(401);
+    given()
+        .when()
+        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(UUID.randomUUID()))
+        .then()
+        .statusCode(401);
   }
 
   @Test
@@ -1486,13 +1489,7 @@ class TransacaoResourceTest {
                         LocalDate.of(2026, 1, 15),
                         "Transacao excluida"));
 
-    given()
-        .auth()
-        .oauth2(token)
-        .when()
-        .delete("/api/transacoes/{id}", transacaoId)
-        .then()
-        .statusCode(204);
+    excluirTransacao(token, transacaoId).statusCode(204);
 
     requisicaoConsulta(token)
         .queryParam("inicio", "2026-01")
@@ -1678,7 +1675,7 @@ class TransacaoResourceTest {
         .statusCode(201)
         .extract()
         .jsonPath()
-        .getUUID("id");
+        .getUUID("transferenciaId");
   }
 
   private UUID persistirTransacao(
@@ -1737,7 +1734,24 @@ class TransacaoResourceTest {
 
   private io.restassured.response.ValidatableResponse excluirTransacao(
       String token, UUID transacaoId) {
-    return given().auth().oauth2(token).when().delete("/api/transacoes/{id}", transacaoId).then();
+    return given()
+        .auth()
+        .oauth2(token)
+        .queryParam("versaoEdicao", versaoPersistida(transacaoId))
+        .when()
+        .delete("/api/transacoes/{chaveEdicao}", IdentidadeEdicaoTransacao.chave(transacaoId))
+        .then();
+  }
+
+  /** Versão vigente da transação persistida; inexistente resulta em valor qualquer. */
+  private String versaoPersistida(UUID transacaoId) {
+    return QuarkusTransaction.requiringNew()
+        .call(
+            () ->
+                transacaoRepository
+                    .findByIdOptional(transacaoId)
+                    .map(transacao -> IdentidadeEdicaoTransacao.versao(transacao.getVersao()))
+                    .orElse("versao-qualquer"));
   }
 
   private io.restassured.response.ValidatableResponse alterarTransacao(

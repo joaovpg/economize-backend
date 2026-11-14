@@ -2,13 +2,17 @@ package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.categoria.Categoria;
 import com.joaovpg.economize.categoria.CategoriaRepository;
+import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
+import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
+import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -17,24 +21,35 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
 public class CriarTransacao {
+  private static final int ESCALA_MONETARIA = 4;
+
   private final UsuarioRepository usuarioRepository;
   private final ContaFinanceiraRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
   private final TransacaoRepository transacaoRepository;
+  private final CriarSerieTransacao criarSerie;
+  private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
 
   public CriarTransacao(
       UsuarioRepository usuarioRepository,
       ContaFinanceiraRepository contaRepository,
       CategoriaRepository categoriaRepository,
-      TransacaoRepository transacaoRepository) {
+      TransacaoRepository transacaoRepository,
+      CriarSerieTransacao criarSerie,
+      ResolverOcorrenciasRecorrentes resolverOcorrencias) {
     this.usuarioRepository = usuarioRepository;
     this.contaRepository = contaRepository;
     this.categoriaRepository = categoriaRepository;
     this.transacaoRepository = transacaoRepository;
+    this.criarSerie = criarSerie;
+    this.resolverOcorrencias = resolverOcorrencias;
   }
 
   @Transactional
@@ -64,15 +79,23 @@ public class CriarTransacao {
             : categoriaRepository
                 .buscarAtivaDoUsuario(comando.categoriaId(), comando.usuarioId())
                 .orElseThrow(() -> recursoNaoEncontrado("Categoria"));
+    var descricao = comando.descricao().strip();
+    var observacoes = comando.observacoes() == null ? null : comando.observacoes().strip();
+    var valor = comando.valor().setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY);
+
+    if (comando.repeticao() != null) {
+      return criarSerie(comando, usuario, conta, categoria, descricao, observacoes, valor);
+    }
+
     var transacao = new Transacao();
     transacao.setUsuario(usuario);
     transacao.setConta(conta);
     transacao.setCategoria(categoria);
     transacao.setTipo(comando.tipo());
     transacao.setSituacao(comando.situacao());
-    transacao.setDescricao(comando.descricao().strip());
-    transacao.setObservacoes(comando.observacoes() == null ? null : comando.observacoes().strip());
-    transacao.setValor(comando.valor());
+    transacao.setDescricao(descricao);
+    transacao.setObservacoes(observacoes);
+    transacao.setValor(valor);
     transacao.setDataFinanceira(comando.dataFinanceira());
     transacao.setEfetivadoEm(
         comando.situacao() == SituacaoTransacao.EFETIVADA ? Instant.now() : null);
@@ -80,10 +103,67 @@ public class CriarTransacao {
     return ConsultarTransacoes.itemTransacaoSimples(transacao);
   }
 
-  private void validar(Comando comando) {
-    if (comando.repeticaoInformada()) {
-      throw new RegraNegocioException("REPETICAO_INVALIDA", "Repeticao ainda nao suportada");
+  /**
+   * Cria a série e devolve a primeira ocorrência no mesmo formato da leitura. Quando efetivada, ela
+   * é materializada uma única vez; quando planejada, continua virtual e é projetada pela regra.
+   */
+  private ConsultarTransacoes.Item criarSerie(
+      Comando comando,
+      Usuario usuario,
+      ContaFinanceira conta,
+      Categoria categoria,
+      String descricao,
+      String observacoes,
+      BigDecimal valor) {
+    var inicio = comando.dataFinanceira();
+    var segmento =
+        criarSerie.executar(
+            new CriarSerieTransacao.Comando(
+                usuario,
+                conta,
+                categoria,
+                comando.tipo(),
+                descricao,
+                observacoes,
+                valor,
+                inicio,
+                comando.repeticao()));
+
+    var materializadas = new ArrayList<Transacao>();
+    if (comando.situacao() == SituacaoTransacao.EFETIVADA) {
+      var primeira = new Transacao();
+      primeira.setUsuario(usuario);
+      primeira.setConta(conta);
+      primeira.setCategoria(categoria);
+      primeira.setGrupoRecorrencia(segmento.getGrupo());
+      primeira.setSegmentoRecorrencia(segmento);
+      primeira.setTipo(comando.tipo());
+      primeira.setSituacao(SituacaoTransacao.EFETIVADA);
+      primeira.setDescricao(descricao);
+      primeira.setObservacoes(observacoes);
+      primeira.setValor(valor);
+      primeira.setDataFinanceira(inicio);
+      primeira.setIdentificadorRecorrencia(inicio);
+      primeira.setExcecaoRecorrencia(false);
+      primeira.setEfetivadoEm(Instant.now().truncatedTo(ChronoUnit.MICROS));
+      transacaoRepository.persist(primeira);
+      materializadas.add(primeira);
     }
+
+    return primeiraOcorrencia(segmento, materializadas, inicio);
+  }
+
+  private ConsultarTransacoes.Item primeiraOcorrencia(
+      SegmentoRecorrencia segmento, List<Transacao> materializadas, LocalDate inicio) {
+    return resolverOcorrencias
+        .resolver(List.of(segmento), materializadas, List.of(), inicio, inicio)
+        .stream()
+        .findFirst()
+        .map(ConsultarTransacoes::itemRecorrente)
+        .orElseThrow(() -> new IllegalStateException("A primeira ocorrencia nao foi projetada"));
+  }
+
+  private void validar(Comando comando) {
     if (comando.situacao() == null) {
       throw new RegraNegocioException(
           "SITUACAO_TRANSACAO_INVALIDA", "Situacao da transacao invalida");
@@ -118,7 +198,6 @@ public class CriarTransacao {
 
   public record Comando(
       UUID usuarioId,
-      boolean repeticaoInformada,
       UUID contaId,
       UUID categoriaId,
       SituacaoTransacao situacao,
@@ -126,5 +205,6 @@ public class CriarTransacao {
       String descricao,
       String observacoes,
       BigDecimal valor,
-      LocalDate dataFinanceira) {}
+      LocalDate dataFinanceira,
+      RepeticaoRecorrencia repeticao) {}
 }

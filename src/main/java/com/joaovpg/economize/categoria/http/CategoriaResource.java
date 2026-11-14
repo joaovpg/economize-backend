@@ -6,7 +6,7 @@ import com.joaovpg.economize.categoria.application.ListarCategorias;
 import com.joaovpg.economize.categoria.http.dto.request.CadastrarCategoriaRequest;
 import com.joaovpg.economize.categoria.http.dto.request.EditarCategoriaRequest;
 import com.joaovpg.economize.categoria.http.dto.response.CategoriaResponse;
-import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
 import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;

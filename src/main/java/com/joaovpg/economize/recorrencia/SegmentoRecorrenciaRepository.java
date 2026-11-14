@@ -1,6 +1,6 @@
 package com.joaovpg.economize.recorrencia;
 
-import com.joaovpg.economize.recorrencia.enums.StatusRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.LockModeType;
@@ -18,6 +18,19 @@ public class SegmentoRecorrenciaRepository
     implements PanacheRepositoryBase<SegmentoRecorrencia, UUID> {
   public Optional<SegmentoRecorrencia> buscarDoUsuario(UUID id, UUID usuarioId) {
     return find("id = ?1 and usuario.id = ?2", id, usuarioId).firstResultOptional();
+  }
+
+  /** Identifica o grupo do segmento sem carregar a entidade, para bloquear o grupo antes dela. */
+  public Optional<UUID> buscarGrupoIdDoUsuario(UUID id, UUID usuarioId) {
+    return getEntityManager()
+        .createQuery(
+            "select s.grupo.id from SegmentoRecorrencia s"
+                + " where s.id = :id and s.usuario.id = :usuarioId",
+            UUID.class)
+        .setParameter("id", id)
+        .setParameter("usuarioId", usuarioId)
+        .getResultStream()
+        .findFirst();
   }
 
   public Optional<SegmentoRecorrencia> buscarDoUsuarioParaEdicao(UUID id, UUID usuarioId) {

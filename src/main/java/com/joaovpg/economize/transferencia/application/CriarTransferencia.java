@@ -4,10 +4,11 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.transferencia.SituacaoTransferencia;
 import com.joaovpg.economize.transferencia.Transferencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
@@ -172,6 +173,7 @@ public class CriarTransferencia {
   private TransferenciaResultado resultado(Transferencia transferencia) {
     return new TransferenciaResultado(
         transferencia.getId(),
+        IdentidadeEdicaoTransacao.versao(transferencia.getVersao()),
         transferencia.getContaOrigem().getId(),
         transferencia.getContaDestino().getId(),
         transferencia.getSituacao(),

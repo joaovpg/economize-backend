@@ -1,17 +1,23 @@
 package com.joaovpg.economize.transacao.http;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
-import com.joaovpg.economize.shared.http.LogHttpErrors;
-import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
+import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
+import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
+import com.joaovpg.economize.transacao.application.ExcluirOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.ExcluirTransacao;
+import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
+import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
+import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
 import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -23,24 +29,38 @@ import org.jboss.resteasy.reactive.RestResponse;
 
 @LogHttpErrors
 public class TransacaoResource implements TransacaoResourceApi {
+  private static final String ESCOPO_ESTA_E_AS_PROXIMAS = "ESTA_E_AS_PROXIMAS";
+
   private final CriarTransacao criarTransacao;
   private final AlterarTransacao alterarTransacao;
+  private final AlterarOcorrenciaSerie alterarOcorrenciaSerie;
+  private final AlterarEstaEAsProximas alterarEstaEAsProximas;
   private final ExcluirTransacao excluirTransacao;
+  private final ExcluirOcorrenciaSerie excluirOcorrenciaSerie;
   private final ConsultarTransacoes consultarTransacoes;
+  private final PreverAlteracaoTransacao preverAlteracaoTransacao;
   private final TransacaoHttpMapper mapper;
   private final JsonWebToken token;
 
   TransacaoResource(
       CriarTransacao criarTransacao,
       AlterarTransacao alterarTransacao,
+      AlterarOcorrenciaSerie alterarOcorrenciaSerie,
+      AlterarEstaEAsProximas alterarEstaEAsProximas,
       ExcluirTransacao excluirTransacao,
+      ExcluirOcorrenciaSerie excluirOcorrenciaSerie,
       ConsultarTransacoes consultarTransacoes,
+      PreverAlteracaoTransacao preverAlteracaoTransacao,
       TransacaoHttpMapper mapper,
       JsonWebToken token) {
     this.criarTransacao = criarTransacao;
     this.alterarTransacao = alterarTransacao;
+    this.alterarOcorrenciaSerie = alterarOcorrenciaSerie;
+    this.alterarEstaEAsProximas = alterarEstaEAsProximas;
     this.excluirTransacao = excluirTransacao;
+    this.excluirOcorrenciaSerie = excluirOcorrenciaSerie;
     this.consultarTransacoes = consultarTransacoes;
+    this.preverAlteracaoTransacao = preverAlteracaoTransacao;
     this.mapper = mapper;
     this.token = token;
   }
@@ -80,10 +100,33 @@ public class TransacaoResource implements TransacaoResourceApi {
 
   @Override
   public ItemResponse alterar(String chaveEdicao, AlterarTransacaoRequest request) {
+    var usuarioId = UUID.fromString(token.getSubject());
+    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
+      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      if (ESCOPO_ESTA_E_AS_PROXIMAS.equals(mapper.escopoTexto(request.escopo()))) {
+        var comando = mapper.toCommandEstaEAsProximas(usuarioId, chave, request);
+        return mapper.toResponse(alterarEstaEAsProximas.executar(comando));
+      }
+      var comando = mapper.toCommandOcorrencia(usuarioId, chave, request);
+      return mapper.toResponse(alterarOcorrenciaSerie.executar(comando));
+    }
     var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
-    var comando = mapper.toCommand(UUID.fromString(token.getSubject()), request);
+    var comando = mapper.toCommand(usuarioId, request);
     var resultado = alterarTransacao.executar(id, comando);
     return mapper.toResponse(resultado);
+  }
+
+  @Override
+  public PreviaEdicaoTransacaoResponse previaEdicao(
+      String chaveEdicao, PreviaEdicaoTransacaoRequest request) {
+    var usuarioId = UUID.fromString(token.getSubject());
+    var comando = mapper.toCommandPrevia(usuarioId, request);
+    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
+      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      return mapper.toResponse(preverAlteracaoTransacao.executarOcorrencia(chave, comando));
+    }
+    var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
+    return mapper.toResponse(preverAlteracaoTransacao.executarSimples(id, comando));
   }
 
   @Override
@@ -98,8 +141,19 @@ public class TransacaoResource implements TransacaoResourceApi {
   }
 
   @Override
-  public RestResponse<Void> excluir(UUID id) {
-    excluirTransacao.executar(UUID.fromString(token.getSubject()), id);
+  public RestResponse<Void> excluir(String chaveEdicao, String escopo, String versaoEdicao) {
+    var usuarioId = UUID.fromString(token.getSubject());
+    if (versaoEdicao == null || versaoEdicao.isBlank()) {
+      throw new ValidacaoException("versaoEdicao", "Versao de edicao obrigatoria para excluir");
+    }
+    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
+      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
+      excluirOcorrenciaSerie.executar(
+          usuarioId, chave.segmentoId(), chave.dataOriginal(), escopo, versaoEdicao);
+    } else {
+      var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
+      excluirTransacao.executar(usuarioId, id, escopo, versaoEdicao);
+    }
     return RestResponse.noContent();
   }
 }
