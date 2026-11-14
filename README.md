@@ -60,7 +60,13 @@ src/main/java/com/joaovpg/economize/
 ├── shared/
 ├── conta/
 ├── recorrencia/
+│   ├── adapter/
+│   ├── application/
+│   └── domain/
 ├── transacao/
+│   ├── application/
+│   ├── domain/
+│   └── http/
 ├── transferencia/
 └── usuario/
 ```
@@ -149,6 +155,8 @@ O Flyway aplica as migrations na inicialização e o Hibernate valida o schema. 
 | Swagger UI | <http://localhost:8080/q/swagger-ui> |
 | OpenAPI | <http://localhost:8080/q/openapi> |
 | Quarkus Dev UI | <http://localhost:8080/q/dev/> |
+
+Para exercitar a API, importe a coleção `postman/economize.postman_collection.json` no Postman.
 
 ### Acesse o pgAdmin
 
