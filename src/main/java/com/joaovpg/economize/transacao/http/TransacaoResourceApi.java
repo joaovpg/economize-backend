@@ -1,6 +1,6 @@
 package com.joaovpg.economize.transacao.http;
 
-import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;

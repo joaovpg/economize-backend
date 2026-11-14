@@ -2,7 +2,6 @@ package com.joaovpg.economize.transacao.http;
 
 import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.shared.http.LogHttpErrors;
-import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
 import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
@@ -11,6 +10,7 @@ import com.joaovpg.economize.transacao.application.CriarTransacao;
 import com.joaovpg.economize.transacao.application.ExcluirOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.ExcluirTransacao;
 import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;

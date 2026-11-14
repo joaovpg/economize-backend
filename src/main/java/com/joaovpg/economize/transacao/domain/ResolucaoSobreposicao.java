@@ -1,4 +1,4 @@
-package com.joaovpg.economize.transacao;
+package com.joaovpg.economize.transacao.domain;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 

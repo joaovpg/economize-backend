@@ -24,6 +24,7 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
 import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.TipoGrupoRecorrencia;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;

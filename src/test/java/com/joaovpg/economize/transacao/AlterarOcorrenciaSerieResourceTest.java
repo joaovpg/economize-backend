@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import com.joaovpg.economize.usuario.UsuarioRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -344,13 +346,13 @@ class AlterarOcorrenciaSerieResourceTest {
         .body("type", equalTo("urn:economize:problem:RECURSO_NAO_ENCONTRADO"));
     alterar(
             token,
-            com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao.chaveRecorrencia(
+            com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao.chaveRecorrencia(
                 UUID.randomUUID(), LocalDate.of(2026, 10, 10)),
             alteracao(versao, SOMENTE_ESTA, "null", "PLANEJADA", "2026-10-12", "80"))
         .statusCode(404);
     alterar(
             token,
-            com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao.chaveRecorrencia(
+            com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao.chaveRecorrencia(
                 UUID.fromString(segmentoId), LocalDate.of(2026, 10, 11)),
             alteracao(versao, SOMENTE_ESTA, "null", "PLANEJADA", "2026-10-12", "80"))
         .statusCode(404);

@@ -1,5 +1,7 @@
 package com.joaovpg.economize.transacao;
 
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.LockModeType;

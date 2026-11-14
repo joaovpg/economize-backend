@@ -2,8 +2,8 @@ package com.joaovpg.economize.transacao.application;
 
 import com.joaovpg.economize.recorrencia.application.RevisarSerieRecorrencia;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.util.UUID;

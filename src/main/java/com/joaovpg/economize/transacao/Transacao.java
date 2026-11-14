@@ -5,6 +5,8 @@ import com.joaovpg.economize.conta.ContaFinanceira;
 import com.joaovpg.economize.recorrencia.GrupoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.shared.persistence.EntidadeBase;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

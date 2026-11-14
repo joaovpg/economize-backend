@@ -1,6 +1,6 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
-import com.joaovpg.economize.transacao.ResolucaoSobreposicao;
+import com.joaovpg.economize.transacao.domain.ResolucaoSobreposicao;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.time.YearMonth;

@@ -11,7 +11,7 @@ import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.TipoGrupoRecorrencia;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.math.BigDecimal;

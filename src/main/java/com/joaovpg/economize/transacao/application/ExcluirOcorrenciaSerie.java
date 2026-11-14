@@ -9,11 +9,11 @@ import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorren
 import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.transacao.EscopoEdicaoTransacao;
-import com.joaovpg.economize.transacao.IdentidadeEdicaoTransacao;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;

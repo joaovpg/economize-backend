@@ -1,4 +1,4 @@
-package com.joaovpg.economize.transacao;
+package com.joaovpg.economize.transacao.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;

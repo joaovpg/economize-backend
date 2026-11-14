@@ -1,6 +1,6 @@
 package com.joaovpg.economize.transacao.http.dto.response;
 
-import com.joaovpg.economize.transacao.ResolucaoSobreposicao;
+import com.joaovpg.economize.transacao.domain.ResolucaoSobreposicao;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;

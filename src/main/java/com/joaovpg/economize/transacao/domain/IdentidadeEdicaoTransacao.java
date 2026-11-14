@@ -1,6 +1,7 @@
-package com.joaovpg.economize.transacao;
+package com.joaovpg.economize.transacao.domain;
 
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
+import com.joaovpg.economize.transacao.Transacao;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Base64;

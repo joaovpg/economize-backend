@@ -2,8 +2,8 @@ package com.joaovpg.economize.transacao.http.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
