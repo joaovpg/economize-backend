@@ -53,19 +53,31 @@ No contrato HTTP de Categorias, a Situacao e representada pelo campo booleano `a
 
 ## Recorrencia
 
-Um grupo preserva a origem comum e seu tipo, `RECORRENCIA` ou `PARCELAMENTO`. Cada segmento possui dados financeiros proprios, DTSTART, periodo opcional e uma RRULE canonica sem o prefixo `RRULE:`. O motor aceita `DAILY`, `WEEKLY`, `MONTHLY` e `YEARLY`, alem de `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY` e `BYMONTHDAY` no subconjunto definido pela aplicacao.
+Um grupo preserva a origem comum e seu tipo, `RECORRENCIA` ou `PARCELAMENTO`. Cada segmento possui dados financeiros proprios, DTSTART, periodo opcional e uma RRULE canonica sem o prefixo `RRULE:`. O motor aceita `DAILY`, `WEEKLY`, `MONTHLY` e `YEARLY`, com `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY` e `BYSETPOS` no subconjunto definido pela aplicacao. A data de inicio de um segmento e sempre a primeira ocorrencia e a ancora da regra.
 
-A politica de datas fica em cada Segmento (`STR_POLITICA_DATA`), para que um segmento preserve sua politica mesmo quando a modalidade muda. Os segmentos existentes receberam a politica pelo tipo do grupo na migration V8: Recorrencias usam `PADRAO`; Parcelamentos usam `AJUSTAR_ULTIMO_DIA_MES` para reproduzir datas mensais e anuais inexistentes no cliente.
+O contrato de repeticao (ADR 0015) mapeia cada combinacao para uma RRULE canonica:
 
-A consulta unificada devolve a configuracao estruturada da repeticao (frequencia, intervalo, dias, politica, termino e parcelamento), traduzida da RRULE sem recalcular datas, inclusive para inicio fora do primeiro dia da semana ou do mes e para mensal sem dias. Cada grupo guarda `VER_REVISAO_SERIE`, a revisao compartilhada que compoe as versoes de edicao das ocorrencias da serie.
+| `frequencia` / `ancoragem` | RRULE | `STR_POLITICA_DATA` |
+| --- | --- | --- |
+| `MENSAL` / `DIA_DO_MES` | `FREQ=MONTHLY;INTERVAL=x`, sem `BYMONTHDAY` | `AJUSTAR_ULTIMO_DIA_MES` |
+| `ANUAL` / `DIA_DO_MES` | `FREQ=YEARLY;INTERVAL=x` | `AJUSTAR_ULTIMO_DIA_MES` |
+| `DIARIA` / `DIA_DO_MES` | `FREQ=DAILY;INTERVAL=x` | `PADRAO` |
+| `SEMANAL` / `DIA_DO_MES` | `FREQ=WEEKLY;INTERVAL=x;BYDAY=` dia da data financeira `;WKST=MO` | `PADRAO` |
+| `MENSAL` / `DIA_UTIL` | `FREQ=MONTHLY;INTERVAL=x;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=n`, expandida pelo iCal4j atras do port `MotorRecorrencia` (ADR 0009) | `PADRAO` |
 
-Ocorrencias virtuais sao expandidas em memoria e nao geram Transacoes por efeito colateral. A identidade logica e `Segmento de recorrencia + Data original da ocorrencia`. Uma ocorrencia de serie recebe a chave de edicao `1:r:` com esses dois valores; a mesma identidade permanece ao efetivar, individualizar ou alterar a ocorrencia, e somente a conversao para transacao simples ou para nova serie a substitui. A resposta sempre devolve a chave vigente.
+Os componentes `COUNT` (termino `APOS_OCORRENCIAS` e `PARCELAS`) e `UNTIL` (termino `EM_DATA`) seguem a forma anterior. O termino `PARCELAS` cria um grupo do tipo `PARCELAMENTO`.
+
+A politica de datas fica em cada Segmento (`STR_POLITICA_DATA`), para que um segmento preserve sua politica mesmo quando a modalidade muda. Os segmentos existentes receberam a politica pelo tipo do grupo na migration V8. A migration V11 normaliza os segmentos para a tabela acima: remove `BYMONTHDAY` dos mensais, que e igual ao dia do inicio, e fixa a politica pela frequencia. Ela falha, sem alterar nada, quando existe segmento que mudaria de datas ou nao tem representacao no contrato.
+
+A consulta unificada devolve a configuracao estruturada da repeticao (frequencia, intervalo, ancoragem, `numeroDiaUtil` e termino), traduzida da RRULE sem recalcular datas. `numeroDiaUtil` vem preenchido com N quando a ancoragem e `DIA_UTIL`. Cada grupo guarda `VER_REVISAO_SERIE`, a revisao compartilhada que compoe as versoes de edicao das ocorrencias da serie.
+
+Ocorrencias virtuais sao expandidas em memoria e nao geram Transacoes por efeito colateral. A identidade logica e `Segmento de recorrencia + Data original da ocorrencia`. Uma ocorrencia de serie recebe a chave de edicao `1:r:` com esses dois valores; a mesma identidade permanece ao efetivar, individualizar ou alterar a ocorrencia, inclusive com `SOMENTE_ESTA`; somente a conversao por `ESTA_E_AS_PROXIMAS` para transacao simples ou para nova serie a substitui. A resposta sempre devolve a chave vigente.
 
 ### Escopos
 
 Os unicos escopos publicos sao `SOMENTE_ESTA` e `ESTA_E_AS_PROXIMAS`. Eles valem para alteracao com `PUT /api/transacoes/{chaveEdicao}` e para exclusao com `DELETE /api/transacoes/{chaveEdicao}?escopo=`; a exclusao, em qualquer caso, exige `versaoEdicao`. Efetivacao e replanejamento sao alteracoes de situacao feitas pelo PUT.
 
-- `SOMENTE_ESTA` altera ou exclui apenas a ocorrencia selecionada. Na exclusao, remove a Transacao materializada, se existir, e grava a Supressao de recorrencia na mesma transacao de banco, de forma duravel, para que a ocorrencia nao reapareca em consultas posteriores.
+- `SOMENTE_ESTA` altera ou exclui apenas a ocorrencia selecionada. Na alteracao, a ocorrencia vira uma Transacao vinculada ao segmento, com a data original como identidade e `excecaoRecorrencia = true`, ou e alterada no proprio registro quando ja era fisica. Essa alteracao nao grava Supressao e nao tira a ocorrencia da serie; a `repeticao` enviada deve ser a lida, sem `numeroDiaUtil`, e qualquer outra responde `422 ESCOPO_INVALIDO`. Na exclusao, remove a Transacao materializada, se existir, e grava a Supressao de recorrencia na mesma transacao de banco, de forma duravel, para que a ocorrencia nao reapareca em consultas posteriores.
 - `ESTA_E_AS_PROXIMAS` altera ou exclui a ocorrencia selecionada e as seguintes. O corte usa a data original: o segmento cortado termina na vespera, ou fica cancelado quando o corte coincide com o seu inicio, e os segmentos ativos posteriores do grupo sao cancelados. Materializacoes planejadas a partir do corte sao removidas; individualizadas e efetivadas posteriores sao preservadas. A ocorrencia selecionada, se materializada, e removida. A exclusao nao grava Supressao, porque o corte ja impede a projecao. O grupo fica `CANCELADO` quando o corte elimina toda a projecao virtual e `CONCLUIDO` quando preserva ocorrencias virtuais anteriores para consulta.
 
 Excluir uma ocorrencia de serie exige o escopo; sem ele, ou com qualquer outro valor, a operacao e recusada. Transacao simples nao recebe escopo.
@@ -73,8 +85,7 @@ Excluir uma ocorrencia de serie exige o escopo; sem ele, ou com qualquer outro v
 ### Conversoes
 
 - Transacao simples para repeticao ou parcelamento: a propria transacao vira a primeira ocorrencia da nova serie, sem copia.
-- Ocorrencia de serie com `SOMENTE_ESTA` para transacao simples: a ocorrencia vira simples e deixa de pertencer ao grupo; a ocorrencia original fica suprimida e a serie continua. A leitura mantem `serie` como historico, com `repeticao` nulo e `escoposDisponiveis` vazio.
-- Ocorrencia de serie com `SOMENTE_ESTA` para nova repeticao ou parcelamento: a ocorrencia inicia um novo grupo; a original fica suprimida e a serie anterior continua.
+- `SOMENTE_ESTA` nao converte a ocorrencia: ela permanece na serie, conforme descrito em Escopos. Conversoes para transacao simples ou para nova repeticao ou parcelamento usam somente `ESTA_E_AS_PROXIMAS`.
 - Ocorrencia de serie com `ESTA_E_AS_PROXIMAS` para simples, repeticao ou parcelamento: encerra a projecao antiga a partir da data original, mantem as protegidas posteriores e inicia o novo trecho ou a transacao simples com a ocorrencia selecionada.
 - Parcelamento para parcelamento: a numeracao e preservada quando o total nao muda; mudar o total encerra o plano anterior e cria novo grupo a partir da selecionada.
 - Repeticao para parcelamento exige numeracao da primeira parcela e total. Parcelamento para repeticao exige termino; a numeracao anterior permanece no historico.
@@ -82,6 +93,8 @@ Excluir uma ocorrencia de serie exige o escopo; sem ele, ou com qualquer outro v
 ## Identidade, versao e concorrencia
 
 `chaveEdicao` e uma string opaca e URL-safe. Uma transacao simples usa a identidade da propria transacao; uma ocorrencia de serie usa segmento e data original. A chave nao revela dados financeiros e nao e autorizacao. Uma ocorrencia destacada como transacao simples mantem a identidade da transacao persistida e preserva os metadados de origem separadamente.
+
+Todo item da consulta traz `chaveItem`, uma string opaca, estavel e unica no resultado, para identificar o item em listas do cliente. Ela e igual a `chaveEdicao` quando esta existe; cada lado de uma transferencia e o saldo inicial de cada conta recebem uma chave propria, que nao e aceita como chave de edicao. Uma ocorrencia de serie mantem a mesma `chaveItem` e a mesma posicao entre os itens da data quando deixa de ser virtual: a ordenacao desempata pelo segmento e pela data original nas ocorrencias de serie e pelo identificador da operacao nos demais itens.
 
 `versaoEdicao` e uma string opaca gerada pelo servidor. Para transacao simples e transferencia, corresponde a versao persistida do agregado. Para uma ocorrencia de serie, combina a revisao compartilhada do grupo e a versao do registro materializado, quando existir; uma ocorrencia virtual muda de versao quando o grupo muda.
 
@@ -105,7 +118,7 @@ Transferencias sao criadas, substituidas ou excluidas por contratos proprios de 
 
 Esta entrega fornece migrations, entidades, repositorios, constraints estruturais, cadastro de usuario, autenticacao JWT, gestao de categorias, gestao de Contas financeiras, o ciclo completo de receitas e despesas simples, a consulta unificada com Saldo de abertura, o motor de recorrencias e parcelamentos com seus contratos unificados de escrita, e a exclusao de transacoes, ocorrencias e transferencias.
 
-As escritas de series usam `POST /api/transacoes` com `repeticao`, `PUT /api/transacoes/{chaveEdicao}` com `escopo` e `DELETE /api/transacoes/{chaveEdicao}?escopo=`. As rotas antigas `/api/recorrencias` e os escopos `ONLY_THIS` e `THIS_AND_FUTURE` foram removidos, sem alias.
+As escritas de series usam `POST /api/transacoes` com `repeticao`, `PUT /api/transacoes/{chaveEdicao}` com `escopo` e `DELETE /api/transacoes/{chaveEdicao}?escopo=`. As rotas antigas `/api/recorrencias` e os escopos `ONLY_THIS` e `THIS_AND_FUTURE` foram removidos, sem alias. Repeticoes com varios dias e dias uteis com feriados nao sao suportadas; o Usuario cria uma serie para cada dia.
 
 Pendencias conhecidas:
 

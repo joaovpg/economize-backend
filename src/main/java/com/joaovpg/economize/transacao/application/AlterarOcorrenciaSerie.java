@@ -7,7 +7,7 @@ import com.joaovpg.economize.recorrencia.GrupoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
-import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
@@ -22,14 +22,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Altera uma única ocorrência de uma série (escopo SOMENTE_ESTA). A ocorrência pode virar uma
- * transação simples, que mantém a série como histórico, ou iniciar uma nova série; em ambos os
- * casos a ocorrência original é suprimida e a série anterior continua.
+ * Altera uma única ocorrência de uma série (escopo SOMENTE_ESTA). A ocorrência vira um registro
+ * físico vinculado ao segmento, identificado pela data original, ou é alterada no próprio registro
+ * quando já era física. A série segue projetando as demais datas e nenhuma supressão é gravada. A
+ * repetição precisa ser a lida: mudar a regra ou converter em transação simples é de
+ * ESTA_E_AS_PROXIMAS.
  */
 @ApplicationScoped
 public class AlterarOcorrenciaSerie {
@@ -39,25 +40,25 @@ public class AlterarOcorrenciaSerie {
   private final SegmentoRecorrenciaRepository segmentoRepository;
   private final GrupoRecorrenciaRepository grupoRepository;
   private final TransacaoRepository transacaoRepository;
-  private final CriarSerieTransacao criarSerie;
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
+  private final LeitorRruleRecorrencia leitorRrule;
   private final RegrasEdicaoTransacao regras;
 
   public AlterarOcorrenciaSerie(
       SegmentoRecorrenciaRepository segmentoRepository,
       GrupoRecorrenciaRepository grupoRepository,
       TransacaoRepository transacaoRepository,
-      CriarSerieTransacao criarSerie,
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
       LocalizarOcorrenciaRecorrente localizarOcorrencia,
+      LeitorRruleRecorrencia leitorRrule,
       RegrasEdicaoTransacao regras) {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
     this.transacaoRepository = transacaoRepository;
-    this.criarSerie = criarSerie;
     this.resolverOcorrencias = resolverOcorrencias;
     this.localizarOcorrencia = localizarOcorrencia;
+    this.leitorRrule = leitorRrule;
     this.regras = regras;
   }
 
@@ -81,9 +82,8 @@ public class AlterarOcorrenciaSerie {
         transacaoRepository.buscarOcorrenciaDoUsuarioParaEdicao(
             segmento.getId(), comando.dataOriginal(), comando.usuarioId());
 
-    var ocorrencia =
-        localizarOcorrencia.executar(
-            segmento, comando.dataOriginal(), comando.usuarioId(), materializada.isPresent());
+    localizarOcorrencia.executar(
+        segmento, comando.dataOriginal(), comando.usuarioId(), materializada.isPresent());
     var versaoAtual =
         IdentidadeEdicaoTransacao.versaoRecorrencia(
             grupo.getRevisaoSerie(), materializada.map(Transacao::getVersao).orElse(null));
@@ -91,6 +91,7 @@ public class AlterarOcorrenciaSerie {
       throw new RegraNegocioException(
           "VERSAO_DESATUALIZADA", "A ocorrencia foi alterada por outra operacao");
     }
+    exigirRepeticaoLida(segmento, comando.repeticao());
 
     var atual = materializada.orElse(null);
     var usuario = segmento.getUsuario();
@@ -102,8 +103,12 @@ public class AlterarOcorrenciaSerie {
             comando.categoriaId(),
             comando.usuarioId());
     regras.validarDatas(conta, usuario, comando.dataFinanceira(), comando.situacao());
+    regras.validarMesmaMoeda(contaAtual, conta);
 
-    var dados =
+    var transacao =
+        atual != null ? atual : novaOcorrenciaVinculada(segmento, grupo, comando.dataOriginal());
+    preencher(
+        transacao,
         new Dados(
             conta,
             categoria,
@@ -113,98 +118,48 @@ public class AlterarOcorrenciaSerie {
             comando.valor().setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY),
             comando.dataFinanceira(),
             comando.situacao(),
-            RegrasEdicaoTransacao.efetivadoEm(comando.situacao(), atual));
-
-    if (comando.repeticao() == null) {
-      regras.validarMesmaMoeda(contaAtual, conta);
-      return individualizarComoSimples(segmento, grupo, atual, comando, dados, ocorrencia);
-    }
-    return iniciarNovaSerie(segmento, grupo, atual, comando, dados);
-  }
-
-  private ConsultarTransacoes.Item individualizarComoSimples(
-      SegmentoRecorrencia segmento,
-      GrupoRecorrencia grupo,
-      Transacao atual,
-      Comando comando,
-      Dados dados,
-      OcorrenciaRecorrencia ocorrencia) {
-    var transacao = atual;
-    if (transacao == null) {
-      transacao = new Transacao();
-      transacao.setUsuario(segmento.getUsuario());
-    } else {
-      transacao.setGrupoRecorrencia(null);
-      transacao.setSegmentoRecorrencia(null);
-      transacao.setIdentificadorRecorrencia(null);
-      transacao.setExcecaoRecorrencia(false);
-    }
-    preencherSimples(transacao, dados);
-    transacao.setSegmentoOrigem(segmento);
-    transacao.setDataOriginalOrigem(comando.dataOriginal());
-    transacao.setNumeroParcelaOrigem(RegrasEdicaoTransacao.numeroParcela(segmento, ocorrencia));
+            RegrasEdicaoTransacao.efetivadoEm(comando.situacao(), atual)));
+    transacao.setExcecaoRecorrencia(true);
     if (atual == null) {
       transacaoRepository.persist(transacao);
     }
-
-    regras.registrarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
     grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
     transacaoRepository.flush();
-    return ConsultarTransacoes.itemTransacaoSimples(transacao);
-  }
-
-  private ConsultarTransacoes.Item iniciarNovaSerie(
-      SegmentoRecorrencia segmento,
-      GrupoRecorrencia grupo,
-      Transacao atual,
-      Comando comando,
-      Dados dados) {
-    if (atual != null) {
-      transacaoRepository.delete(atual);
-    }
-    regras.registrarSupressao(segmento, comando.dataOriginal(), comando.usuarioId());
-    grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
-
-    var novoSegmento =
-        criarSerie.executar(
-            new CriarSerieTransacao.Comando(
-                segmento.getUsuario(),
-                dados.conta(),
-                dados.categoria(),
-                dados.tipo(),
-                dados.descricao(),
-                dados.observacoes(),
-                dados.valor(),
-                dados.dataFinanceira(),
-                comando.repeticao()));
-
-    var materializadas = new ArrayList<Transacao>();
-    if (dados.situacao() == SituacaoTransacao.EFETIVADA) {
-      var primeira = new Transacao();
-      primeira.setUsuario(segmento.getUsuario());
-      primeira.setGrupoRecorrencia(novoSegmento.getGrupo());
-      primeira.setSegmentoRecorrencia(novoSegmento);
-      primeira.setIdentificadorRecorrencia(dados.dataFinanceira());
-      primeira.setExcecaoRecorrencia(false);
-      preencherSimples(primeira, dados);
-      transacaoRepository.persist(primeira);
-      materializadas.add(primeira);
-    }
 
     return resolverOcorrencias
-        .resolver(
-            List.of(novoSegmento),
-            materializadas,
-            List.of(),
-            dados.dataFinanceira(),
-            dados.dataFinanceira())
+        .resolver(List.of(), List.of(transacao), List.of(), null, null)
         .stream()
         .findFirst()
         .map(ConsultarTransacoes::itemRecorrente)
-        .orElseThrow(() -> new IllegalStateException("A primeira ocorrencia nao foi projetada"));
+        .orElseThrow(() -> new IllegalStateException("A ocorrencia vinculada nao foi lida"));
   }
 
-  private void preencherSimples(Transacao transacao, Dados dados) {
+  /**
+   * A repetição recebida deve ser a lida, sem o número do dia útil, que é calculado pelo servidor.
+   * Qualquer outra, inclusive nula, responde ESCOPO_INVALIDO antes de qualquer gravação.
+   */
+  private void exigirRepeticaoLida(SegmentoRecorrencia segmento, RepeticaoRecorrencia recebida) {
+    var regra = leitorRrule.ler(segmento.getInicio(), segmento.getRrule());
+    var lida = RepeticaoRecorrencia.de(segmento, regra).semNumeroDiaUtil();
+    if (recebida == null || !lida.equals(recebida.semNumeroDiaUtil())) {
+      throw new RegraNegocioException(
+          "ESCOPO_INVALIDO",
+          "Com SOMENTE_ESTA a repeticao deve ser a lida; para alterar a regra use"
+              + " ESTA_E_AS_PROXIMAS");
+    }
+  }
+
+  private static Transacao novaOcorrenciaVinculada(
+      SegmentoRecorrencia segmento, GrupoRecorrencia grupo, LocalDate dataOriginal) {
+    var transacao = new Transacao();
+    transacao.setUsuario(segmento.getUsuario());
+    transacao.setGrupoRecorrencia(grupo);
+    transacao.setSegmentoRecorrencia(segmento);
+    transacao.setIdentificadorRecorrencia(dataOriginal);
+    return transacao;
+  }
+
+  private static void preencher(Transacao transacao, Dados dados) {
     transacao.setConta(dados.conta());
     transacao.setCategoria(dados.categoria());
     transacao.setTipo(dados.tipo());
@@ -252,7 +207,8 @@ public class AlterarOcorrenciaSerie {
 
   /**
    * Comando da alteração de uma ocorrência. {@code escopo} é o valor textual recebido ou nulo;
-   * {@code repeticao} é nula quando o destino é transação simples.
+   * {@code repeticao} deve ser a configuração lida, sem o número do dia útil, e é nula quando
+   * ausente.
    */
   public record Comando(
       UUID usuarioId,

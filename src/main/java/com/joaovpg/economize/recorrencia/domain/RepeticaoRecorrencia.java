@@ -1,47 +1,66 @@
 package com.joaovpg.economize.recorrencia.domain;
 
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.List;
 
 /**
- * Configuração estruturada de um segmento, traduzida da RRULE sem recalcular datas.
+ * Configuração de repetição de um segmento, traduzida da RRULE sem recalcular datas. A mesma forma
+ * é usada na entrada de criação e de edição, exceto pelo número do dia útil, que o servidor calcula
+ * e devolve na leitura.
  *
- * @param frequencia frequência da regra
+ * @param frequencia frequência da repetição
  * @param intervalo intervalo entre ciclos da frequência
- * @param diasSemana dias da semana ordenados de segunda a domingo; vazio quando inaplicável
- * @param diasMes dias do mês em ordem crescente; vazio quando inaplicável
- * @param politicaData política de datas do segmento
- * @param termino término da repetição; nulo quando há parcelamento
- * @param parcelamento numeração das parcelas; nulo em repetições sem parcelas
+ * @param ancoragem âncora da repetição dentro do mês ou do ano
+ * @param numeroDiaUtil N do dia útil; nulo quando a ancoragem é DIA_DO_MES
+ * @param termino término da repetição, inclusive a numeração de um Parcelamento
  */
 public record RepeticaoRecorrencia(
     FrequenciaRecorrencia frequencia,
     int intervalo,
-    List<DayOfWeek> diasSemana,
-    List<Integer> diasMes,
-    PoliticaDataOcorrencia politicaData,
-    Termino termino,
-    Parcelamento parcelamento) {
+    AncoragemRecorrencia ancoragem,
+    Integer numeroDiaUtil,
+    Termino termino) {
 
-  public record Termino(TipoTermino tipo, LocalDate data, Integer quantidade) {}
+  /**
+   * Término da repetição. Cada tipo usa somente os próprios campos: data em EM_DATA, quantidade em
+   * APOS_OCORRENCIAS e numeração em PARCELAS.
+   */
+  public record Termino(
+      TipoTermino tipo,
+      LocalDate data,
+      Integer quantidade,
+      Integer numeroPrimeiraParcela,
+      Integer totalParcelas) {}
 
-  public record Parcelamento(int numeroPrimeiraParcela, int totalParcelas) {}
+  /** Indica se a repetição é um Parcelamento, ou seja, tem numeração de parcelas. */
+  public boolean parcelado() {
+    return termino.tipo() == TipoTermino.PARCELAS;
+  }
+
+  /**
+   * Forma de entrada desta repetição, sem o número do dia útil calculado pelo servidor. Serve para
+   * comparar a configuração recebida com a lida.
+   */
+  public RepeticaoRecorrencia semNumeroDiaUtil() {
+    return new RepeticaoRecorrencia(frequencia, intervalo, ancoragem, null, termino);
+  }
 
   public static RepeticaoRecorrencia de(SegmentoRecorrencia segmento, RegraRecorrencia regra) {
-    var parcelado = segmento.getNumeroPrimeiraParcela() != null;
+    var termino =
+        segmento.getNumeroPrimeiraParcela() != null
+            ? new Termino(
+                TipoTermino.PARCELAS,
+                null,
+                null,
+                segmento.getNumeroPrimeiraParcela(),
+                segmento.getQuantidadeTotalOriginal())
+            : termino(regra, segmento.getFim());
     return new RepeticaoRecorrencia(
         regra.frequencia(),
         regra.intervalo(),
-        regra.diasSemana().stream().sorted().toList(),
-        regra.diasMes().stream().sorted().toList(),
-        segmento.getPoliticaData(),
-        parcelado ? null : termino(regra, segmento.getFim()),
-        parcelado
-            ? new Parcelamento(
-                segmento.getNumeroPrimeiraParcela(), segmento.getQuantidadeTotalOriginal())
-            : null);
+        regra.diaUtil() ? AncoragemRecorrencia.DIA_UTIL : AncoragemRecorrencia.DIA_DO_MES,
+        regra.posicaoDiaUtil(),
+        termino);
   }
 
   /**
@@ -53,12 +72,13 @@ public record RepeticaoRecorrencia(
   private static Termino termino(RegraRecorrencia regra, LocalDate fimSegmento) {
     var data = menor(regra.ate(), fimSegmento);
     if (data != null) {
-      return new Termino(TipoTermino.EM_DATA, data, null);
+      return new Termino(TipoTermino.EM_DATA, data, null, null, null);
     }
     if (regra.quantidadeOcorrencias() != null) {
-      return new Termino(TipoTermino.APOS_OCORRENCIAS, null, regra.quantidadeOcorrencias());
+      return new Termino(
+          TipoTermino.APOS_OCORRENCIAS, null, regra.quantidadeOcorrencias(), null, null);
     }
-    return new Termino(TipoTermino.INDEFINIDO, null, null);
+    return new Termino(TipoTermino.INDEFINIDO, null, null, null, null);
   }
 
   private static LocalDate menor(LocalDate primeira, LocalDate segunda) {

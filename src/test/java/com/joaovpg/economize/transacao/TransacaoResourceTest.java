@@ -1327,6 +1327,8 @@ class TransacaoResourceTest {
         .body("itens[0].valor", equalTo(new BigDecimal("75.0000")))
         .body("itens[0].dataFinanceira", equalTo("2026-02-01"))
         .body("itens[0].contaId", equalTo(contaSecundariaId.toString()))
+        .body("itens[0].chaveEdicao", nullValue())
+        .body("itens[0].chaveItem", notNullValue())
         .body("$", not(hasKey("modoSaldo")))
         .body("$", not(hasKey("saldos")))
         .body("$", not(hasKey("consolidado")));

@@ -12,16 +12,14 @@ import java.util.Set;
 @ApplicationScoped
 public class LeitorRruleRecorrencia {
   private static final DateTimeFormatter DATA_RRULE = DateTimeFormatter.BASIC_ISO_DATE;
+  private static final Set<DayOfWeek> DIAS_UTEIS =
+      EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY);
 
+  /**
+   * Lê a RRULE de um segmento cuja data de início é a primeira ocorrência. Aceita somente as formas
+   * geradas por RegraRecorrencia.rrule().
+   */
   public RegraRecorrencia ler(LocalDate inicio, String rrule) {
-    return ler(inicio, rrule, true);
-  }
-
-  public RegraRecorrencia lerSegmento(LocalDate inicio, String rrule) {
-    return ler(inicio, rrule, false);
-  }
-
-  private RegraRecorrencia ler(LocalDate inicio, String rrule, boolean exigirPrimeiraOcorrencia) {
     if (inicio == null || rrule == null || rrule.isBlank() || rrule.startsWith("RRULE:")) {
       throw new IllegalArgumentException("RRULE invalida");
     }
@@ -41,14 +39,36 @@ public class LeitorRruleRecorrencia {
     var ate = parseData(componentes.remove("UNTIL"));
     componentes.remove("WKST");
     var diasSemana = parseDiasSemana(componentes.remove("BYDAY"));
-    var diasMes = parseDiasMes(componentes.remove("BYMONTHDAY"));
+    var posicao = parseInteiroOpcional(componentes.remove("BYSETPOS"), "BYSETPOS");
     if (!componentes.isEmpty()) {
       throw new IllegalArgumentException("Componente RRULE nao suportado");
     }
-    return exigirPrimeiraOcorrencia
-        ? new RegraRecorrencia(inicio, frequencia, intervalo, diasSemana, diasMes, quantidade, ate)
-        : RegraRecorrencia.paraSegmento(
-            inicio, frequencia, intervalo, diasSemana, diasMes, quantidade, ate);
+    var diaUtil = posicao != null;
+    validarDias(inicio, frequencia, diasSemana, diaUtil, posicao);
+    return new RegraRecorrencia(inicio, frequencia, intervalo, diaUtil, quantidade, ate);
+  }
+
+  private static void validarDias(
+      LocalDate inicio,
+      FrequenciaRecorrencia frequencia,
+      Set<DayOfWeek> diasSemana,
+      boolean diaUtil,
+      Integer posicao) {
+    if (frequencia == FrequenciaRecorrencia.WEEKLY) {
+      // Sem BYDAY, a RFC 5545 usa o dia da semana do DTSTART.
+      if (!diasSemana.isEmpty() && !diasSemana.equals(Set.of(inicio.getDayOfWeek()))) {
+        throw new IllegalArgumentException("BYDAY deve ser o dia da semana do inicio");
+      }
+    } else if (diaUtil) {
+      if (!diasSemana.equals(DIAS_UTEIS)) {
+        throw new IllegalArgumentException("BYDAY do dia util deve ser de segunda a sexta");
+      }
+      if (posicao != RegraRecorrencia.posicaoNoMes(inicio)) {
+        throw new IllegalArgumentException("BYSETPOS diferente da posicao do inicio");
+      }
+    } else if (!diasSemana.isEmpty()) {
+      throw new IllegalArgumentException("BYDAY nao e valido para esta frequencia");
+    }
   }
 
   private FrequenciaRecorrencia parseFrequencia(String valor) {
@@ -116,22 +136,5 @@ public class LeitorRruleRecorrencia {
       case "SU" -> DayOfWeek.SUNDAY;
       default -> throw new IllegalArgumentException("BYDAY invalido");
     };
-  }
-
-  private Set<Integer> parseDiasMes(String valor) {
-    if (valor == null) {
-      return Set.of();
-    }
-    var dias = new java.util.TreeSet<Integer>();
-    Arrays.stream(valor.split(","))
-        .forEach(
-            dia -> {
-              try {
-                dias.add(Integer.valueOf(dia));
-              } catch (NumberFormatException exception) {
-                throw new IllegalArgumentException("BYMONTHDAY invalido", exception);
-              }
-            });
-    return Set.copyOf(dias);
   }
 }

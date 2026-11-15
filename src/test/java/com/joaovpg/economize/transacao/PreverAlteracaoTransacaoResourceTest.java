@@ -43,11 +43,11 @@ class PreverAlteracaoTransacaoResourceTest {
   // Acima do limite de corpo configurado em application.yaml (quarkus.http.limits.max-body-size).
   private static final int TAMANHO_CORPO_ACIMA_DO_LIMITE = 70_000;
   private static final String MENSAL_DIA_10 =
-      repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String MENSAL_DIA_12 =
-      repeticao("MENSAL", "[]", "[12]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String MENSAL_DIA_5 =
-      repeticao("MENSAL", "[]", "[5]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -309,7 +309,7 @@ class PreverAlteracaoTransacaoResourceTest {
             alteracao(
                 (String) outubro.get("versaoEdicao"),
                 SOMENTE_ESTA,
-                "null",
+                MENSAL_DIA_10,
                 "PLANEJADA",
                 "2026-10-12",
                 "80"))
@@ -452,6 +452,45 @@ class PreverAlteracaoTransacaoResourceTest {
     previa(token, chave, manterAmbas)
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+  }
+
+  @Test
+  void previaTrataOcorrenciaVinculadaAposSomenteEstaComoPreservada() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    alterar(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            alteracao(
+                (String) outubro.get("versaoEdicao"),
+                SOMENTE_ESTA,
+                MENSAL_DIA_10,
+                "PLANEJADA",
+                "2026-10-12",
+                "80"))
+        .statusCode(200);
+    var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
+
+    previa(
+            token,
+            (String) setembro.get("chaveEdicao"),
+            previaCorpo(
+                (String) setembro.get("versaoEdicao"),
+                ESTA_E_AS_PROXIMAS,
+                MENSAL_DIA_10,
+                "PLANEJADA",
+                INICIO,
+                "120",
+                "2026-09",
+                "2026-10",
+                "MANTER_SOMENTE_PRESERVADA"))
+        .statusCode(200)
+        .body("itensPreservados", hasSize(1))
+        .body("itensPreservados[0].dataFinanceira", equalTo("2026-10-12"))
+        .body("itensPreservados[0].origem", equalTo("TRANSACAO_RECORRENTE"))
+        .body("ocorrenciasNovas[1].dataFinanceira", equalTo("2026-10-10"))
+        .body("sobreposicoes", empty());
   }
 
   @Test
@@ -670,18 +709,35 @@ class PreverAlteracaoTransacaoResourceTest {
         .formatted(alteracao.strip(), inicio, fim, politicaJson);
   }
 
-  private static String repeticao(
-      String frequencia,
-      String diasSemana,
-      String diasMes,
-      String politica,
-      String termino,
-      String parcelamento) {
+  @Test
+  void previaRejeitaCamposDoContratoAnteriorDeRepeticao() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+
+    var corpoPrevia =
+        previaCorpo(
+            (String) outubro.get("versaoEdicao"),
+            ESTA_E_AS_PROXIMAS,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"diasSemana\":[],\"diasMes\":[12],"
+                + "\"politicaData\":\"PADRAO\",\"termino\":{\"tipo\":\"INDEFINIDO\"},"
+                + "\"parcelamento\":null}",
+            "PLANEJADA",
+            "2026-10-12",
+            "80",
+            "2026-10",
+            "2026-12",
+            "MANTER_SOMENTE_PRESERVADA");
+    previa(token, (String) outubro.get("chaveEdicao"), corpoPrevia)
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+  }
+
+  private static String repeticao(String frequencia, String ancoragem, String termino) {
     return """
-    {"frequencia":"%s","intervalo":1,"diasSemana":%s,"diasMes":%s,
-     "politicaData":"%s","termino":%s,"parcelamento":%s}
+    {"frequencia":"%s","intervalo":1,"ancoragem":"%s","termino":%s}
     """
-        .formatted(frequencia, diasSemana, diasMes, politica, termino, parcelamento);
+        .formatted(frequencia, ancoragem, termino);
   }
 
   private String autenticar() {

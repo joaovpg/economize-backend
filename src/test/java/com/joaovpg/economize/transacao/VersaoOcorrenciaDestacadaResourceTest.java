@@ -25,8 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Versão de uma ocorrência destacada (transação simples desligada de série): inclui a revisão do
- * grupo de origem, de modo que escritas concorrentes na série tornam a versão lida desatualizada.
+ * Versão de uma transação simples destacada de série, criada por ESTA_E_AS_PROXIMAS com repetição
+ * nula: inclui a revisão do grupo de origem, de modo que escritas na série tornam a versão lida
+ * desatualizada.
  */
 @QuarkusTest
 class VersaoOcorrenciaDestacadaResourceTest {
@@ -34,9 +35,15 @@ class VersaoOcorrenciaDestacadaResourceTest {
   private static final String INICIO = "2026-09-10";
   private static final String VERSAO_DESATUALIZADA = "urn:economize:problem:VERSAO_DESATUALIZADA";
   private static final String MENSAL_DIA_10 =
-      "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"diasSemana\":[],\"diasMes\":[10],"
-          + "\"politicaData\":\"PADRAO\",\"termino\":{\"tipo\":\"INDEFINIDO\"},"
-          + "\"parcelamento\":null}";
+      "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+          + "\"termino\":{\"tipo\":\"INDEFINIDO\"}}";
+
+  /**
+   * Repetição lida depois de ESTA_E_AS_PROXIMAS em novembro: o segmento passa a terminar em 09/11.
+   */
+  private static final String REPETICAO_APOS_CORTE =
+      "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+          + "\"termino\":{\"tipo\":\"EM_DATA\",\"data\":\"2026-11-09\"}}";
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -78,7 +85,7 @@ class VersaoOcorrenciaDestacadaResourceTest {
                 (String) novembro.get("chaveEdicao"),
                 alteracao(
                     (String) novembro.get("versaoEdicao"),
-                    "SOMENTE_ESTA",
+                    "ESTA_E_AS_PROXIMAS",
                     "null",
                     "PLANEJADA",
                     "2026-11-10",
@@ -91,16 +98,16 @@ class VersaoOcorrenciaDestacadaResourceTest {
     String versaoLida = (String) destacadaLida.get("versaoEdicao");
     assertEquals(chaveDestacada, destacadaLida.get("chaveEdicao"));
 
-    var dezembro = itemDe(token, "2026-12", "2026-12", "2026-12-10");
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
     alterar(
             token,
-            (String) dezembro.get("chaveEdicao"),
+            (String) outubro.get("chaveEdicao"),
             alteracao(
-                (String) dezembro.get("versaoEdicao"),
+                (String) outubro.get("versaoEdicao"),
                 "SOMENTE_ESTA",
-                "null",
+                REPETICAO_APOS_CORTE,
                 "PLANEJADA",
-                "2026-12-10",
+                "2026-10-10",
                 "90"))
         .statusCode(200);
 
@@ -130,7 +137,7 @@ class VersaoOcorrenciaDestacadaResourceTest {
             (String) novembro.get("chaveEdicao"),
             alteracao(
                 (String) novembro.get("versaoEdicao"),
-                "SOMENTE_ESTA",
+                "ESTA_E_AS_PROXIMAS",
                 "null",
                 "PLANEJADA",
                 "2026-11-10",
@@ -139,16 +146,16 @@ class VersaoOcorrenciaDestacadaResourceTest {
     var destacadaLida = itemDe(token, "2026-11", "2026-11", "2026-11-10");
     String versaoLida = (String) destacadaLida.get("versaoEdicao");
 
-    var dezembro = itemDe(token, "2026-12", "2026-12", "2026-12-10");
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
     alterar(
             token,
-            (String) dezembro.get("chaveEdicao"),
+            (String) outubro.get("chaveEdicao"),
             alteracao(
-                (String) dezembro.get("versaoEdicao"),
+                (String) outubro.get("versaoEdicao"),
                 "SOMENTE_ESTA",
-                "null",
+                REPETICAO_APOS_CORTE,
                 "PLANEJADA",
-                "2026-12-10",
+                "2026-10-10",
                 "90"))
         .statusCode(200);
 

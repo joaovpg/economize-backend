@@ -90,7 +90,7 @@ public class PreverAlteracaoTransacao {
     regras.validarDatas(
         conta, transacao.getUsuario(), comando.dataFinanceira(), comando.situacao());
 
-    var projecao = projecaoDoComando(comando, comando.dataFinanceira(), false);
+    var projecao = projecaoDoComando(comando, comando.dataFinanceira());
     return calcular(versaoAtual, comando, projecao, List.of());
   }
 
@@ -137,9 +137,7 @@ public class PreverAlteracaoTransacao {
     }
     // Transação simples resultante não gera candidatas nem sobreposições na série.
     var projecao =
-        comando.repeticao() == null
-            ? null
-            : projecaoDoComando(comando, comando.dataFinanceira(), true);
+        comando.repeticao() == null ? null : projecaoDoComando(comando, comando.dataFinanceira());
     var protegidas =
         transacaoRepository
             .listarProtegidasDoGrupoAPartirDe(
@@ -211,11 +209,8 @@ public class PreverAlteracaoTransacao {
         quantidadeForaDoPeriodo);
   }
 
-  /**
-   * Projeta a nova regra. Em novo trecho de série ({@code novoTrecho}) o início só precisa ser uma
-   * ocorrência da regra; na conversão de transação simples, ele é a primeira ocorrência.
-   */
-  private Projecao projecaoDoComando(Comando comando, LocalDate inicio, boolean novoTrecho) {
+  /** Projeta a nova regra, cuja primeira ocorrência é a data financeira informada. */
+  private Projecao projecaoDoComando(Comando comando, LocalDate inicio) {
     var impacto =
         (comando.tipo() == TipoTransacao.RECEITA ? comando.valor() : comando.valor().negate())
             .setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY);
@@ -223,16 +218,12 @@ public class PreverAlteracaoTransacao {
       return new Projecao(inicio, null, null, null, impacto);
     }
     var repeticao = comando.repeticao();
-    var regra =
-        novoTrecho
-            ? RepeticaoValidacao.validarEdicao(repeticao, inicio, false)
-            : RepeticaoValidacao.validar(repeticao, inicio);
-    var parcelamento = repeticao.parcelamento();
+    var regra = RepeticaoValidacao.validar(repeticao, inicio);
     return new Projecao(
         inicio,
         regra,
-        repeticao.politicaData(),
-        parcelamento == null ? null : parcelamento.numeroPrimeiraParcela(),
+        regra.politicaData(),
+        repeticao.parcelado() ? repeticao.termino().numeroPrimeiraParcela() : null,
         impacto);
   }
 

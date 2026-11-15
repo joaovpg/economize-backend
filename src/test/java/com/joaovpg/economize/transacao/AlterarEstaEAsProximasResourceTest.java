@@ -63,19 +63,16 @@ class AlterarEstaEAsProximasResourceTest {
   private static final String MANTER_AMBAS = "MANTER_AMBAS";
   private static final String SEM_ESCOPO = null;
   private static final String MENSAL_DIA_10 =
-      repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String MENSAL_DIA_5 =
-      repeticao("MENSAL", "[]", "[5]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String MENSAL_DIA_15 =
-      repeticao("MENSAL", "[]", "[15]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String PARCELAS_TRES =
       repeticao(
           "MENSAL",
-          "[]",
-          "[]",
-          "AJUSTAR_ULTIMO_DIA_MES",
-          "null",
-          "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}");
+          "DIA_DO_MES",
+          "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}");
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -187,7 +184,7 @@ class AlterarEstaEAsProximasResourceTest {
         .body("itens.find { it.dataFinanceira == '2026-12-10' }.protegida", equalTo(true))
         .body(
             "itens.find { it.dataFinanceira == '2026-12-10' }.origem",
-            equalTo("TRANSACAO_SIMPLES"));
+            equalTo("TRANSACAO_RECORRENTE"));
   }
 
   @Test
@@ -216,7 +213,8 @@ class AlterarEstaEAsProximasResourceTest {
     consultar(token, "2026-10", "2026-10")
         .statusCode(200)
         .body(
-            "itens.find { it.dataFinanceira == '2026-10-10' }.origem", equalTo("TRANSACAO_SIMPLES"))
+            "itens.find { it.dataFinanceira == '2026-10-10' }.origem",
+            equalTo("TRANSACAO_RECORRENTE"))
         .body("itens.find { it.dataFinanceira == '2026-10-10' }.situacao", equalTo("EFETIVADA"))
         .body(
             "itens.find { it.dataFinanceira == '2026-10-10' }.valor",
@@ -247,7 +245,7 @@ class AlterarEstaEAsProximasResourceTest {
         .body("origem", equalTo("TRANSACAO_RECORRENTE"))
         .body("serie.grupoId", equalTo(grupoId))
         .body("serie.dataOriginal", equalTo("2026-11-15"))
-        .body("repeticao.diasMes", hasSize(1));
+        .body("repeticao.ancoragem", equalTo("DIA_DO_MES"));
 
     consultar(token, "2026-10", "2026-12")
         .statusCode(200)
@@ -553,66 +551,106 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void editaNovoTrechoComInicioEmOcorrenciaDaRegraQueNaoEOMenorDiaDaSemana() {
+  void reenviaConfiguracaoLidaEmOcorrenciaSemanalMantendoACadencia() {
     var token = autenticar();
-    var semanalSegQua =
-        repeticao(
-            "SEMANAL",
-            "[\"SEGUNDA\",\"QUARTA\"]",
-            "[]",
-            "PADRAO",
-            "{\"tipo\":\"INDEFINIDO\"}",
-            "null");
-    criar(token, corpo("PLANEJADA", "2026-09-07", semanalSegQua)).statusCode(201);
-    var quarta = itemDe(token, "2026-09", "2026-09", "2026-09-09");
+    var semanal = repeticao("SEMANAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
+    criar(token, corpo("PLANEJADA", "2026-09-07", semanal)).statusCode(201);
+    var segunda = itemDe(token, "2026-09", "2026-09", "2026-09-14");
 
     alterar(
             token,
-            (String) quarta.get("chaveEdicao"),
+            (String) segunda.get("chaveEdicao"),
             alteracao(
-                (String) quarta.get("versaoEdicao"),
+                (String) segunda.get("versaoEdicao"),
                 ESTA,
-                semanalSegQua,
+                semanal,
                 "PLANEJADA",
-                "2026-09-09",
+                "2026-09-14",
                 "100",
                 MANTER_PRESERVADA,
                 "[]"))
-        .statusCode(200);
+        .statusCode(200)
+        .body("repeticao.frequencia", equalTo("SEMANAL"))
+        .body("serie.dataOriginal", equalTo("2026-09-14"));
 
     consultar(token, "2026-09", "2026-09")
         .statusCode(200)
         .body(
-            "itens.find { it.dataFinanceira == '2026-09-09' }.repeticao.diasSemana",
-            org.hamcrest.Matchers.contains("SEGUNDA", "QUARTA"))
-        .body(
             "itens.dataFinanceira",
-            org.hamcrest.Matchers.contains(
-                "2026-09-07",
-                "2026-09-09",
-                "2026-09-14",
-                "2026-09-16",
-                "2026-09-21",
-                "2026-09-23",
-                "2026-09-28",
-                "2026-09-30"));
+            org.hamcrest.Matchers.contains("2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28"));
   }
 
   @Test
-  void criacaoComInicioEmQuartaSemSerPrimeiraOcorrenciaContinuaRecusada() {
+  void reenvioDaLeituraDeDiaUtilNoPutMantemAMesmaCadencia() throws Exception {
     var token = autenticar();
-    var semanalSegQua =
-        repeticao(
-            "SEMANAL",
-            "[\"SEGUNDA\",\"QUARTA\"]",
-            "[]",
-            "PADRAO",
-            "{\"tipo\":\"INDEFINIDO\"}",
-            "null");
+    criar(
+            token,
+            corpo(
+                "PLANEJADA",
+                "2026-11-05",
+                repeticao("MENSAL", "DIA_UTIL", "{\"tipo\":\"INDEFINIDO\"}")))
+        .statusCode(201);
+    var dezembro = itemDe(token, "2026-12", "2026-12", "2026-12-04");
+    var lida =
+        new java.util.HashMap<String, Object>((Map<String, Object>) dezembro.get("repeticao"));
+    assertEquals(4, lida.get("numeroDiaUtil"));
+    lida.remove("numeroDiaUtil");
 
-    criar(token, corpo("PLANEJADA", "2026-09-09", semanalSegQua))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
+    alterar(
+            token,
+            (String) dezembro.get("chaveEdicao"),
+            alteracao(
+                (String) dezembro.get("versaoEdicao"),
+                ESTA,
+                new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(lida),
+                "PLANEJADA",
+                "2026-12-04",
+                "100",
+                MANTER_PRESERVADA,
+                "[]"))
+        .statusCode(200)
+        .body("repeticao.ancoragem", equalTo("DIA_UTIL"))
+        .body("repeticao.numeroDiaUtil", equalTo(4));
+
+    consultar(token, "2026-11", "2027-01")
+        .statusCode(200)
+        .body(
+            "itens.dataFinanceira",
+            org.hamcrest.Matchers.contains("2026-11-05", "2026-12-04", "2027-01-06"));
+  }
+
+  @Test
+  void alteracaoComCamposDoContratoAnteriorDeRepeticaoRespondeDadosInvalidos() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+
+    alterar(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            alteracao(
+                (String) outubro.get("versaoEdicao"),
+                ESTA,
+                "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"diasSemana\":[],\"diasMes\":[10],"
+                    + "\"politicaData\":\"PADRAO\",\"termino\":{\"tipo\":\"INDEFINIDO\"},"
+                    + "\"parcelamento\":null}",
+                "PLANEJADA",
+                "2026-10-10",
+                "100",
+                MANTER_PRESERVADA,
+                "[]"))
+        .statusCode(400)
+        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+  }
+
+  @Test
+  void criacaoSemanalNaQuartaComecaNaDataFinanceiraSemExigirOutraOcorrencia() {
+    var token = autenticar();
+    var semanal = repeticao("SEMANAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
+
+    criar(token, corpo("PLANEJADA", "2026-09-09", semanal))
+        .statusCode(201)
+        .body("serie.dataOriginal", equalTo("2026-09-09"));
   }
 
   @Test
@@ -709,11 +747,8 @@ class AlterarEstaEAsProximasResourceTest {
                 ESTA,
                 repeticao(
                     "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
+                    "DIA_DO_MES",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-11-10",
                 "50",
@@ -746,11 +781,8 @@ class AlterarEstaEAsProximasResourceTest {
                 ESTA,
                 repeticao(
                     "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":2,\"totalParcelas\":5}"),
+                    "DIA_DO_MES",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":2,\"totalParcelas\":5}"),
                 "PLANEJADA",
                 "2026-10-10",
                 "100",
@@ -784,11 +816,8 @@ class AlterarEstaEAsProximasResourceTest {
                 ESTA,
                 repeticao(
                     "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":2,\"totalParcelas\":3}"),
+                    "DIA_DO_MES",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":2,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-10-10",
                 "100",
@@ -818,11 +847,8 @@ class AlterarEstaEAsProximasResourceTest {
                 ESTA,
                 repeticao(
                     "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
+                    "DIA_DO_MES",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-10-10",
                 "100",
@@ -938,39 +964,6 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void regraSemanalDeveIncluirDiaDaDataDeInicio() {
-    var token = autenticar();
-    // 2026-09-09 é quarta-feira; a regra semanal só possui segunda-feira.
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                "2026-09-09",
-                repeticao(
-                    "SEMANAL",
-                    "[\"SEGUNDA\"]",
-                    "[]",
-                    "PADRAO",
-                    "{\"tipo\":\"INDEFINIDO\"}",
-                    "null")))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
-  }
-
-  @Test
-  void regraMensalPadraoDeveIncluirDiaDaDataDeInicio() {
-    var token = autenticar();
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                INICIO,
-                repeticao("MENSAL", "[]", "[5]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null")))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
-  }
-
-  @Test
   void agrupaVariasPreservadasDaMesmaDataEmUmaUnicaDecisao() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
@@ -982,7 +975,7 @@ class AlterarEstaEAsProximasResourceTest {
             alteracao(
                 (String) dezembro.get("versaoEdicao"),
                 SOMENTE_ESTA,
-                "null",
+                MENSAL_DIA_10,
                 "PLANEJADA",
                 "2026-12-10",
                 "90",
@@ -1075,7 +1068,7 @@ class AlterarEstaEAsProximasResourceTest {
             alteracao(
                 (String) item.get("versaoEdicao"),
                 SOMENTE_ESTA,
-                "null",
+                MENSAL_DIA_10,
                 "PLANEJADA",
                 novaData,
                 valor,
@@ -1111,39 +1104,6 @@ class AlterarEstaEAsProximasResourceTest {
         .body("sobreposicoes[0].resolucaoSugerida", equalTo(MANTER_PRESERVADA));
   }
 
-  @Test
-  void formaMensalAncoradaDeSegmentoExistenteAceitaSomenteNaAlteracao() {
-    var token = autenticar();
-    var segmentoId = criarSegmentoLegadoMensalSemDias(LocalDate.of(2026, 9, 10));
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                repeticao("MENSAL", "[]", "[]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null"),
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
-        .statusCode(200)
-        .body("serie.segmentoId", not(equalTo(segmentoId.toString())))
-        .body("repeticao.diasMes", empty())
-        .body("repeticao.politicaData", equalTo("PADRAO"));
-
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                INICIO,
-                repeticao("MENSAL", "[]", "[]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null")))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
-  }
-
   private UUID criarSegmentoLegadoMensalSemDias(LocalDate inicio) {
     return QuarkusTransaction.requiringNew()
         .call(
@@ -1166,7 +1126,7 @@ class AlterarEstaEAsProximasResourceTest {
               segmento.setValor(new BigDecimal("100.0000"));
               segmento.setInicio(inicio);
               segmento.setRrule("FREQ=MONTHLY");
-              segmento.setPoliticaData(PoliticaDataOcorrencia.PADRAO);
+              segmento.setPoliticaData(PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES);
               segmento.setStatus(StatusRecorrencia.ATIVO);
               segmentoRepository.persist(segmento);
               return segmento.getId();
@@ -1182,7 +1142,7 @@ class AlterarEstaEAsProximasResourceTest {
         alteracao(
             (String) item.get("versaoEdicao"),
             "SOMENTE_ESTA",
-            "null",
+            MENSAL_DIA_10,
             "EFETIVADA",
             data,
             "100.00",
@@ -1330,18 +1290,11 @@ class AlterarEstaEAsProximasResourceTest {
     return "[" + String.join(",", lista) + "]";
   }
 
-  private static String repeticao(
-      String frequencia,
-      String diasSemana,
-      String diasMes,
-      String politica,
-      String termino,
-      String parcelamento) {
+  private static String repeticao(String frequencia, String ancoragem, String termino) {
     return """
-    {"frequencia":"%s","intervalo":1,"diasSemana":%s,"diasMes":%s,
-     "politicaData":"%s","termino":%s,"parcelamento":%s}
+    {"frequencia":"%s","intervalo":1,"ancoragem":"%s","termino":%s}
     """
-        .formatted(frequencia, diasSemana, diasMes, politica, termino, parcelamento);
+        .formatted(frequencia, ancoragem, termino);
   }
 
   private String autenticar() {

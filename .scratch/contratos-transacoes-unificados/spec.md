@@ -2,6 +2,8 @@
 
 Status: done
 
+> Substituída em dois pontos pela spec `.scratch/simplificar-repeticao/spec.md`: a configuração de repetição (`repeticao` com `frequencia`, `intervalo`, `ancoragem` e `termino`) e a edição `SOMENTE_ESTA`, que agora mantém a ocorrência na série em vez de convertê-la. As demais regras desta spec continuam valendo.
+
 ## Objetivo e contexto
 
 Oferecer um fluxo único de cadastro e edição de receitas e despesas, com repetição opcional e parcelamento como configuração adicional da repetição. Transferências têm fluxo de escrita próprio e não se repetem. A leitura permanece unificada. Este documento descreve o contrato pretendido, não o comportamento já implementado.
@@ -63,9 +65,7 @@ Matriz de conversão:
 | Origem | Destino | Efeito |
 | --- | --- | --- |
 | Simples | Repetição, parcelada ou não | Transação existente é primeira ocorrência; preserva situação e instante quando não alterados; não duplicar. |
-| Série | Simples, `SOMENTE_ESTA` | Individualiza como simples e impede reaparecimento da ocorrência original; série segue. |
 | Série | Simples, `ESTA_E_AS_PROXIMAS` | Selecionada torna-se simples; encerra projeção antiga a partir do corte; preserva ocorrências protegidas posteriores. |
-| Série | Nova repetição ou parcelamento, `SOMENTE_ESTA` | Selecionada inicia nova série; suprimir origem para evitar reaparecimento; série anterior continua. |
 | Série | Repetição ou parcelamento, `ESTA_E_AS_PROXIMAS` | Corta projeção antiga e inicia novo trecho/configuração; histórico e ocorrências protegidas são preservados. |
 | Parcelamento | Parcelamento | Preserve numeração e total original; mudança do total encerra plano anterior e cria novo grupo, conforme modelo atual. |
 

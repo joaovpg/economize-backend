@@ -225,9 +225,7 @@ public class ConsultarTransacoes {
         Comparator.comparing(Item::dataFinanceira)
             .thenComparingInt(
                 item -> item.origem() == OrigemItemConsulta.SALDO_INICIAL_CONTA ? 0 : 1)
-            .thenComparing(Item::operacaoId, Comparator.nullsFirst(Comparator.naturalOrder()))
-            .thenComparing(
-                ConsultarTransacoes::segmentoId, Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(ConsultarTransacoes::identificadorEstavel)
             .thenComparing(
                 ConsultarTransacoes::dataOriginal, Comparator.nullsFirst(Comparator.naturalOrder()))
             .thenComparingInt(
@@ -409,12 +407,22 @@ public class ConsultarTransacoes {
         List.of());
   }
 
-  private static UUID segmentoId(Item item) {
-    return item.serie() == null ? null : item.serie().segmentoId();
+  /**
+   * Identificador que não muda quando uma ocorrência de série deixa de ser virtual: o segmento para
+   * ocorrências de série e a operação para os demais itens. Assim, efetivar ou editar uma
+   * ocorrência não altera sua posição entre os itens da mesma data.
+   */
+  private static UUID identificadorEstavel(Item item) {
+    return ehOcorrenciaDeSerie(item) ? item.serie().segmentoId() : item.operacaoId();
   }
 
   private static LocalDate dataOriginal(Item item) {
-    return item.serie() == null ? null : item.serie().dataOriginal();
+    return ehOcorrenciaDeSerie(item) ? item.serie().dataOriginal() : null;
+  }
+
+  private static boolean ehOcorrenciaDeSerie(Item item) {
+    return item.origem() == OrigemItemConsulta.TRANSACAO_RECORRENTE
+        || item.origem() == OrigemItemConsulta.PARCELA;
   }
 
   private Periodo resolverPeriodo(YearMonth inicio, YearMonth fim) {
@@ -492,5 +500,17 @@ public class ConsultarTransacoes {
       Boolean protegida,
       SerieRecorrencia serie,
       RepeticaoRecorrencia repeticao,
-      List<EscopoEdicaoTransacao> escoposDisponiveis) {}
+      List<EscopoEdicaoTransacao> escoposDisponiveis) {
+
+    /**
+     * Chave estável e única do item na consulta. Uma ocorrência de série mantém a mesma chave
+     * quando deixa de ser virtual; itens sem chave de edição recebem uma chave por origem, operação
+     * e conta.
+     */
+    public String chaveItem() {
+      return chaveEdicao != null
+          ? chaveEdicao
+          : IdentidadeEdicaoTransacao.chaveItemSemEdicao(origem, operacaoId, contaId);
+    }
+  }
 }

@@ -37,6 +37,15 @@ public final class IdentidadeEdicaoTransacao {
     return codificar(PREFIXO_RECORRENCIA + segmentoId + ":" + dataOriginal);
   }
 
+  /**
+   * Chave de exibição de um item sem chave de edição, como cada lado de uma transferência ou o
+   * saldo inicial de uma conta. Não é aceita como chave de edição.
+   */
+  public static String chaveItemSemEdicao(
+      OrigemItemConsulta origem, UUID operacaoId, UUID contaId) {
+    return codificar("1:i:" + origem + ":" + operacaoId + ":" + contaId);
+  }
+
   /** Indica se a chave identifica uma ocorrência de série (segmento e data original). */
   public static boolean ehChaveDeOcorrencia(String chave) {
     var valor = decodificarOuNulo(chave);

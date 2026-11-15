@@ -2,16 +2,11 @@ package com.joaovpg.economize.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
-import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,32 +17,25 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class RecorrenciaPoliticaRevisaoMigrationTest {
-  private static final LocalDate HORIZONTE = LocalDate.of(2027, 12, 31);
-
   @Inject AgroalDataSource dataSource;
-  @Inject ExpansorRecorrencia expansor;
-  @Inject LeitorRruleRecorrencia leitorRrule;
 
   @Test
-  void preencherPoliticaPeloTipoDoGrupoPreservandoOcorrenciasSupressoesEVersoes()
+  void preencherPoliticaPeloTipoDoGrupoPreservandoSegmentosSupressoesEVersoes()
       throws SQLException {
     var schema = "politica_" + UUID.randomUUID().toString().replace("-", "");
     var ids = new Dados();
     try {
       flyway(schema, "7").migrate();
       inserirDadosLegados(schema, ids);
-      var antes = capturar(schema, false);
+      var antes = capturar(schema);
 
-      flyway(schema, null).migrate();
-      var depois = capturar(schema, true);
+      // A V11 normaliza as RRULEs e a política dos segmentos; esta migration verifica a V8.
+      flyway(schema, "10").migrate();
+      var depois = capturar(schema);
 
       assertEquals(antes.segmentos(), depois.segmentos());
       assertEquals(antes.supressoes(), depois.supressoes());
       assertEquals(antes.transacoes(), depois.transacoes());
-      assertEquals(antes.ocorrencias(), depois.ocorrencias());
-      assertTrue(
-          depois.ocorrencias().contains(ids.segmentoParcela + "@2026-02-28#2=100.0000"),
-          "a parcela de fevereiro deve continuar ajustada ao ultimo dia do mes");
 
       var politicas =
           consultar(
@@ -81,14 +69,7 @@ class RecorrenciaPoliticaRevisaoMigrationTest {
     }
   }
 
-  private Captura capturar(String schema, boolean migrado) throws SQLException {
-    var politica =
-        migrado
-            ? "S.STR_POLITICA_DATA"
-            : """
-            CASE WHEN G.STR_TIPO = 'PARCELAMENTO'
-                 THEN 'AJUSTAR_ULTIMO_DIA_MES' ELSE 'PADRAO' END
-            """;
+  private Captura capturar(String schema) throws SQLException {
     return new Captura(
         consultar(
             schema,
@@ -117,44 +98,7 @@ class RecorrenciaPoliticaRevisaoMigrationTest {
             FROM TB006_TRANSACAO
             ORDER BY ID_REGISTRO
             """,
-            8),
-        ocorrencias(
-            schema,
-            """
-            SELECT S.ID_REGISTRO, S.STR_RRULE, S.DAT_DTSTART, S.DAT_FIM,\
-            """
-                + politica
-                + """
-                     , S.DEC_VALOR
-                FROM TB005_SEGMENTO_RECORRENCIA S
-                JOIN TB004_GRUPO_RECORRENCIA G ON G.ID_REGISTRO = S.ID_GRUPO_RECORRENCIA
-                ORDER BY S.ID_REGISTRO
-                """));
-  }
-
-  private List<String> ocorrencias(String schema, String sql) throws SQLException {
-    var resultado = new ArrayList<String>();
-    for (var linha : consultar(schema, sql, 6)) {
-      var colunas = linha.split("\\|", -1);
-      var inicio = LocalDate.parse(colunas[2]);
-      var fim = colunas[3].equals("null") ? HORIZONTE : LocalDate.parse(colunas[3]);
-      if (fim.isAfter(HORIZONTE)) {
-        fim = HORIZONTE;
-      }
-      var regra = leitorRrule.lerSegmento(inicio, colunas[1]);
-      var politica = PoliticaDataOcorrencia.valueOf(colunas[4]);
-      for (var ocorrencia : expansor.expandir(regra, inicio, fim, politica)) {
-        resultado.add(
-            colunas[0]
-                + "@"
-                + ocorrencia.dataOriginal()
-                + "#"
-                + ocorrencia.numeroOcorrencia()
-                + "="
-                + colunas[5]);
-      }
-    }
-    return resultado;
+            8));
   }
 
   private List<String> consultar(String schema, String sql, int colunas) throws SQLException {
@@ -268,10 +212,7 @@ class RecorrenciaPoliticaRevisaoMigrationTest {
   }
 
   private record Captura(
-      List<String> segmentos,
-      List<String> supressoes,
-      List<String> transacoes,
-      List<String> ocorrencias) {}
+      List<String> segmentos, List<String> supressoes, List<String> transacoes) {}
 
   private static class Dados {
     private final UUID usuario = UUID.randomUUID();

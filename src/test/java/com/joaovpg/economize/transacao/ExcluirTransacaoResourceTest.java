@@ -31,25 +31,16 @@ class ExcluirTransacaoResourceTest {
   private static final String INICIO = "2026-09-10";
   private static final String VERSAO_DESATUALIZADA = "urn:economize:problem:VERSAO_DESATUALIZADA";
   private static final String MENSAL_DIA_10 =
-      repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String DIARIA_QUATRO =
-      repeticao(
-          "DIARIA",
-          "[]",
-          "[]",
-          "PADRAO",
-          "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":4}",
-          "null");
+      repeticao("DIARIA", "DIA_DO_MES", "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":4}");
   private static final String DIARIA_INDEFINIDA =
-      repeticao("DIARIA", "[]", "[]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("DIARIA", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String PARCELAS_TRES =
       repeticao(
           "MENSAL",
-          "[]",
-          "[]",
-          "AJUSTAR_ULTIMO_DIA_MES",
-          "null",
-          "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}");
+          "DIA_DO_MES",
+          "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}");
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -211,7 +202,7 @@ class ExcluirTransacaoResourceTest {
             alteracao(
                 (String) novembro.get("versaoEdicao"),
                 "SOMENTE_ESTA",
-                "null",
+                MENSAL_DIA_10,
                 "EFETIVADA",
                 "2026-11-08",
                 "100"))
@@ -312,7 +303,7 @@ class ExcluirTransacaoResourceTest {
             alteracao(
                 (String) efetivar.get("versaoEdicao"),
                 "SOMENTE_ESTA",
-                "null",
+                DIARIA_INDEFINIDA,
                 "EFETIVADA",
                 "2026-01-13",
                 "30"))
@@ -414,7 +405,7 @@ class ExcluirTransacaoResourceTest {
             alteracao(
                 (String) novembro.get("versaoEdicao"),
                 "SOMENTE_ESTA",
-                "null",
+                MENSAL_DIA_10,
                 "PLANEJADA",
                 "2026-11-10",
                 "100"))
@@ -542,18 +533,11 @@ class ExcluirTransacaoResourceTest {
     return json.append("}").toString();
   }
 
-  private static String repeticao(
-      String frequencia,
-      String diasSemana,
-      String diasMes,
-      String politica,
-      String termino,
-      String parcelamento) {
+  private static String repeticao(String frequencia, String ancoragem, String termino) {
     return """
-    {"frequencia":"%s","intervalo":1,"diasSemana":%s,"diasMes":%s,
-     "politicaData":"%s","termino":%s,"parcelamento":%s}
+    {"frequencia":"%s","intervalo":1,"ancoragem":"%s","termino":%s}
     """
-        .formatted(frequencia, diasSemana, diasMes, politica, termino, parcelamento);
+        .formatted(frequencia, ancoragem, termino);
   }
 
   private String autenticar() {

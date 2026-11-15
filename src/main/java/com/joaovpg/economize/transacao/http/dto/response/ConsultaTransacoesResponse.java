@@ -1,7 +1,7 @@
 package com.joaovpg.economize.transacao.http.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.AncoragemRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.TipoTermino;
 import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.domain.OrigemItemConsulta;
@@ -108,6 +108,14 @@ public record ConsultaTransacoesResponse(
           UUID contaContraparteId,
       @Schema(
               description =
+                  "Chave opaca, estável e única do item na consulta, para uso como key de lista."
+                      + " Igual à chaveEdicao quando ela existe; uma ocorrência de série mantém a"
+                      + " mesma chave ao deixar de ser virtual. Não é aceita como chave de edição"
+                      + " em saldo inicial e transferência.",
+              required = true)
+          String chaveItem,
+      @Schema(
+              description =
                   "Chave opaca para edição; nula para saldo inicial e transferência, que são"
                       + " editadas pela sua operação.",
               nullable = true)
@@ -159,21 +167,14 @@ public record ConsultaTransacoesResponse(
       @Schema(description = "Frequência da repetição.", required = true)
           FrequenciaRepeticao frequencia,
       @Schema(description = "Intervalo entre ciclos da frequência.", required = true) int intervalo,
+      @Schema(description = "Âncora da repetição.", required = true) AncoragemRecorrencia ancoragem,
       @Schema(
               description =
-                  "Dias da semana em ordem de segunda a domingo; vazio quando inaplicável.",
-              required = true)
-          List<DiaSemanaRepeticao> diasSemana,
-      @Schema(
-              description = "Dias do mês em ordem crescente; vazio quando inaplicável.",
-              required = true)
-          List<Integer> diasMes,
-      @Schema(description = "Política aplicada às datas inexistentes.", required = true)
-          PoliticaDataOcorrencia politicaData,
-      @Schema(description = "Término da repetição; nulo quando há parcelamento.", nullable = true)
-          TerminoResponse termino,
-      @Schema(description = "Numeração do parcelamento; nula sem parcelamento.", nullable = true)
-          ParcelamentoResponse parcelamento) {}
+                  "N do dia útil calculado pelo servidor; nulo quando a ancoragem é DIA_DO_MES.",
+              nullable = true)
+          Integer numeroDiaUtil,
+      @Schema(description = "Término da repetição ou do Parcelamento.", required = true)
+          TerminoResponse termino) {}
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record TerminoResponse(
@@ -186,13 +187,15 @@ public record ConsultaTransacoesResponse(
       @Schema(
               description = "Quantidade de ocorrências; presente somente para APOS_OCORRENCIAS.",
               nullable = true)
-          Integer quantidade) {}
-
-  public record ParcelamentoResponse(
-      @Schema(description = "Número da primeira parcela do plano.", required = true)
-          int numeroPrimeiraParcela,
-      @Schema(description = "Total contratado original de parcelas.", required = true)
-          int totalParcelas) {}
+          Integer quantidade,
+      @Schema(
+              description = "Número da primeira parcela; presente somente para PARCELAS.",
+              nullable = true)
+          Integer numeroPrimeiraParcela,
+      @Schema(
+              description = "Total contratado de parcelas; presente somente para PARCELAS.",
+              nullable = true)
+          Integer totalParcelas) {}
 
   @Schema(description = "Frequência de uma repetição, em português.")
   public enum FrequenciaRepeticao {
@@ -204,16 +207,5 @@ public record ConsultaTransacoesResponse(
     MENSAL,
     @Schema(description = "A cada ano.")
     ANUAL
-  }
-
-  @Schema(description = "Dia da semana, em português.")
-  public enum DiaSemanaRepeticao {
-    SEGUNDA,
-    TERCA,
-    QUARTA,
-    QUINTA,
-    SEXTA,
-    SABADO,
-    DOMINGO
   }
 }

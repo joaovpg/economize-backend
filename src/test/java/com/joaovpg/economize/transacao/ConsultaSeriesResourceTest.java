@@ -96,9 +96,9 @@ class ConsultaSeriesResourceTest {
                       persistirSegmento(
                           "Aluguel",
                           TipoGrupoRecorrencia.RECORRENCIA,
-                          "FREQ=MONTHLY;BYMONTHDAY=10",
+                          "FREQ=MONTHLY",
                           LocalDate.of(2026, 1, 10),
-                          PoliticaDataOcorrencia.PADRAO,
+                          PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES,
                           null,
                           null);
                   var supressao = new SupressaoRecorrencia();
@@ -136,13 +136,11 @@ class ConsultaSeriesResourceTest {
         .body("itens[0].serie.totalParcelas", nullValue())
         .body("itens[0].repeticao.frequencia", equalTo("MENSAL"))
         .body("itens[0].repeticao.intervalo", equalTo(1))
-        .body("itens[0].repeticao.diasSemana", empty())
-        .body("itens[0].repeticao.diasMes", contains(10))
-        .body("itens[0].repeticao.politicaData", equalTo("PADRAO"))
+        .body("itens[0].repeticao.ancoragem", equalTo("DIA_DO_MES"))
+        .body("itens[0].repeticao.numeroDiaUtil", nullValue())
         .body("itens[0].repeticao.termino.tipo", equalTo("INDEFINIDO"))
         .body("itens[0].repeticao.termino", not(hasKey("data")))
         .body("itens[0].repeticao.termino", not(hasKey("quantidade")))
-        .body("itens[0].repeticao.parcelamento", nullValue())
         .body("itens[0].escoposDisponiveis", hasSize(2))
         .body("itens[0].escoposDisponiveis", hasItems("SOMENTE_ESTA", "ESTA_E_AS_PROXIMAS"));
 
@@ -160,9 +158,9 @@ class ConsultaSeriesResourceTest {
                 persistirSegmento(
                     "Aluguel",
                     TipoGrupoRecorrencia.RECORRENCIA,
-                    "FREQ=MONTHLY;BYMONTHDAY=10",
+                    "FREQ=MONTHLY",
                     LocalDate.of(2026, 1, 10),
-                    PoliticaDataOcorrencia.PADRAO,
+                    PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES,
                     null,
                     null));
 
@@ -183,9 +181,9 @@ class ConsultaSeriesResourceTest {
                       persistirSegmento(
                           "Aluguel",
                           TipoGrupoRecorrencia.RECORRENCIA,
-                          "FREQ=MONTHLY;BYMONTHDAY=10",
+                          "FREQ=MONTHLY",
                           LocalDate.of(2026, 1, 10),
-                          PoliticaDataOcorrencia.PADRAO,
+                          PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES,
                           null,
                           null);
                   var transacao = new Transacao();
@@ -227,7 +225,7 @@ class ConsultaSeriesResourceTest {
   }
 
   @Test
-  void parcelamentoExpoeNumeracaoEConfiguracaoSemTermino() {
+  void parcelamentoExpoeNumeracaoEConfiguracaoComTerminoEmParcelas() {
     QuarkusTransaction.requiringNew()
         .run(
             () ->
@@ -249,22 +247,21 @@ class ConsultaSeriesResourceTest {
         .body("itens[0].serie.numeroParcela", equalTo(3))
         .body("itens[0].serie.totalParcelas", equalTo(4))
         .body("itens[0].repeticao.frequencia", equalTo("MENSAL"))
-        .body("itens[0].repeticao.diasMes", empty())
-        .body("itens[0].repeticao.politicaData", equalTo("AJUSTAR_ULTIMO_DIA_MES"))
-        .body("itens[0].repeticao.termino", nullValue())
-        .body("itens[0].repeticao.parcelamento.numeroPrimeiraParcela", equalTo(2))
-        .body("itens[0].repeticao.parcelamento.totalParcelas", equalTo(4));
+        .body("itens[0].repeticao.ancoragem", equalTo("DIA_DO_MES"))
+        .body("itens[0].repeticao.termino.tipo", equalTo("PARCELAS"))
+        .body("itens[0].repeticao.termino.numeroPrimeiraParcela", equalTo(2))
+        .body("itens[0].repeticao.termino.totalParcelas", equalTo(4));
   }
 
   @Test
-  void traduzInicioForaDoPrimeiroDiaDaSemanaSemRecalcularDias() {
+  void traduzSemanalNoDiaDoInicioSemRecalcularDatas() {
     QuarkusTransaction.requiringNew()
         .run(
             () ->
                 persistirSegmento(
                     "Academia",
                     TipoGrupoRecorrencia.RECORRENCIA,
-                    "FREQ=WEEKLY;BYDAY=MO,WE;WKST=MO",
+                    "FREQ=WEEKLY;BYDAY=WE;WKST=MO",
                     LocalDate.of(2026, 1, 7),
                     PoliticaDataOcorrencia.PADRAO,
                     null,
@@ -279,15 +276,15 @@ class ConsultaSeriesResourceTest {
             "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.serie.inicioSegmento",
             equalTo("2026-01-07"))
         .body(
-            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.diasSemana",
-            contains("SEGUNDA", "QUARTA"))
+            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.frequencia",
+            equalTo("SEMANAL"))
         .body(
-            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.politicaData",
-            equalTo("PADRAO"));
+            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.ancoragem",
+            equalTo("DIA_DO_MES"));
   }
 
   @Test
-  void traduzMensalAntigaSemDiasDoMesComPoliticaPadrao() {
+  void traduzMensalSemDiasDoMesComoAncoragemDoMes() {
     QuarkusTransaction.requiringNew()
         .run(
             () ->
@@ -296,7 +293,7 @@ class ConsultaSeriesResourceTest {
                     TipoGrupoRecorrencia.RECORRENCIA,
                     "FREQ=MONTHLY",
                     LocalDate.of(2026, 1, 15),
-                    PoliticaDataOcorrencia.PADRAO,
+                    PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES,
                     null,
                     null));
 
@@ -305,11 +302,9 @@ class ConsultaSeriesResourceTest {
         .body(
             "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.dataFinanceira",
             equalTo("2026-01-15"))
-        .body("itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.diasMes", empty())
-        .body("itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.diasSemana", empty())
         .body(
-            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.politicaData",
-            equalTo("PADRAO"))
+            "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.ancoragem",
+            equalTo("DIA_DO_MES"))
         .body(
             "itens.find { it.origem == 'TRANSACAO_RECORRENTE' }.repeticao.termino.tipo",
             equalTo("INDEFINIDO"));

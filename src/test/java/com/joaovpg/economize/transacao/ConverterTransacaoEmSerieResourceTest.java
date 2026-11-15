@@ -35,15 +35,12 @@ import org.junit.jupiter.api.Test;
 class ConverterTransacaoEmSerieResourceTest {
   private static final ZoneId FUSO = ZoneId.of("Pacific/Pago_Pago");
   private static final String REPETICAO_MENSAL_DIA_10_INDEFINIDA =
-      repeticao("MENSAL", "[]", "[10]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null");
+      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String PARCELAMENTO_MENSAL_3_DE_5 =
       repeticao(
           "MENSAL",
-          "[]",
-          "[]",
-          "AJUSTAR_ULTIMO_DIA_MES",
-          "null",
-          "{\"numeroPrimeiraParcela\":3,\"totalParcelas\":5}");
+          "DIA_DO_MES",
+          "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":3,\"totalParcelas\":5}");
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -170,8 +167,9 @@ class ConverterTransacaoEmSerieResourceTest {
         .body("efetivadoEm", equalTo(efetivadoAntes))
         .body("serie.numeroParcela", equalTo(3))
         .body("serie.totalParcelas", equalTo(5))
-        .body("repeticao.parcelamento.numeroPrimeiraParcela", equalTo(3))
-        .body("repeticao.parcelamento.totalParcelas", equalTo(5));
+        .body("repeticao.termino.tipo", equalTo("PARCELAS"))
+        .body("repeticao.termino.numeroPrimeiraParcela", equalTo(3))
+        .body("repeticao.termino.totalParcelas", equalTo(5));
 
     consultar(token, "2026-10", "2027-01")
         .statusCode(200)
@@ -324,7 +322,7 @@ class ConverterTransacaoEmSerieResourceTest {
                 versao,
                 "PLANEJADA",
                 "2026-11-10",
-                repeticao("SEMANAL", "[]", "[]", "PADRAO", "{\"tipo\":\"INDEFINIDO\"}", "null"),
+                repeticao("SEMANAL", "DIA_UTIL", "{\"tipo\":\"INDEFINIDO\"}"),
                 ""))
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
@@ -337,11 +335,8 @@ class ConverterTransacaoEmSerieResourceTest {
                 "2026-11-10",
                 repeticao(
                     "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":6,\"totalParcelas\":5}"),
+                    "DIA_DO_MES",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":6,\"totalParcelas\":5}"),
                 ""))
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:PARCELAMENTO_INVALIDO"));
@@ -353,15 +348,12 @@ class ConverterTransacaoEmSerieResourceTest {
                 "PLANEJADA",
                 "2026-11-10",
                 repeticao(
-                    "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "{\"tipo\":\"INDEFINIDO\"}",
-                    "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":5}"),
+                    "DIARIA",
+                    "DIA_UTIL",
+                    "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":5}"),
                 ""))
         .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:PARCELAMENTO_INVALIDO"));
+        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
     assertEquals(0, contarSegmentosDoUsuario());
     consultar(token, "2026-11", "2026-11")
         .statusCode(200)
@@ -548,17 +540,10 @@ class ConverterTransacaoEmSerieResourceTest {
         .getCookie("economize_token");
   }
 
-  private static String repeticao(
-      String frequencia,
-      String diasSemana,
-      String diasMes,
-      String politica,
-      String termino,
-      String parcelamento) {
+  private static String repeticao(String frequencia, String ancoragem, String termino) {
     return """
-    {"frequencia":"%s","intervalo":1,"diasSemana":%s,"diasMes":%s,
-     "politicaData":"%s","termino":%s,"parcelamento":%s}
+    {"frequencia":"%s","intervalo":1,"ancoragem":"%s","termino":%s}
     """
-        .formatted(frequencia, diasSemana, diasMes, politica, termino, parcelamento);
+        .formatted(frequencia, ancoragem, termino);
   }
 }

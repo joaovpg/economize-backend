@@ -32,7 +32,7 @@ public class LocalizarOcorrenciaRecorrente {
    */
   public OcorrenciaRecorrencia executar(
       SegmentoRecorrencia segmento, LocalDate dataOriginal, UUID usuarioId, boolean materializada) {
-    var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
+    var regra = leitorRrule.ler(segmento.getInicio(), segmento.getRrule());
     var ocorrencia =
         expansor
             .expandir(regra, segmento.getInicio(), dataOriginal, segmento.getPoliticaData())

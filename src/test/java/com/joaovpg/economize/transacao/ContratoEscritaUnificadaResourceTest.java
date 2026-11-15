@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -128,6 +129,28 @@ class ContratoEscritaUnificadaResourceTest {
   }
 
   @Test
+  void openApiDescreveARepeticaoNoFormatoAncoradoNaDataFinanceira() {
+    var schemas = mapa(mapa(openApi().get("components")).get("schemas"));
+
+    assertEquals(
+        Set.of("frequencia", "intervalo", "ancoragem", "termino"),
+        mapa(mapa(schemas.get("RepeticaoTransacaoRequest")).get("properties")).keySet());
+    assertEquals(
+        Set.of("tipo", "data", "quantidade", "numeroPrimeiraParcela", "totalParcelas"),
+        mapa(mapa(schemas.get("TerminoTransacaoRequest")).get("properties")).keySet());
+    assertEquals(List.of("DIA_DO_MES", "DIA_UTIL"), enumDoSchema(schemas, "AncoragemRecorrencia"));
+    assertEquals(
+        List.of("INDEFINIDO", "EM_DATA", "APOS_OCORRENCIAS", "PARCELAS"),
+        enumDoSchema(schemas, "TipoTermino"));
+
+    var texto = openApiTexto();
+    assertFalse(texto.contains("diasSemana"));
+    assertFalse(texto.contains("diasMes"));
+    assertFalse(texto.contains("politicaData"));
+    assertFalse(texto.contains("\"parcelamento\""));
+  }
+
+  @Test
   void openApiNaoContemEscoposOuRotasAntigas() {
     var texto = openApiTexto();
 
@@ -138,6 +161,10 @@ class ContratoEscritaUnificadaResourceTest {
     assertFalse(texto.contains("/api/recorrencias"));
     assertTrue(texto.contains("SOMENTE_ESTA"));
     assertTrue(texto.contains("ESTA_E_AS_PROXIMAS"));
+  }
+
+  private static List<String> enumDoSchema(Map<String, Object> schemas, String nome) {
+    return ((List<?>) mapa(schemas.get(nome)).get("enum")).stream().map(String::valueOf).toList();
   }
 
   private List<String> parametroEscopo(

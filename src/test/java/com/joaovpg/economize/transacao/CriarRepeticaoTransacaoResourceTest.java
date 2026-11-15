@@ -39,7 +39,7 @@ class CriarRepeticaoTransacaoResourceTest {
   private static final ZoneId FUSO = ZoneId.of("Pacific/Pago_Pago");
 
   private static final String MENSAL_DIA_10_INDEFINIDA =
-      repeticao("MENSAL", "[]", "[10]", "PADRAO", indefinido(), "null");
+      repeticao("MENSAL", "DIA_DO_MES", indefinido());
 
   @Inject UsuarioRepository usuarioRepository;
   @Inject ContaFinanceiraRepository contaRepository;
@@ -237,11 +237,10 @@ class CriarRepeticaoTransacaoResourceTest {
         .body("serie.totalParcelas", nullValue())
         .body("repeticao.frequencia", equalTo("MENSAL"))
         .body("repeticao.intervalo", equalTo(1))
-        .body("repeticao.diasSemana", hasSize(0))
-        .body("repeticao.diasMes", contains(10))
-        .body("repeticao.politicaData", equalTo("PADRAO"))
+        .body("repeticao.ancoragem", equalTo("DIA_DO_MES"))
+        .body("repeticao.numeroDiaUtil", nullValue())
         .body("repeticao.termino.tipo", equalTo("INDEFINIDO"))
-        .body("repeticao.parcelamento", nullValue())
+        .body("repeticao.termino.numeroPrimeiraParcela", nullValue())
         .body("escoposDisponiveis", hasSize(2));
   }
 
@@ -292,109 +291,114 @@ class CriarRepeticaoTransacaoResourceTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("casosValidos")
   void aceitaCombinacoesValidasEDevolveAConfiguracaoEfetiva(
-      String nome, String dataFinanceira, String repeticao, String frequencia, String politica) {
+      String nome,
+      String dataFinanceira,
+      String repeticao,
+      String frequencia,
+      String ancoragem,
+      String tipoTermino) {
     criar(autenticar(), corpo("PLANEJADA", dataFinanceira, repeticao))
         .statusCode(201)
         .body("virtual", equalTo(true))
         .body("dataFinanceira", equalTo(dataFinanceira))
         .body("repeticao.frequencia", equalTo(frequencia))
-        .body("repeticao.politicaData", equalTo(politica));
+        .body("repeticao.ancoragem", equalTo(ancoragem))
+        .body("repeticao.termino.tipo", equalTo(tipoTermino));
   }
 
   static Stream<Arguments> casosValidos() {
-    var sem = "null";
-    var parcelado = "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}";
     return Stream.of(
         Arguments.of(
             "diaria indefinida",
             "2026-11-10",
-            repeticao("DIARIA", "[]", "[]", "PADRAO", indefinido(), sem),
+            repeticao("DIARIA", "DIA_DO_MES", indefinido()),
             "DIARIA",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "INDEFINIDO"),
         Arguments.of(
-            "semanal com dois dias da semana",
+            "semanal a cada duas semanas",
             "2026-11-10",
-            repeticao("SEMANAL", "[\"QUINTA\",\"TERCA\"]", "[]", "PADRAO", indefinido(), sem),
+            repeticao("SEMANAL", 2, "DIA_DO_MES", indefinido()),
             "SEMANAL",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "INDEFINIDO"),
         Arguments.of(
             "mensal com dia do mes",
             "2026-11-10",
-            repeticao("MENSAL", "[]", "[10]", "PADRAO", indefinido(), sem),
+            repeticao("MENSAL", "DIA_DO_MES", indefinido()),
             "MENSAL",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "INDEFINIDO"),
         Arguments.of(
-            "mensal ajustada ao ultimo dia sem dias informados",
+            "mensal no ultimo dia do mes em data de fim de mes",
             "2026-11-30",
-            repeticao("MENSAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), sem),
+            repeticao("MENSAL", "DIA_DO_MES", indefinido()),
             "MENSAL",
-            "AJUSTAR_ULTIMO_DIA_MES"),
+            "DIA_DO_MES",
+            "INDEFINIDO"),
         Arguments.of(
-            "anual padrao",
+            "mensal no quinto dia util",
+            "2026-11-05",
+            repeticao("MENSAL", "DIA_UTIL", indefinido()),
+            "MENSAL",
+            "DIA_UTIL",
+            "INDEFINIDO"),
+        Arguments.of(
+            "anual no dia do mes",
             "2026-11-10",
-            repeticao("ANUAL", "[]", "[]", "PADRAO", indefinido(), sem),
+            repeticao("ANUAL", "DIA_DO_MES", indefinido()),
             "ANUAL",
-            "PADRAO"),
-        Arguments.of(
-            "anual ajustada ao ultimo dia",
-            "2026-11-30",
-            repeticao("ANUAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), sem),
-            "ANUAL",
-            "AJUSTAR_ULTIMO_DIA_MES"),
+            "DIA_DO_MES",
+            "INDEFINIDO"),
         Arguments.of(
             "semanal com termino em data",
             "2026-11-10",
-            repeticao(
-                "SEMANAL",
-                "[\"TERCA\"]",
-                "[]",
-                "PADRAO",
-                "{\"tipo\":\"EM_DATA\",\"data\":\"2026-12-31\"}",
-                sem),
+            repeticao("SEMANAL", "DIA_DO_MES", emData("2026-12-31")),
             "SEMANAL",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "EM_DATA"),
         Arguments.of(
             "mensal com termino apos ocorrencias",
             "2026-11-10",
-            repeticao(
-                "MENSAL",
-                "[]",
-                "[10]",
-                "PADRAO",
-                "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":3}",
-                sem),
+            repeticao("MENSAL", "DIA_DO_MES", apos(3)),
             "MENSAL",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "APOS_OCORRENCIAS"),
         Arguments.of(
             "diaria parcelada",
             "2026-11-10",
-            repeticao("DIARIA", "[]", "[]", "PADRAO", sem, parcelado),
+            repeticao("DIARIA", "DIA_DO_MES", parcelas(1, 3)),
             "DIARIA",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "PARCELAS"),
         Arguments.of(
-            "semanal parcelada no dia da data financeira",
+            "semanal parcelada",
             "2026-11-10",
-            repeticao("SEMANAL", "[\"TERCA\"]", "[]", "PADRAO", sem, parcelado),
+            repeticao("SEMANAL", "DIA_DO_MES", parcelas(1, 3)),
             "SEMANAL",
-            "PADRAO"),
+            "DIA_DO_MES",
+            "PARCELAS"),
         Arguments.of(
-            "mensal parcelada ajustada",
+            "mensal parcelada no ultimo dia do mes",
             "2026-11-30",
-            repeticao("MENSAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", sem, parcelado),
+            repeticao("MENSAL", "DIA_DO_MES", parcelas(1, 3)),
             "MENSAL",
-            "AJUSTAR_ULTIMO_DIA_MES"),
+            "DIA_DO_MES",
+            "PARCELAS"),
         Arguments.of(
-            "mensal parcelada com politica padrao",
-            "2026-11-10",
-            repeticao("MENSAL", "[]", "[]", "PADRAO", sem, parcelado),
+            "mensal parcelada no dia util",
+            "2026-11-05",
+            repeticao("MENSAL", "DIA_UTIL", parcelas(2, 4)),
             "MENSAL",
-            "PADRAO"),
+            "DIA_UTIL",
+            "PARCELAS"),
         Arguments.of(
-            "anual parcelada ajustada",
+            "anual parcelada",
             "2026-11-30",
-            repeticao("ANUAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", sem, parcelado),
+            repeticao("ANUAL", "DIA_DO_MES", parcelas(1, 3)),
             "ANUAL",
-            "AJUSTAR_ULTIMO_DIA_MES"));
+            "DIA_DO_MES",
+            "PARCELAS"));
   }
 
   @Test
@@ -412,12 +416,7 @@ class CriarRepeticaoTransacaoResourceTest {
           "2099-01-05"
         }) {
       var resposta =
-          criar(
-                  token,
-                  corpo(
-                      "PLANEJADA",
-                      data,
-                      repeticao("MENSAL", "[]", "[5]", "PADRAO", indefinido(), "null")))
+          criar(token, corpo("PLANEJADA", data, repeticao("MENSAL", "DIA_DO_MES", indefinido())))
               .extract()
               .response();
       assertEquals(201, resposta.statusCode(), "data " + data + ": " + resposta.asString());
@@ -454,8 +453,8 @@ class CriarRepeticaoTransacaoResourceTest {
         """
         {"tipo":"DESPESA","contaId":"%s","categoriaId":"%s","situacao":"PLANEJADA",
          "descricao":"Aluguel","observacoes":null,"valor":1500,"dataFinanceira":"2026-11-05",
-         "repeticao":{"frequencia":"MENSAL","intervalo":1,"diasSemana":[],"diasMes":[5],
-           "politicaData":"PADRAO","termino":{"tipo":"INDEFINIDO"},"parcelamento":null}}
+         "repeticao":{"frequencia":"MENSAL","intervalo":1,"ancoragem":"DIA_DO_MES",
+           "termino":{"tipo":"INDEFINIDO"}}}
         """
             .formatted(contaId, categoriaId);
 
@@ -468,15 +467,7 @@ class CriarRepeticaoTransacaoResourceTest {
     criar(
             token,
             corpo(
-                "PLANEJADA",
-                "2026-11-10",
-                repeticao(
-                    "MENSAL",
-                    "[]",
-                    "[10]",
-                    "PADRAO",
-                    "{\"tipo\":\"EM_DATA\",\"data\":\"2027-01-10\"}",
-                    "null")))
+                "PLANEJADA", "2026-11-10", repeticao("MENSAL", "DIA_DO_MES", emData("2027-01-10"))))
         .statusCode(201)
         .body("repeticao.termino.tipo", equalTo("EM_DATA"))
         .body("repeticao.termino.data", equalTo("2027-01-10"));
@@ -489,18 +480,7 @@ class CriarRepeticaoTransacaoResourceTest {
   @Test
   void projetaTerminoAposOcorrenciasContandoAPrimeira() {
     var token = autenticar();
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                "2026-11-10",
-                repeticao(
-                    "MENSAL",
-                    "[]",
-                    "[10]",
-                    "PADRAO",
-                    "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":2}",
-                    "null")))
+    criar(token, corpo("PLANEJADA", "2026-11-10", repeticao("MENSAL", "DIA_DO_MES", apos(2))))
         .statusCode(201)
         .body("repeticao.termino.tipo", equalTo("APOS_OCORRENCIAS"))
         .body("repeticao.termino.quantidade", equalTo(2));
@@ -515,22 +495,15 @@ class CriarRepeticaoTransacaoResourceTest {
     var token = autenticar();
     criar(
             token,
-            corpo(
-                "PLANEJADA",
-                "2026-11-30",
-                repeticao(
-                    "MENSAL",
-                    "[]",
-                    "[]",
-                    "AJUSTAR_ULTIMO_DIA_MES",
-                    "null",
-                    "{\"numeroPrimeiraParcela\":3,\"totalParcelas\":5}")))
+            corpo("PLANEJADA", "2026-11-30", repeticao("MENSAL", "DIA_DO_MES", parcelas(3, 5))))
         .statusCode(201)
         .body("serie.numeroParcela", equalTo(3))
         .body("serie.totalParcelas", equalTo(5))
-        .body("repeticao.termino", nullValue())
-        .body("repeticao.parcelamento.numeroPrimeiraParcela", equalTo(3))
-        .body("repeticao.parcelamento.totalParcelas", equalTo(5));
+        .body("repeticao.termino.tipo", equalTo("PARCELAS"))
+        .body("repeticao.termino.numeroPrimeiraParcela", equalTo(3))
+        .body("repeticao.termino.totalParcelas", equalTo(5))
+        .body("repeticao.termino.data", nullValue())
+        .body("repeticao.termino.quantidade", nullValue());
 
     consultar(token, "2026-11", "2027-03")
         .statusCode(200)
@@ -540,30 +513,9 @@ class CriarRepeticaoTransacaoResourceTest {
   }
 
   @Test
-  void padraoPulaMesesSemODiaTrintaEEUmUltimoDiaAjustaCadaMes() {
-    var token = autenticar();
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                "2026-03-31",
-                repeticao("MENSAL", "[]", "[31]", "PADRAO", indefinido(), "null")))
-        .statusCode(201);
-
-    consultar(token, "2026-03", "2026-07")
-        .statusCode(200)
-        .body("itens.dataFinanceira", contains("2026-03-31", "2026-05-31", "2026-07-31"));
-  }
-
-  @Test
   void ajusteDoUltimoDiaMantemAsDatasDeFimDeMes() {
     var token = autenticar();
-    criar(
-            token,
-            corpo(
-                "PLANEJADA",
-                "2026-03-31",
-                repeticao("MENSAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), "null")))
+    criar(token, corpo("PLANEJADA", "2026-03-31", repeticao("MENSAL", "DIA_DO_MES", indefinido())))
         .statusCode(201);
 
     consultar(token, "2026-03", "2026-07")
@@ -574,14 +526,24 @@ class CriarRepeticaoTransacaoResourceTest {
   }
 
   @Test
-  void ajusteAnualDeFevereiroBissextoUsaUltimoDiaDoMes() {
+  void ajusteDoUltimoDiaValeTambemComIntervaloMaiorQueUm() {
     var token = autenticar();
     criar(
             token,
-            corpo(
-                "PLANEJADA",
-                "2028-02-29",
-                repeticao("ANUAL", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), "null")))
+            corpo("PLANEJADA", "2026-01-31", repeticao("MENSAL", 2, "DIA_DO_MES", indefinido())))
+        .statusCode(201);
+
+    consultar(token, "2026-01", "2026-07")
+        .statusCode(200)
+        .body(
+            "itens.dataFinanceira",
+            contains("2026-01-31", "2026-03-31", "2026-05-31", "2026-07-31"));
+  }
+
+  @Test
+  void ajusteAnualDeFevereiroBissextoUsaUltimoDiaDoMes() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2028-02-29", repeticao("ANUAL", "DIA_DO_MES", indefinido())))
         .statusCode(201);
 
     consultar(token, "2028-02", "2028-02")
@@ -590,6 +552,127 @@ class CriarRepeticaoTransacaoResourceTest {
     consultar(token, "2029-02", "2029-02")
         .statusCode(200)
         .body("itens.dataFinanceira", contains("2029-02-28"));
+  }
+
+  @Test
+  void ajusteDoUltimoDiaComInicioNoDia29VoltaAoDia29ForaDeFevereiro() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2027-01-29", repeticao("MENSAL", "DIA_DO_MES", indefinido())))
+        .statusCode(201);
+
+    consultar(token, "2027-01", "2027-03")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains("2027-01-29", "2027-02-28", "2027-03-29"));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("repeticoesComIntervaloMaximo")
+  void intervaloMaximoProjetaSomenteAPrimeiraOcorrencia(
+      String nome, String dataFinanceira, String repeticao) {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", dataFinanceira, repeticao))
+        .statusCode(201)
+        .body("repeticao.intervalo", equalTo(Integer.MAX_VALUE));
+
+    consultar(token, "2027-01", "2027-12")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains(dataFinanceira));
+  }
+
+  static Stream<Arguments> repeticoesComIntervaloMaximo() {
+    var maximo = Integer.MAX_VALUE;
+    return Stream.of(
+        Arguments.of(
+            "mensal no dia do mes",
+            "2027-01-10",
+            repeticao("MENSAL", maximo, "DIA_DO_MES", indefinido())),
+        Arguments.of(
+            "anual no dia do mes",
+            "2027-01-10",
+            repeticao("ANUAL", maximo, "DIA_DO_MES", indefinido())),
+        Arguments.of(
+            "mensal no dia util",
+            "2027-01-11",
+            repeticao("MENSAL", maximo, "DIA_UTIL", indefinido())),
+        Arguments.of(
+            "diaria", "2027-01-10", repeticao("DIARIA", maximo, "DIA_DO_MES", indefinido())),
+        Arguments.of(
+            "semanal", "2027-01-10", repeticao("SEMANAL", maximo, "DIA_DO_MES", indefinido())));
+  }
+
+  @Test
+  void semanalACadaDuasSemanasProjetaSomenteAsSemanasDoIntervalo() {
+    var token = autenticar();
+    criar(
+            token,
+            corpo("PLANEJADA", "2026-11-10", repeticao("SEMANAL", 2, "DIA_DO_MES", indefinido())))
+        .statusCode(201)
+        .body("repeticao.intervalo", equalTo(2));
+
+    consultar(token, "2026-11", "2026-12")
+        .statusCode(200)
+        .body(
+            "itens.dataFinanceira",
+            contains("2026-11-10", "2026-11-24", "2026-12-08", "2026-12-22"));
+  }
+
+  @Test
+  void diaUtilProjetaONesimoDiaUtilDeCadaMes() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2026-11-05", repeticao("MENSAL", "DIA_UTIL", indefinido())))
+        .statusCode(201)
+        .body("repeticao.ancoragem", equalTo("DIA_UTIL"))
+        .body("repeticao.numeroDiaUtil", equalTo(4));
+
+    consultar(token, "2026-11", "2027-01")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains("2026-11-05", "2026-12-04", "2027-01-06"));
+  }
+
+  @Test
+  void diaUtilComIntervaloMaiorQueUmUsaOMesmoNumeroDeDiaUtil() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2026-11-05", repeticao("MENSAL", 2, "DIA_UTIL", indefinido())))
+        .statusCode(201)
+        .body("repeticao.numeroDiaUtil", equalTo(4));
+
+    consultar(token, "2026-11", "2027-03")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains("2026-11-05", "2027-01-06", "2027-03-04"));
+  }
+
+  @Test
+  void diaUtilNoVigesimoDiaUtilEhAceito() {
+    criar(
+            autenticar(),
+            corpo("PLANEJADA", "2026-11-27", repeticao("MENSAL", "DIA_UTIL", indefinido())))
+        .statusCode(201)
+        .body("repeticao.numeroDiaUtil", equalTo(20));
+  }
+
+  @Test
+  void diaUtilComParcelasNumeraAPartirDaDataFinanceira() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2026-11-05", repeticao("MENSAL", "DIA_UTIL", parcelas(1, 3))))
+        .statusCode(201)
+        .body("serie.numeroParcela", equalTo(1))
+        .body("serie.totalParcelas", equalTo(3));
+
+    consultar(token, "2026-11", "2027-03")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains("2026-11-05", "2026-12-04", "2027-01-06"))
+        .body("itens.serie.numeroParcela", contains(1, 2, 3));
+  }
+
+  @Test
+  void diariaSegueOsDiasConsecutivosAtravesDoFimDoMes() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", "2026-01-31", repeticao("DIARIA", "DIA_DO_MES", apos(3))))
+        .statusCode(201);
+
+    consultar(token, "2026-01", "2026-03")
+        .statusCode(200)
+        .body("itens.dataFinanceira", contains("2026-01-31", "2026-02-01", "2026-02-02"));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -603,335 +686,229 @@ class CriarRepeticaoTransacaoResourceTest {
 
   static Stream<Arguments> casosInvalidos() {
     var terca = "2026-11-10";
-    var mensal = "[10]";
+    var mensal = "MENSAL";
     return Stream.of(
-        // Frequência e dias
+        // Frequência e ancoragem
         Arguments.of(
-            "diaria com dia da semana",
+            "dia util com frequencia diaria",
             terca,
-            repeticao("DIARIA", "[\"SEGUNDA\"]", "[]", "PADRAO", indefinido(), "null"),
+            repeticao("DIARIA", "DIA_UTIL", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "diaria com dia do mes",
+            "dia util com frequencia semanal",
             terca,
-            repeticao("DIARIA", "[]", mensal, "PADRAO", indefinido(), "null"),
+            repeticao("SEMANAL", "DIA_UTIL", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "semanal sem dias da semana",
+            "dia util com frequencia anual",
             terca,
-            repeticao("SEMANAL", "[]", "[]", "PADRAO", indefinido(), "null"),
+            repeticao("ANUAL", "DIA_UTIL", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "semanal que nao inclui o dia da data financeira",
-            terca,
-            repeticao("SEMANAL", "[\"SEGUNDA\"]", "[]", "PADRAO", indefinido(), "null"),
+            "dia util em data de fim de semana",
+            "2026-11-28",
+            repeticao(mensal, "DIA_UTIL", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "semanal com dia anterior ao inicio",
-            terca,
-            repeticao("SEMANAL", "[\"SEGUNDA\",\"TERCA\"]", "[]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "semanal com dia do mes",
-            terca,
-            repeticao("SEMANAL", "[\"TERCA\"]", mensal, "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "mensal padrao sem dias do mes",
-            terca,
-            repeticao("MENSAL", "[]", "[]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "mensal padrao sem o dia da data financeira",
-            terca,
-            repeticao("MENSAL", "[]", "[5]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "mensal padrao com dia anterior ao inicio",
-            terca,
-            repeticao("MENSAL", "[]", "[5,10]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "mensal com dia da semana",
-            terca,
-            repeticao("MENSAL", "[\"TERCA\"]", mensal, "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "anual com dia do mes",
-            terca,
-            repeticao("ANUAL", "[]", mensal, "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "anual com dia da semana",
-            terca,
-            repeticao("ANUAL", "[\"TERCA\"]", "[]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "dia do mes repetido",
-            terca,
-            repeticao("MENSAL", "[]", "[10,10]", "PADRAO", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "dia do mes fora de 1 a 31",
-            terca,
-            repeticao("MENSAL", "[]", "[32]", "PADRAO", indefinido(), "null"),
+            "dia util que e o vigesimo primeiro do mes",
+            "2026-11-30",
+            repeticao(mensal, "DIA_UTIL", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
             "intervalo zero",
             terca,
-            """
-            {"frequencia":"MENSAL","intervalo":0,"diasSemana":[],"diasMes":[10],
-             "politicaData":"PADRAO","termino":{"tipo":"INDEFINIDO"},"parcelamento":null}
-            """,
+            repeticao(mensal, 0, "DIA_DO_MES", indefinido()),
             422,
             "REPETICAO_INVALIDA"),
-        // Política de datas
-        Arguments.of(
-            "ajuste de ultimo dia em repeticao diaria",
-            terca,
-            repeticao("DIARIA", "[]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "ajuste de ultimo dia em repeticao semanal",
-            terca,
-            repeticao(
-                "SEMANAL", "[\"TERCA\"]", "[]", "AJUSTAR_ULTIMO_DIA_MES", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "ajuste de ultimo dia com dias do mes",
-            terca,
-            repeticao("MENSAL", "[]", mensal, "AJUSTAR_ULTIMO_DIA_MES", indefinido(), "null"),
-            422,
-            "REPETICAO_INVALIDA"),
-        // Término
+        // Término: campos de outro tipo e datas inválidas
         Arguments.of(
             "indefinido com data",
             terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                mensal,
-                "PADRAO",
-                "{\"tipo\":\"INDEFINIDO\",\"data\":\"2027-01-10\"}",
-                "null"),
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\",\"data\":\"2027-01-10\"}"),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
             "termino em data anterior ao inicio",
             terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                mensal,
-                "PADRAO",
-                "{\"tipo\":\"EM_DATA\",\"data\":\"2026-11-01\"}",
-                "null"),
+            repeticao(mensal, "DIA_DO_MES", emData("2026-11-01")),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
             "termino em data com quantidade",
             terca,
             repeticao(
-                "MENSAL",
-                "[]",
                 mensal,
-                "PADRAO",
-                "{\"tipo\":\"EM_DATA\",\"data\":\"2027-01-10\",\"quantidade\":3}",
-                "null"),
+                "DIA_DO_MES",
+                "{\"tipo\":\"EM_DATA\",\"data\":\"2027-01-10\",\"quantidade\":3}"),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
             "termino apos zero ocorrencias",
             terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                mensal,
-                "PADRAO",
-                "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":0}",
-                "null"),
+            repeticao(mensal, "DIA_DO_MES", apos(0)),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
             "termino apos ocorrencias com data",
             terca,
             repeticao(
-                "MENSAL",
-                "[]",
                 mensal,
-                "PADRAO",
-                "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":2,\"data\":\"2027-01-10\"}",
-                "null"),
+                "DIA_DO_MES",
+                "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":2,\"data\":\"2027-01-10\"}"),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "repeticao sem termino nem parcelamento",
-            terca,
-            repeticao("MENSAL", "[]", mensal, "PADRAO", "null", "null"),
-            400,
-            "DADOS_INVALIDOS"),
-        Arguments.of(
-            "termino em data sem data",
-            terca,
-            repeticao("MENSAL", "[]", mensal, "PADRAO", "{\"tipo\":\"EM_DATA\"}", "null"),
-            400,
-            "DADOS_INVALIDOS"),
-        Arguments.of(
-            "termino apos ocorrencias sem quantidade",
-            terca,
-            repeticao("MENSAL", "[]", mensal, "PADRAO", "{\"tipo\":\"APOS_OCORRENCIAS\"}", "null"),
-            400,
-            "DADOS_INVALIDOS"),
-        // Parcelamento
-        Arguments.of(
-            "parcelamento com termino",
+            "termino apos ocorrencias com numeracao de parcelas",
             terca,
             repeticao(
-                "MENSAL",
-                "[]",
-                "[]",
-                "AJUSTAR_ULTIMO_DIA_MES",
-                indefinido(),
-                "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
-            422,
-            "PARCELAMENTO_INVALIDO"),
-        Arguments.of(
-            "parcelamento com primeira parcela zero",
-            terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                "[]",
-                "AJUSTAR_ULTIMO_DIA_MES",
-                "null",
-                "{\"numeroPrimeiraParcela\":0,\"totalParcelas\":3}"),
-            422,
-            "PARCELAMENTO_INVALIDO"),
-        Arguments.of(
-            "parcelamento com primeira parcela maior que o total",
-            terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                "[]",
-                "AJUSTAR_ULTIMO_DIA_MES",
-                "null",
-                "{\"numeroPrimeiraParcela\":4,\"totalParcelas\":3}"),
-            422,
-            "PARCELAMENTO_INVALIDO"),
-        Arguments.of(
-            "parcelamento semanal sem dia da semana",
-            terca,
-            repeticao(
-                "SEMANAL",
-                "[]",
-                "[]",
-                "PADRAO",
-                "null",
-                "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "parcelamento semanal com dias diferentes da data financeira",
-            terca,
-            repeticao(
-                "SEMANAL",
-                "[\"TERCA\",\"QUINTA\"]",
-                "[]",
-                "PADRAO",
-                "null",
-                "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
-            422,
-            "REPETICAO_INVALIDA"),
-        Arguments.of(
-            "parcelamento mensal com dia do mes",
-            terca,
-            repeticao(
-                "MENSAL",
-                "[]",
                 mensal,
-                "PADRAO",
-                "null",
-                "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
+                "DIA_DO_MES",
+                "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":2,"
+                    + "\"numeroPrimeiraParcela\":1,\"totalParcelas\":2}"),
             422,
             "REPETICAO_INVALIDA"),
         Arguments.of(
-            "parcelamento diario com ajuste de ultimo dia",
+            "parcelas com data",
             terca,
             repeticao(
-                "DIARIA",
-                "[]",
-                "[]",
-                "AJUSTAR_ULTIMO_DIA_MES",
-                "null",
-                "{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
+                mensal,
+                "DIA_DO_MES",
+                "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3,"
+                    + "\"data\":\"2027-01-10\"}"),
             422,
             "REPETICAO_INVALIDA"),
-        // Contrato HTTP: campos ausentes, desconhecidos ou fora dos nomes públicos
+        Arguments.of(
+            "parcelas com quantidade",
+            terca,
+            repeticao(
+                mensal,
+                "DIA_DO_MES",
+                "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3,"
+                    + "\"quantidade\":3}"),
+            422,
+            "REPETICAO_INVALIDA"),
+        Arguments.of(
+            "parcelas com primeira parcela zero",
+            terca,
+            repeticao(mensal, "DIA_DO_MES", parcelas(0, 3)),
+            422,
+            "PARCELAMENTO_INVALIDO"),
+        Arguments.of(
+            "parcelas com primeira parcela maior que o total",
+            terca,
+            repeticao(mensal, "DIA_DO_MES", parcelas(4, 3)),
+            422,
+            "PARCELAMENTO_INVALIDO"),
+        // Contrato HTTP: campos ausentes, desconhecidos ou com valores fora do contrato
         Arguments.of("repeticao vazia", terca, "{}", 400, "DADOS_INVALIDOS"),
         Arguments.of(
-            "politica de datas ausente",
+            "termino ausente",
             terca,
-            """
-            {"frequencia":"MENSAL","intervalo":1,"diasSemana":[],"diasMes":[10],
-             "termino":{"tipo":"INDEFINIDO"},"parcelamento":null}
-            """,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"termino\":null}",
             400,
             "DADOS_INVALIDOS"),
         Arguments.of(
-            "campo desconhecido na repeticao",
+            "ancoragem ausente",
             terca,
-            """
-            {"frequencia":"MENSAL","intervalo":1,"diasSemana":[],"diasMes":[10],
-             "politicaData":"PADRAO","termino":{"tipo":"INDEFINIDO"},"parcelamento":null,
-             "extra":true}
-            """,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
             400,
             "DADOS_INVALIDOS"),
         Arguments.of(
-            "frequencia em ingles",
+            "intervalo ausente",
             terca,
-            repeticao("DAILY", "[]", "[]", "PADRAO", indefinido(), "null"),
+            "{\"frequencia\":\"MENSAL\",\"ancoragem\":\"DIA_DO_MES\","
+                + "\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
             400,
             "DADOS_INVALIDOS"),
         Arguments.of(
-            "dia da semana em ingles",
+            "ancoragem desconhecida",
             terca,
-            repeticao("SEMANAL", "[\"MONDAY\"]", "[]", "PADRAO", indefinido(), "null"),
+            repeticao(mensal, "ULTIMO_DIA_UTIL", indefinido()),
             400,
             "DADOS_INVALIDOS"),
         Arguments.of(
             "tipo de termino desconhecido",
             terca,
-            repeticao("MENSAL", "[]", mensal, "PADRAO", "{\"tipo\":\"XYZ\"}", "null"),
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"XYZ\"}"),
             400,
             "DADOS_INVALIDOS"),
         Arguments.of(
-            "parcelamento sem total",
+            "termino em data sem data",
             terca,
-            repeticao(
-                "MENSAL",
-                "[]",
-                "[]",
-                "AJUSTAR_ULTIMO_DIA_MES",
-                "null",
-                "{\"numeroPrimeiraParcela\":1}"),
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"EM_DATA\"}"),
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "termino apos ocorrencias sem quantidade",
+            terca,
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"APOS_OCORRENCIAS\"}"),
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "parcelas sem total",
+            terca,
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1}"),
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "parcelas sem numeracao inicial",
+            terca,
+            repeticao(mensal, "DIA_DO_MES", "{\"tipo\":\"PARCELAS\",\"totalParcelas\":3}"),
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "frequencia em ingles",
+            terca,
+            repeticao("DAILY", "DIA_DO_MES", indefinido()),
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "campo dias da semana",
+            terca,
+            "{\"frequencia\":\"SEMANAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"diasSemana\":[\"TERCA\"],\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "campo dias do mes",
+            terca,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"diasMes\":[10],\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "campo politica de datas",
+            terca,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"politicaData\":\"PADRAO\",\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "campo parcelamento",
+            terca,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"parcelamento\":{\"numeroPrimeiraParcela\":1,\"totalParcelas\":3},"
+                + "\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "numero do dia util enviado pelo cliente",
+            terca,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"numeroDiaUtil\":2,\"termino\":{\"tipo\":\"INDEFINIDO\"}}",
+            400,
+            "DADOS_INVALIDOS"),
+        Arguments.of(
+            "campo desconhecido na repeticao",
+            terca,
+            "{\"frequencia\":\"MENSAL\",\"intervalo\":1,\"ancoragem\":\"DIA_DO_MES\","
+                + "\"termino\":{\"tipo\":\"INDEFINIDO\"},\"extra\":true}",
             400,
             "DADOS_INVALIDOS"));
   }
@@ -985,22 +962,33 @@ class CriarRepeticaoTransacaoResourceTest {
     return login(emailOutroUsuario, "outra-senha");
   }
 
+  private static String repeticao(String frequencia, String ancoragem, String termino) {
+    return repeticao(frequencia, 1, ancoragem, termino);
+  }
+
   private static String repeticao(
-      String frequencia,
-      String diasSemana,
-      String diasMes,
-      String politica,
-      String termino,
-      String parcelamento) {
+      String frequencia, int intervalo, String ancoragem, String termino) {
     return """
-    {"frequencia":"%s","intervalo":1,"diasSemana":%s,"diasMes":%s,
-     "politicaData":"%s","termino":%s,"parcelamento":%s}
+    {"frequencia":"%s","intervalo":%d,"ancoragem":"%s","termino":%s}
     """
-        .formatted(frequencia, diasSemana, diasMes, politica, termino, parcelamento);
+        .formatted(frequencia, intervalo, ancoragem, termino);
   }
 
   private static String indefinido() {
     return "{\"tipo\":\"INDEFINIDO\"}";
+  }
+
+  private static String emData(String data) {
+    return "{\"tipo\":\"EM_DATA\",\"data\":\"%s\"}".formatted(data);
+  }
+
+  private static String apos(int quantidade) {
+    return "{\"tipo\":\"APOS_OCORRENCIAS\",\"quantidade\":%d}".formatted(quantidade);
+  }
+
+  private static String parcelas(int numeroPrimeiraParcela, int totalParcelas) {
+    return "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":%d,\"totalParcelas\":%d}"
+        .formatted(numeroPrimeiraParcela, totalParcelas);
   }
 
   private String autenticar() {

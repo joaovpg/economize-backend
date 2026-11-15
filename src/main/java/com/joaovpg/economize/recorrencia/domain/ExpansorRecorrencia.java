@@ -29,21 +29,20 @@ public class ExpansorRecorrencia {
     if (inicio == null || fim == null || inicio.isAfter(fim)) {
       return List.of();
     }
-    if (deveAjustarDataDeParcelamento(regra, politicaData)) {
-      return expandirComAjusteDeParcelamento(regra, inicio, fim);
+    if (deveAjustarUltimoDiaDoMes(regra, politicaData)) {
+      return expandirComAjusteDoUltimoDia(regra, inicio, fim);
     }
     return motor.expandir(regra, inicio, fim);
   }
 
-  private boolean deveAjustarDataDeParcelamento(
+  private boolean deveAjustarUltimoDiaDoMes(
       RegraRecorrencia regra, PoliticaDataOcorrencia politicaData) {
     return politicaData == PoliticaDataOcorrencia.AJUSTAR_ULTIMO_DIA_MES
-        && regra.diasMes().isEmpty()
         && (regra.frequencia() == FrequenciaRecorrencia.MONTHLY
             || regra.frequencia() == FrequenciaRecorrencia.YEARLY);
   }
 
-  private List<OcorrenciaRecorrencia> expandirComAjusteDeParcelamento(
+  private List<OcorrenciaRecorrencia> expandirComAjusteDoUltimoDia(
       RegraRecorrencia regra, LocalDate inicio, LocalDate fim) {
     return switch (regra.frequencia()) {
       case MONTHLY -> expandirMensalComAjuste(regra, inicio, fim);
@@ -52,19 +51,25 @@ public class ExpansorRecorrencia {
     };
   }
 
+  /**
+   * Itera os meses em aritmética de long: um intervalo grande não estoura e a repetição para ao
+   * passar do mês de {@code fim}, sem chegar a um mês fora do intervalo de datas do LocalDate.
+   */
   private List<OcorrenciaRecorrencia> expandirMensalComAjuste(
       RegraRecorrencia regra, LocalDate inicio, LocalDate fim) {
     var ocorrencias = new ArrayList<OcorrenciaRecorrencia>();
-    var mes = YearMonth.from(regra.inicio());
+    var indiceMes = indiceMes(regra.inicio());
+    var ultimoIndice = indiceMes(fim);
     var numero = 0;
-    while (!mes.atDay(1).isAfter(fim)) {
+    while (indiceMes <= ultimoIndice) {
+      var mes = mesDoIndice(indiceMes);
       var data = mes.atDay(Math.min(regra.inicio().getDayOfMonth(), mes.lengthOfMonth()));
       if (limiteAlcancado(regra, data, numero + 1)) {
         break;
       }
       numero++;
       adicionar(ocorrencias, data, numero, inicio, fim);
-      mes = mes.plusMonths(regra.intervalo());
+      indiceMes += regra.intervalo();
     }
     return ocorrencias;
   }
@@ -72,10 +77,10 @@ public class ExpansorRecorrencia {
   private List<OcorrenciaRecorrencia> expandirAnualComAjuste(
       RegraRecorrencia regra, LocalDate inicio, LocalDate fim) {
     var ocorrencias = new ArrayList<OcorrenciaRecorrencia>();
-    var ano = regra.inicio().getYear();
+    long ano = regra.inicio().getYear();
     var numero = 0;
-    while (!LocalDate.of(ano, 1, 1).isAfter(fim)) {
-      var mes = YearMonth.of(ano, regra.inicio().getMonthValue());
+    while (ano <= fim.getYear()) {
+      var mes = YearMonth.of(Math.toIntExact(ano), regra.inicio().getMonthValue());
       var data = mes.atDay(Math.min(regra.inicio().getDayOfMonth(), mes.lengthOfMonth()));
       if (limiteAlcancado(regra, data, numero + 1)) {
         break;
@@ -85,6 +90,16 @@ public class ExpansorRecorrencia {
       ano += regra.intervalo();
     }
     return ocorrencias;
+  }
+
+  private static long indiceMes(LocalDate data) {
+    return data.getYear() * 12L + data.getMonthValue() - 1;
+  }
+
+  private static YearMonth mesDoIndice(long indice) {
+    return YearMonth.of(
+        Math.toIntExact(Math.floorDiv(indice, 12L)),
+        Math.toIntExact(Math.floorMod(indice, 12L)) + 1);
   }
 
   private boolean limiteAlcancado(RegraRecorrencia regra, LocalDate data, int numero) {

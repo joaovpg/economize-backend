@@ -35,7 +35,7 @@ public class CriarSerieTransacao {
 
   public SegmentoRecorrencia executar(Comando comando) {
     var regra = RepeticaoValidacao.validar(comando.repeticao(), comando.dataFinanceira());
-    var parcelado = comando.repeticao().parcelamento() != null;
+    var parcelado = comando.repeticao().parcelado();
 
     var grupo = new GrupoRecorrencia();
     grupo.setUsuario(comando.usuario());
@@ -53,7 +53,6 @@ public class CriarSerieTransacao {
   public SegmentoRecorrencia executarNoGrupo(
       GrupoRecorrencia grupo, Comando comando, RegraRecorrencia regra) {
     var repeticao = comando.repeticao();
-    var parcelamento = repeticao.parcelamento();
 
     var segmento = new SegmentoRecorrencia();
     segmento.setUsuario(comando.usuario());
@@ -68,11 +67,11 @@ public class CriarSerieTransacao {
     segmento.setFim(regra.ate());
     segmento.setRrule(regra.rrule());
     segmento.setTotalOcorrencias(regra.quantidadeOcorrencias());
-    if (parcelamento != null) {
-      segmento.setNumeroPrimeiraParcela(parcelamento.numeroPrimeiraParcela());
-      segmento.setQuantidadeTotalOriginal(parcelamento.totalParcelas());
+    if (repeticao.parcelado()) {
+      segmento.setNumeroPrimeiraParcela(repeticao.termino().numeroPrimeiraParcela());
+      segmento.setQuantidadeTotalOriginal(repeticao.termino().totalParcelas());
     }
-    segmento.setPoliticaData(repeticao.politicaData());
+    segmento.setPoliticaData(regra.politicaData());
     segmento.setStatus(StatusRecorrencia.ATIVO);
     segmentoRepository.persist(segmento);
     return segmento;

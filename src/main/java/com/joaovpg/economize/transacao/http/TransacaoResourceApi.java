@@ -69,8 +69,8 @@ public interface TransacaoResourceApi {
                       value =
                           "{\"inicio\":\"2026-02\",\"fim\":\"2026-02\",\"saldoAbertura\":1000.0000,"
                               + "\"itens\":[{\"origem\":\"SALDO_INICIAL_CONTA\",\"operacaoId\":\"00000000-0000-0000-0000-000000000001\",\"situacao\":null,\"descricao\":\"Saldo"
-                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"chaveEdicao\":null,\"versaoEdicao\":null,\"tipo\":null,\"virtual\":null,\"protegida\":null,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]},"
-                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"chaveEdicao\":\"chave-opaca\",\"versaoEdicao\":\"versao-opaca\",\"tipo\":\"DESPESA\",\"virtual\":false,\"protegida\":false,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]}]}")))
+                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"chaveItem\":\"chave-item-opaca\",\"chaveEdicao\":null,\"versaoEdicao\":null,\"tipo\":null,\"virtual\":null,\"protegida\":null,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]},"
+                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"chaveItem\":\"chave-opaca\",\"chaveEdicao\":\"chave-opaca\",\"versaoEdicao\":\"versao-opaca\",\"tipo\":\"DESPESA\",\"virtual\":false,\"protegida\":false,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]}]}")))
   @APIResponse(
       responseCode = "404",
       description = "Conta ou categoria informada não encontrada para o usuário autenticado.")
@@ -132,16 +132,17 @@ public interface TransacaoResourceApi {
       description =
           "Atualiza uma transação simples ou uma ocorrência de série, identificadas pela"
               + " `chaveEdicao`. Para transação simples, omita `escopo`. Para ocorrência de série,"
-              + " informe `SOMENTE_ESTA` (apenas a ocorrência) ou `ESTA_E_AS_PROXIMAS` (a"
-              + " ocorrência e as seguintes). Ao criar um novo trecho com `ESTA_E_AS_PROXIMAS`,"
-              + " informe `politicaSobreposicao` e `resolucoesSobreposicao`. Com `repeticao`"
-              + " informada, a transação simples torna-se a primeira ocorrência de uma repetição ou"
-              + " parcelamento, sem cópia, e a resposta traz a nova chave. Ao mudar para"
-              + " `EFETIVADA`, a data financeira não pode estar no futuro; ao voltar para"
-              + " `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, inclusive os"
-              + " anuláveis e `repeticao` (`null` mantém a transação simples ou, em ocorrência de"
-              + " série, a converte em transação simples), e a `versaoEdicao` vigente. Use `POST"
-              + " .../previa-edicao` antes para conhecer as sobreposições.")
+              + " informe `SOMENTE_ESTA` (apenas a ocorrência, que continua na série) ou"
+              + " `ESTA_E_AS_PROXIMAS` (a ocorrência e as seguintes). Ao criar um novo trecho com"
+              + " `ESTA_E_AS_PROXIMAS`, informe `politicaSobreposicao` e `resolucoesSobreposicao`."
+              + " Com `repeticao` informada, a transação simples torna-se a primeira ocorrência de"
+              + " uma repetição ou parcelamento, sem cópia, e a resposta traz a nova chave. Ao"
+              + " mudar para `EFETIVADA`, a data financeira não pode estar no futuro; ao voltar"
+              + " para `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, inclusive os"
+              + " anuláveis e `repeticao` (`null` mantém a transação simples; em ocorrência de"
+              + " série com `SOMENTE_ESTA`, envie a repetição lida, sem `numeroDiaUtil`; com"
+              + " `ESTA_E_AS_PROXIMAS`, `null` a converte em transação simples), e a `versaoEdicao`"
+              + " vigente. Use `POST .../previa-edicao` antes para conhecer as sobreposições.")
   @APIResponseSchema(
       value = ItemResponse.class,
       responseCode = "200",
@@ -236,13 +237,14 @@ public interface TransacaoResourceApi {
       operationId = "criarTransacao",
       summary = "Cria uma transação simples, repetida ou parcelada",
       description =
-          "Cria uma receita ou despesa para uma conta ativa do usuário autenticado. A categoria "
-              + "é opcional; a conta e a categoria, quando informada, devem pertencer ao usuário. "
-              + "Uma transação `EFETIVADA` não pode ter data financeira futura. Com `repeticao` "
-              + "nulo, cria uma transação simples. Com repetição ou parcelamento, cria a série "
-              + "e responde com a primeira ocorrência no mesmo formato da leitura: efetivada é "
-              + "materializada uma vez; planejada permanece virtual e é identificada pela chave "
-              + "do segmento e pela data original. `politicaData` é sempre explícita e devolvida.")
+          "Cria uma receita ou despesa para uma conta ativa do usuário autenticado. A categoria é"
+              + " opcional; a conta e a categoria, quando informada, devem pertencer ao usuário."
+              + " Uma transação `EFETIVADA` não pode ter data financeira futura. Com `repeticao`"
+              + " nulo, cria uma transação simples. Com repetição ou parcelamento, cria a série e"
+              + " responde com a primeira ocorrência no mesmo formato da leitura: efetivada é"
+              + " materializada uma vez; planejada permanece virtual e é identificada pela chave do"
+              + " segmento e pela data original. A leitura devolve `ancoragem`, `termino` e"
+              + " `numeroDiaUtil`.")
   @APIResponseSchema(
       value = ItemResponse.class,
       responseCode = "201",

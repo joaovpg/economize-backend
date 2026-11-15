@@ -9,8 +9,6 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
 import com.joaovpg.economize.recorrencia.application.RepeticaoValidacao;
 import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
-import com.joaovpg.economize.recorrencia.domain.FrequenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.domain.LeitorRruleRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
 import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
@@ -58,7 +56,6 @@ public class AlterarEstaEAsProximas {
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
   private final ExpansorRecorrencia expansor;
-  private final LeitorRruleRecorrencia leitorRrule;
   private final RegrasEdicaoTransacao regras;
 
   public AlterarEstaEAsProximas(
@@ -69,7 +66,6 @@ public class AlterarEstaEAsProximas {
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
       LocalizarOcorrenciaRecorrente localizarOcorrencia,
       ExpansorRecorrencia expansor,
-      LeitorRruleRecorrencia leitorRrule,
       RegrasEdicaoTransacao regras) {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
@@ -78,7 +74,6 @@ public class AlterarEstaEAsProximas {
     this.resolverOcorrencias = resolverOcorrencias;
     this.localizarOcorrencia = localizarOcorrencia;
     this.expansor = expansor;
-    this.leitorRrule = leitorRrule;
     this.regras = regras;
   }
 
@@ -202,11 +197,11 @@ public class AlterarEstaEAsProximas {
           "REPETICAO_INVALIDA", "A nova regra deve iniciar na data da ocorrencia ou depois dela");
     }
 
-    var destinoParcelado = repeticao.parcelamento() != null;
+    var destinoParcelado = repeticao.parcelado();
     var origemParcelada = grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO;
     if (destinoParcelado && origemParcelada) {
       var numeroAtual = RegrasEdicaoTransacao.numeroParcela(segmento, contexto.ocorrencia());
-      if (!Objects.equals(repeticao.parcelamento().numeroPrimeiraParcela(), numeroAtual)) {
+      if (!Objects.equals(repeticao.termino().numeroPrimeiraParcela(), numeroAtual)) {
         throw new RegraNegocioException(
             "PARCELAMENTO_INVALIDO", "A numeracao da parcela selecionada deve ser preservada");
       }
@@ -215,16 +210,11 @@ public class AlterarEstaEAsProximas {
         destinoParcelado == origemParcelada
             && (!destinoParcelado
                 || Objects.equals(
-                    repeticao.parcelamento().totalParcelas(),
-                    segmento.getQuantidadeTotalOriginal()));
+                    repeticao.termino().totalParcelas(), segmento.getQuantidadeTotalOriginal()));
 
-    var regra =
-        RepeticaoValidacao.validarEdicao(
-            repeticao,
-            inicio,
-            aceitaMensalAncoradaExistente(segmento, repeticao, destinoParcelado));
+    var regra = RepeticaoValidacao.validar(repeticao, inicio);
     var protegidas = listarProtegidasAPartirDe(contexto);
-    var colisoes = colisoes(regra, repeticao.politicaData(), protegidas);
+    var colisoes = colisoes(regra, regra.politicaData(), protegidas);
     var decisoes = decidirSobreposicoes(comando, colisoes);
 
     encerrarProjecao(segmento, dataOriginal);
@@ -289,25 +279,6 @@ public class AlterarEstaEAsProximas {
         .findFirst()
         .map(ConsultarTransacoes::itemRecorrente)
         .orElseThrow(() -> new IllegalStateException("A primeira ocorrencia nao foi projetada"));
-  }
-
-  /**
-   * Aceita a forma mensal PADRAO sem dias apenas quando o segmento de origem já a possui: a
-   * configuração devolvida pela leitura pode ser reenviada sem exigir mudança de regra.
-   */
-  private boolean aceitaMensalAncoradaExistente(
-      SegmentoRecorrencia segmento, RepeticaoRecorrencia repeticao, boolean destinoParcelado) {
-    if (destinoParcelado
-        || repeticao.frequencia() != FrequenciaRecorrencia.MONTHLY
-        || !repeticao.diasMes().isEmpty()
-        || repeticao.politicaData() != PoliticaDataOcorrencia.PADRAO) {
-      return false;
-    }
-    var anterior = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
-    return anterior.frequencia() == FrequenciaRecorrencia.MONTHLY
-        && anterior.diasMes().isEmpty()
-        && segmento.getPoliticaData() == PoliticaDataOcorrencia.PADRAO
-        && segmento.getGrupo().getTipo() == TipoGrupoRecorrencia.RECORRENCIA;
   }
 
   /** Encerra a projeção a partir da data original, sem estender um segmento já encerrado. */

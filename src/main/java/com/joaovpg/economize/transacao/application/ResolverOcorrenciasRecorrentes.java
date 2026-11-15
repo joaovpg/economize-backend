@@ -64,7 +64,7 @@ public class ResolverOcorrenciasRecorrentes {
       }
     }
     for (var segmento : segmentos) {
-      var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
+      var regra = leitorRrule.ler(segmento.getInicio(), segmento.getRrule());
       var limite = fim;
       if (segmento.getFim() != null && segmento.getFim().isBefore(limite)) {
         limite = segmento.getFim();
@@ -130,7 +130,7 @@ public class ResolverOcorrenciasRecorrentes {
           null,
           List.of());
     }
-    var regra = leitorRrule.lerSegmento(segmento.getInicio(), segmento.getRrule());
+    var regra = leitorRrule.ler(segmento.getInicio(), segmento.getRrule());
     var numeroParcela =
         segmento.getNumeroPrimeiraParcela() == null
             ? null
