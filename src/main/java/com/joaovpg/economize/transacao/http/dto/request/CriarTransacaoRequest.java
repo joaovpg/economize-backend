@@ -1,11 +1,14 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +21,9 @@ public record CriarTransacaoRequest(
             examples = {"00000000-0000-0000-0000-000000000001"},
             required = true)
         @NotNull UUID contaId,
-    @Schema(description = "Categoria opcional da transação.", nullable = true) UUID categoriaId,
+    @Schema(description = "Categoria opcional da transação.", nullable = true)
+        @JsonProperty(required = true)
+        UUID categoriaId,
     @Schema(
             description = "Situação da transação; EFETIVADA preenche efetivadoEm.",
             examples = {"EFETIVADA"},
@@ -40,7 +45,9 @@ public record CriarTransacaoRequest(
             examples = {"Compra do mês"},
             maxLength = 2000,
             nullable = true)
-        @Size(max = 2000) String observacoes,
+        @JsonProperty(required = true)
+        @Size(max = 2000) @Pattern(regexp = "(?s).*\\S.*")
+        String observacoes,
     @Schema(
             description =
                 "Valor positivo da operação, com até 15 dígitos inteiros e 4 casas decimais.",
@@ -54,4 +61,11 @@ public record CriarTransacaoRequest(
             examples = {"2026-02-10"},
             format = "date",
             required = true)
-        @NotNull LocalDate dataFinanceira) {}
+        @NotNull LocalDate dataFinanceira,
+    @Schema(
+            description =
+                "Repetição ou parcelamento da transação; nulo cria uma transação simples.",
+            nullable = true,
+            required = true)
+        @JsonProperty(required = true)
+        @Valid RepeticaoTransacaoRequest repeticao) {}

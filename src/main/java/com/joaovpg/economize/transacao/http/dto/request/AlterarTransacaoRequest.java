@@ -1,11 +1,15 @@
 package com.joaovpg.economize.transacao.http.dto.request;
 
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +25,7 @@ public record AlterarTransacaoRequest(
     @Schema(
             description = "Categoria opcional; envie null para remover a categoria.",
             nullable = true)
+        @JsonProperty(required = true)
         UUID categoriaId,
     @Schema(
             description =
@@ -44,7 +49,9 @@ public record AlterarTransacaoRequest(
             examples = {"Compra do mês"},
             maxLength = 2000,
             nullable = true)
-        @Size(max = 2000) String observacoes,
+        @JsonProperty(required = true)
+        @Size(max = 2000) @Pattern(regexp = "(?s).*\\S.*")
+        String observacoes,
     @Schema(
             description = "Valor positivo da operação, com até 4 casas decimais.",
             examples = {"250.75"},
@@ -57,4 +64,22 @@ public record AlterarTransacaoRequest(
             examples = {"2026-02-10"},
             format = "date",
             required = true)
-        @NotNull LocalDate dataFinanceira) {}
+        @NotNull LocalDate dataFinanceira,
+    @Schema(description = "Versão opaca obtida na consulta ou escrita anterior.", required = true)
+        @NotBlank String versaoEdicao,
+    @Schema(
+            description =
+                "Repetição ou parcelamento; null mantém a transação simples. Quando informada, a"
+                    + " transação simples passa a ser a primeira ocorrência da nova série.",
+            nullable = true)
+        @JsonProperty(required = true)
+        @Valid RepeticaoTransacaoRequest repeticao,
+    @Schema(
+            description =
+                "Obrigatório para ocorrência de série (SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS); deve"
+                    + " ser omitido para transação simples.")
+        JsonNode escopo) {
+  public boolean escopoInformado() {
+    return escopo != null;
+  }
+}

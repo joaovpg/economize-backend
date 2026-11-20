@@ -26,6 +26,6 @@ public class ListarContas {
   }
 
   private List<ContaResultado> resultados(List<ContaFinanceira> contas) {
-    return contas.stream().map(ContaValidation::resultado).toList();
+    return contas.stream().map(ContaValidacao::resultado).toList();
   }
 }

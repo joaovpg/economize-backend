@@ -40,6 +40,7 @@ public class EconomizeOpenApiFilter implements OASFilter {
     registerProblemResponses(components);
     registerCookieSecurity(components);
     registerYearMonthSchema(components);
+    components.addSchema("NullValue", OASFactory.createSchema().addType(Schema.SchemaType.NULL));
 
     for (var pathItem : openAPI.getPaths().getPathItems().values()) {
       if (pathItem == null || pathItem.getOperations() == null) {

@@ -9,7 +9,7 @@
 ## Estrutura e fluxo
 
 - Este é um único módulo Maven, com Java 25 e Quarkus 3.37.4. O código é organizado primeiro por domínio em `src/main/java/com/joaovpg/economize/{usuario,conta,categoria,transacao,transferencia,recorrencia}`; não crie pacotes globais por camada.
-- Módulos começam planos e só ganham `http`, `application`, `domain` ou `persistence` quando houver responsabilidade concreta. `shared` contém apenas preocupações realmente transversais.
+- Módulos começam planos e só ganham `http`, `application`, `domain` ou `persistence` quando houver responsabilidade concreta. `shared` contém apenas preocupações realmente transversais. Subpackages agrupam por papel, não por tipo de construção Java (sem `enums/`); veja a convenção na ADR 0001.
 - O fluxo existente é `Resource -> mapper MapStruct -> caso de uso -> repository Panache`. Resources validam o contrato HTTP, extraem o usuário do JWT e traduzem a resposta; regras, autorização por proprietário e transações pertencem ao caso de uso.
 - DTOs HTTP ficam em `<modulo>/http/dto/{request,response}` e não dependem de entidades ou repositories. Mappers ficam junto ao adapter HTTP, são beans CDI do MapStruct, usam nomes como `toCommand` e `toResponse` e não contêm regras.
 - Entidades JPA são modelos passivos de persistência. Use UUID para IDs, `BigDecimal` para dinheiro, `LocalDate` para datas financeiras e `Instant` para instantes. Não exponha entidades no contrato HTTP.

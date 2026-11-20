@@ -1,6 +1,6 @@
 package com.joaovpg.economize.usuario.http;
 
-import com.joaovpg.economize.shared.http.LogHttpErrors;
+import com.joaovpg.economize.shared.http.erro.LogHttpErrors;
 import com.joaovpg.economize.usuario.application.AutenticarUsuario;
 import com.joaovpg.economize.usuario.application.CadastrarUsuario;
 import com.joaovpg.economize.usuario.http.dto.request.CadastroRequest;

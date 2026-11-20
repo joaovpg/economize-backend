@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record TransferenciaResultado(
     UUID id,
+    String versaoEdicao,
     UUID contaOrigemId,
     UUID contaDestinoId,
     SituacaoTransferencia situacao,

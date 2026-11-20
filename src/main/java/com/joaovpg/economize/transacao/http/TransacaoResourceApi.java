@@ -1,9 +1,10 @@
 package com.joaovpg.economize.transacao.http;
 
+import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
-import com.joaovpg.economize.transacao.http.dto.response.TransacaoResponse;
+import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -66,8 +67,8 @@ public interface TransacaoResourceApi {
                       value =
                           "{\"inicio\":\"2026-02\",\"fim\":\"2026-02\",\"saldoAbertura\":1000.0000,"
                               + "\"itens\":[{\"origem\":\"SALDO_INICIAL_CONTA\",\"operacaoId\":\"00000000-0000-0000-0000-000000000001\",\"situacao\":null,\"descricao\":\"Saldo"
-                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null},"
-                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"grupoRecorrenciaId\":null,\"segmentoRecorrenciaId\":null,\"dataOriginalRecorrencia\":null,\"numeroParcela\":null,\"rrule\":null,\"inicioRecorrencia\":null,\"politicaDataOcorrencia\":null}]}")))
+                              + " inicial\",\"observacoes\":null,\"valor\":1000.0000,\"dataFinanceira\":\"2026-02-01\",\"efetivadoEm\":null,\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":null,\"contaContraparteId\":null,\"chaveItem\":\"chave-item-opaca\",\"chaveEdicao\":null,\"versaoEdicao\":null,\"tipo\":null,\"virtual\":null,\"protegida\":null,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]},"
+                              + "{\"origem\":\"TRANSACAO_SIMPLES\",\"operacaoId\":\"00000000-0000-0000-0000-000000000010\",\"situacao\":\"EFETIVADA\",\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":-250.75,\"dataFinanceira\":\"2026-02-10\",\"efetivadoEm\":\"2026-02-10T18:30:00Z\",\"contaId\":\"00000000-0000-0000-0000-000000000001\",\"categoriaId\":\"00000000-0000-0000-0000-000000000002\",\"contaContraparteId\":null,\"chaveItem\":\"chave-opaca\",\"chaveEdicao\":\"chave-opaca\",\"versaoEdicao\":\"versao-opaca\",\"tipo\":\"DESPESA\",\"virtual\":false,\"protegida\":false,\"serie\":null,\"repeticao\":null,\"escoposDisponiveis\":[]}]}")))
   @APIResponse(
       responseCode = "404",
       description = "Conta ou categoria informada não encontrada para o usuário autenticado.")
@@ -120,38 +121,58 @@ public interface TransacaoResourceApi {
           List<String> categoriaIds);
 
   @PUT
-  @Path("/{id}")
+  @Path("/{chaveEdicao}")
   @RolesAllowed("usuario")
   @Tag(name = "Transações")
   @Operation(
       operationId = "alterarTransacao",
-      summary = "Altera uma transação simples",
+      summary = "Altera uma transação simples ou a converte em série",
       description =
-          "Atualiza uma transação simples do usuário autenticado. Transações vinculadas a "
-              + "transferências, recorrências ou parcelamentos devem ser alteradas pelo recurso "
-              + "de origem. Ao mudar para `EFETIVADA`, a data financeira não pode estar no futuro; "
-              + "ao voltar para `PLANEJADA`, `efetivadoEm` é limpo.")
+          "Atualiza uma transação simples ou uma ocorrência de série, identificadas pela"
+              + " `chaveEdicao`. Para transação simples, omita `escopo`. Para ocorrência de série,"
+              + " informe `SOMENTE_ESTA` (apenas a ocorrência, que continua na série) ou"
+              + " `ESTA_E_AS_PROXIMAS` (a ocorrência e as seguintes). Ao criar um novo trecho com"
+              + " `ESTA_E_AS_PROXIMAS` é recusado com 422 OCORRENCIA_EFETIVADA_APOS_CORTE quando a"
+              + " ocorrência selecionada ou uma posterior do grupo está efetivada ou destacada."
+              + " Com `repeticao` informada, a transação simples torna-se a primeira ocorrência de"
+              + " uma repetição ou parcelamento, sem cópia, e a resposta traz a nova chave. Ao"
+              + " mudar para `EFETIVADA`, a data financeira não pode estar no futuro; ao voltar"
+              + " para `PLANEJADA`, `efetivadoEm` é limpo. Informe todos os campos, inclusive os"
+              + " anuláveis e `repeticao` (`null` mantém a transação simples; em ocorrência de"
+              + " série com `SOMENTE_ESTA`, envie a repetição lida, sem `numeroDiaUtil`; com"
+              + " `ESTA_E_AS_PROXIMAS`, `null` a converte em transação simples), e a `versaoEdicao`"
+              + " vigente.")
   @APIResponseSchema(
-      value = TransacaoResponse.class,
+      value = ItemResponse.class,
       responseCode = "200",
       responseDescription = "Transação atualizada com sucesso.")
   @APIResponse(
       responseCode = "404",
       description = "Transação ou recurso relacionado não encontrado.")
   @APIResponse(
+      responseCode = "409",
+      description = "VERSAO_DESATUALIZADA: a transação foi alterada por outra operação.")
+  @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: JSON malformado, campo desconhecido ou ausente (inclusive os campos"
+              + " removidos politicaSobreposicao e resolucoesSobreposicao) ou corpo acima do"
+              + " limite.")
+  @APIResponse(
       responseCode = "422",
       description =
-          "Regra violada; exemplos: TRANSACAO_NAO_SIMPLES, DATA_FINANCEIRA_FUTURA ou "
-              + "MOEDA_CONTA_INCOMPATIVEL.")
-  TransacaoResponse alterar(
-      @PathParam("id")
+          "Regra violada; exemplos: ESCOPO_INVALIDO, DATA_FINANCEIRA_FUTURA, "
+              + "MOEDA_CONTA_INCOMPATIVEL, REPETICAO_INVALIDA, PARCELAMENTO_INVALIDO ou "
+              + "OCORRENCIA_EFETIVADA_APOS_CORTE.")
+  ItemResponse alterar(
+      @PathParam("chaveEdicao")
           @Parameter(
-              name = "id",
+              name = "chaveEdicao",
               in = ParameterIn.PATH,
-              description = "Identificador da transação simples.",
+              description = "Chave opaca da transação simples.",
               required = true,
-              schema = @Schema(implementation = UUID.class))
-          UUID id,
+              schema = @Schema(type = SchemaType.STRING))
+          String chaveEdicao,
       @Valid @RequestBody(
               description = "Novo estado da transação simples.",
               content =
@@ -165,18 +186,31 @@ public interface TransacaoResourceApi {
   @Tag(name = "Transações")
   @Operation(
       operationId = "criarTransacao",
-      summary = "Cria uma transação simples",
+      summary = "Cria uma transação simples, repetida ou parcelada",
       description =
-          "Cria uma receita ou despesa para uma conta ativa do usuário autenticado. A categoria "
-              + "é opcional; a conta e a categoria, quando informada, devem pertencer ao usuário. "
-              + "Uma transação `EFETIVADA` não pode ter data financeira futura.")
+          "Cria uma receita ou despesa para uma conta ativa do usuário autenticado. A categoria é"
+              + " opcional; a conta e a categoria, quando informada, devem pertencer ao usuário."
+              + " Uma transação `EFETIVADA` não pode ter data financeira futura. Com `repeticao`"
+              + " nulo, cria uma transação simples. Com repetição ou parcelamento, cria a série e"
+              + " responde com a primeira ocorrência no mesmo formato da leitura: efetivada é"
+              + " materializada uma vez; planejada permanece virtual e é identificada pela chave do"
+              + " segmento e pela data original. A leitura devolve `ancoragem`, `termino` e"
+              + " `numeroDiaUtil`.")
   @APIResponseSchema(
-      value = TransacaoResponse.class,
+      value = ItemResponse.class,
       responseCode = "201",
-      responseDescription = "Transação criada com sucesso.")
+      responseDescription = "Transação ou primeira ocorrência criada, com Location.")
+  @APIResponse(
+      responseCode = "400",
+      description = "DADOS_INVALIDOS: campo ausente ou desconhecido.")
   @APIResponse(responseCode = "404", description = "Conta ou categoria informada não encontrada.")
-  @APIResponse(responseCode = "422", description = "Regra de negócio violada.")
-  RestResponse<TransacaoResponse> criar(
+  @APIResponse(
+      responseCode = "422",
+      description =
+          "Regra violada; exemplos: REPETICAO_INVALIDA (frequência, dias, política, início ou "
+              + "término incompatíveis), PARCELAMENTO_INVALIDO (numeração ou término com "
+              + "parcelamento) ou DATA_FINANCEIRA_FUTURA.")
+  RestResponse<ItemResponse> criar(
       @Valid @RequestBody(
               description = "Dados da transação simples.",
               content =
@@ -190,33 +224,71 @@ public interface TransacaoResourceApi {
                                   "{\"contaId\":\"00000000-0000-0000-0000-000000000001\","
                                       + "\"categoriaId\":\"00000000-0000-0000-0000-000000000002\","
                                       + "\"situacao\":\"EFETIVADA\",\"tipo\":\"DESPESA\","
-                                      + "\"descricao\":\"Mercado\",\"valor\":250.75,"
-                                      + "\"dataFinanceira\":\"2026-02-10\"}")))
+                                      + "\"descricao\":\"Mercado\",\"observacoes\":null,\"valor\":250.75,"
+                                      + "\"dataFinanceira\":\"2026-02-10\",\"repeticao\":null}")))
           CriarTransacaoRequest request);
 
   @DELETE
-  @Path("/{id}")
+  @Path("/{chaveEdicao}")
   @RolesAllowed("usuario")
   @Tag(name = "Transações")
   @Operation(
       operationId = "excluirTransacao",
-      summary = "Exclui uma transação simples",
+      summary = "Exclui uma transação simples ou uma ocorrência de série",
       description =
-          "Exclui somente uma transação simples pertencente ao usuário autenticado. Transações de"
-              + " transferências, recorrências e parcelamentos não devem ser removidas por esta"
-              + " rota.")
-  @APIResponse(responseCode = "204", description = "Transação excluída com sucesso.")
-  @APIResponse(responseCode = "404", description = "Transação não encontrada.")
+          "Com a chave de uma transação simples, exclui a transação e não aceita `escopo`. Com a"
+              + " chave de uma ocorrência de série, `escopo` é obrigatório: `SOMENTE_ESTA` remove a"
+              + " ocorrência e a suprime de forma durável; `ESTA_E_AS_PROXIMAS` remove a ocorrência"
+              + " e encerra a projeção a partir dela, preservando as ocorrências protegidas"
+              + " posteriores. Toda exclusão de série revisa o grupo. Toda exclusão exige"
+              + " `versaoEdicao`, a versão vigente da transação ou da ocorrência; divergência"
+              + " responde 409 VERSAO_DESATUALIZADA sem remover dados. Transferências são excluídas"
+              + " pela rota de transferências.")
+  @APIResponse(responseCode = "204", description = "Exclusão realizada com sucesso.")
+  @APIResponse(
+      responseCode = "400",
+      description =
+          "DADOS_INVALIDOS: `versaoEdicao` ausente ou vazio, ou corpo fora do limite permitido.")
+  @APIResponse(
+      responseCode = "404",
+      description =
+          "RECURSO_NAO_ENCONTRADO: chave inexistente, inválida, desativada ou de outro usuário.")
+  @APIResponse(
+      responseCode = "409",
+      description =
+          "VERSAO_DESATUALIZADA: a versão informada não é mais a vigente; nada é removido.")
   @APIResponse(
       responseCode = "422",
-      description = "Transação não é simples ou outra regra foi violada.")
+      description =
+          "Regra violada; exemplos: ESCOPO_INVALIDO (ausente, não suportado ou informado em"
+              + " transação simples) ou TRANSACAO_NAO_SIMPLES (transação vinculada a transferência"
+              + " ou série que deve ser excluída pelo recurso de origem).")
   RestResponse<Void> excluir(
-      @PathParam("id")
+      @PathParam("chaveEdicao")
           @Parameter(
-              name = "id",
+              name = "chaveEdicao",
               in = ParameterIn.PATH,
-              description = "Identificador da transação simples.",
+              description = "Chave opaca da transação simples ou da ocorrência de série.",
               required = true,
-              schema = @Schema(implementation = UUID.class))
-          UUID id);
+              schema = @Schema(type = SchemaType.STRING))
+          String chaveEdicao,
+      @QueryParam("escopo")
+          @Parameter(
+              name = "escopo",
+              in = ParameterIn.QUERY,
+              description =
+                  "Obrigatório para ocorrência de série: SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS."
+                      + " Omitido para transação simples.",
+              schema = @Schema(implementation = EscopoEdicaoTransacao.class))
+          String escopo,
+      @QueryParam("versaoEdicao")
+          @Parameter(
+              name = "versaoEdicao",
+              in = ParameterIn.QUERY,
+              required = true,
+              description =
+                  "Versão vigente da transação ou ocorrência, obtida na leitura ou na resposta de"
+                      + " escrita. Divergência responde 409 VERSAO_DESATUALIZADA.",
+              schema = @Schema(type = SchemaType.STRING))
+          String versaoEdicao);
 }

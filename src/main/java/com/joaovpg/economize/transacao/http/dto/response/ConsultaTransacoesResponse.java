@@ -1,8 +1,12 @@
 package com.joaovpg.economize.transacao.http.dto.response;
 
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
-import com.joaovpg.economize.transacao.OrigemItemConsulta;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.joaovpg.economize.recorrencia.domain.AncoragemRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.TipoTermino;
+import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.OrigemItemConsulta;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,6 +44,7 @@ public record ConsultaTransacoesResponse(
                 "Itens ordenados por data financeira e critérios de desempate do extrato.",
             required = true)
         List<ItemResponse> itens) {
+
   public record ItemResponse(
       @Schema(
               description =
@@ -103,39 +108,104 @@ public record ConsultaTransacoesResponse(
           UUID contaContraparteId,
       @Schema(
               description =
-                  "Grupo da recorrência; preenchido somente para TRANSACAO_RECORRENTE ou PARCELA.",
-              nullable = true)
-          UUID grupoRecorrenciaId,
+                  "Chave opaca, estável e única do item na consulta, para uso como key de lista."
+                      + " Igual à chaveEdicao quando ela existe; uma ocorrência de série mantém a"
+                      + " mesma chave ao deixar de ser virtual. Não é aceita como chave de edição"
+                      + " em saldo inicial e transferência.",
+              required = true)
+          String chaveItem,
       @Schema(
               description =
-                  "Segmento da recorrência; preenchido somente para TRANSACAO_RECORRENTE ou"
-                      + " PARCELA.",
+                  "Chave opaca para edição; nula para saldo inicial e transferência, que são"
+                      + " editadas pela sua operação.",
               nullable = true)
-          UUID segmentoRecorrenciaId,
+          String chaveEdicao,
+      @Schema(
+              description = "Versão opaca necessária para editar o item; nula para saldo inicial.",
+              nullable = true)
+          String versaoEdicao,
+      @Schema(
+              description = "Tipo de transação, quando aplicável; nulo para transferência.",
+              nullable = true)
+          TipoTransacao tipo,
+      @Schema(description = "Indica ocorrência virtual; nulo para saldo inicial.", nullable = true)
+          Boolean virtual,
       @Schema(
               description =
-                  "Data original da ocorrência recorrente, antes de eventual dataFinanceira"
-                      + " efetiva.",
-              nullable = true,
-              format = "date")
-          LocalDate dataOriginalRecorrencia,
-      @Schema(description = "Número da parcela; preenchido somente para PARCELA.", nullable = true)
+                  "Indica item individualizado ou efetivado que não muda em lote; nulo para saldo"
+                      + " inicial.",
+              nullable = true)
+          Boolean protegida,
+      @Schema(description = "Metadados da série; nulo fora de séries.", nullable = true)
+          SerieResponse serie,
+      @Schema(
+              description =
+                  "Configuração estruturada da repetição do segmento; nula fora de séries.",
+              nullable = true)
+          RepeticaoResponse repeticao,
+      @Schema(
+              description = "Escopos de edição aceitos para o item; lista vazia fora de séries.",
+              required = true)
+          List<EscopoEdicaoTransacao> escoposDisponiveis) {}
+
+  public record SerieResponse(
+      @Schema(description = "Grupo da série.", required = true) UUID grupoId,
+      @Schema(description = "Segmento que gera a ocorrência.", required = true) UUID segmentoId,
+      @Schema(description = "Data de início real do segmento.", format = "date", required = true)
+          LocalDate inicioSegmento,
+      @Schema(
+              description = "Data original que identifica a ocorrência no segmento.",
+              format = "date",
+              required = true)
+          LocalDate dataOriginal,
+      @Schema(description = "Número da parcela; nulo sem parcelamento.", nullable = true)
           Integer numeroParcela,
-      @Schema(description = "Total de parcelas; preenchido somente para PARCELA.", nullable = true)
-          Integer totalParcelas,
+      @Schema(description = "Total contratado de parcelas; nulo sem parcelamento.", nullable = true)
+          Integer totalParcelas) {}
+
+  public record RepeticaoResponse(
+      @Schema(description = "Frequência da repetição.", required = true)
+          FrequenciaRepeticao frequencia,
+      @Schema(description = "Intervalo entre ciclos da frequência.", required = true) int intervalo,
+      @Schema(description = "Âncora da repetição.", required = true) AncoragemRecorrencia ancoragem,
       @Schema(
-              description = "Regra RFC 5545 da recorrência ou parcelamento.",
-              nullable = true,
-              examples = {"FREQ=MONTHLY;BYMONTHDAY=5"})
-          String rrule,
+              description =
+                  "N do dia útil calculado pelo servidor; nulo quando a ancoragem é DIA_DO_MES.",
+              nullable = true)
+          Integer numeroDiaUtil,
+      @Schema(description = "Término da repetição ou do Parcelamento.", required = true)
+          TerminoResponse termino) {}
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record TerminoResponse(
+      @Schema(description = "Tipo do término.", required = true) TipoTermino tipo,
       @Schema(
-              description = "Data de início do segmento recorrente.",
-              nullable = true,
-              format = "date")
-          LocalDate inicioRecorrencia,
+              description = "Data final inclusiva; presente somente para EM_DATA.",
+              format = "date",
+              nullable = true)
+          LocalDate data,
       @Schema(
-              description = "Política aplicada ao cálculo da data de ocorrência.",
-              nullable = true,
-              examples = {"PADRAO"})
-          PoliticaDataOcorrencia politicaDataOcorrencia) {}
+              description = "Quantidade de ocorrências; presente somente para APOS_OCORRENCIAS.",
+              nullable = true)
+          Integer quantidade,
+      @Schema(
+              description = "Número da primeira parcela; presente somente para PARCELAS.",
+              nullable = true)
+          Integer numeroPrimeiraParcela,
+      @Schema(
+              description = "Total contratado de parcelas; presente somente para PARCELAS.",
+              nullable = true)
+          Integer totalParcelas) {}
+
+  @Schema(description = "Frequência de uma repetição, em português.")
+  public enum FrequenciaRepeticao {
+    @Schema(description = "A cada dia.")
+    DIARIA,
+    @Schema(description = "A cada semana.")
+    SEMANAL,
+    @Schema(description = "A cada mês.")
+    MENSAL,
+    @Schema(description = "A cada ano.")
+    ANUAL
+  }
 }

@@ -1,7 +1,9 @@
 package com.joaovpg.economize.transferencia.application;
 
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
+import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -19,7 +21,7 @@ public class ExcluirTransferencia {
   }
 
   @Transactional
-  public void executar(UUID usuarioId, UUID transferenciaId) {
+  public void executar(UUID usuarioId, UUID transferenciaId, String versaoEdicao) {
     var transferencia =
         transferenciaRepository
             .buscarDoUsuarioParaEdicao(transferenciaId, usuarioId)
@@ -28,6 +30,11 @@ public class ExcluirTransferencia {
                     new RecursoNaoEncontradoException(
                         "RECURSO_NAO_ENCONTRADO", "Transferencia nao encontrada"));
 
+    if (!IdentidadeEdicaoTransacao.versao(transferencia.getVersao()).equals(versaoEdicao)) {
+      throw new RegraNegocioException(
+          "VERSAO_DESATUALIZADA", "A transferencia foi alterada por outra operacao");
+    }
+
     var saida = transferencia.getTransacaoSaida();
     var entrada = transferencia.getTransacaoEntrada();
 
@@ -35,5 +42,6 @@ public class ExcluirTransferencia {
     transferenciaRepository.flush();
     transacaoRepository.delete(saida);
     transacaoRepository.delete(entrada);
+    transacaoRepository.flush();
   }
 }

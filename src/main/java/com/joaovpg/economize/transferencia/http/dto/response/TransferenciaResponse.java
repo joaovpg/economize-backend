@@ -12,7 +12,12 @@ public record TransferenciaResponse(
             description = "Identificador da transferência.",
             examples = {"00000000-0000-0000-0000-000000000020"},
             required = true)
-        UUID id,
+        UUID transferenciaId,
+    @Schema(
+            description =
+                "Versão opaca da transferência; informe-a em `versaoEdicao` ao alterá-la.",
+            required = true)
+        String versaoEdicao,
     @Schema(
             description = "Conta de origem da saída.",
             examples = {"00000000-0000-0000-0000-000000000001"},
@@ -24,18 +29,13 @@ public record TransferenciaResponse(
             required = true)
         UUID contaDestinoId,
     @Schema(
-            description = "Situação aplicada aos dois lados.",
-            examples = {"EFETIVADA"},
-            required = true)
-        SituacaoTransferencia situacao,
-    @Schema(
             description = "Descrição da transferência.",
             examples = {"Reserva"},
             required = true)
         String descricao,
     @Schema(description = "Observação, quando informada.", nullable = true) String observacoes,
     @Schema(
-            description = "Valor positivo da transferência.",
+            description = "Valor nominal positivo da transferência.",
             examples = {"500.00"},
             format = "double",
             required = true)
@@ -46,6 +46,11 @@ public record TransferenciaResponse(
             format = "date",
             required = true)
         LocalDate dataFinanceira,
+    @Schema(
+            description = "Situação aplicada aos dois lados.",
+            examples = {"EFETIVADA"},
+            required = true)
+        SituacaoTransferencia situacao,
     @Schema(
             description = "Instante de efetivação; nulo quando PLANEJADA.",
             nullable = true,

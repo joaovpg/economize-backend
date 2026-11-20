@@ -34,6 +34,25 @@ Mappers ficam junto ao adapter e usam MapStruct como beans CDI, inclusive para m
 
 Casos de uso recebem comandos e devolvem resultados sem depender de DTOs HTTP. Quando a operacao apenas persiste e retorna uma entidade sem composicao adicional, o caso de uso pode devolver a entidade JPA para o adapter; quando combina dados, aplica transformacoes relevantes ou precisa representar algo que nao coincide com uma entidade, deve devolver um objeto de resultado proprio. Em ambos os casos, o caso de uso valida invariantes, verifica autorizacao sobre recursos, compoe entidades e coordena a persistencia dentro da transacao. Entidades JPA sao modelos passivos de persistencia e nao contem factories, validacoes ou regras de negocio.
 
+## Convencao de subpackages
+
+Subpackages agrupam por papel, nao por tipo de construcao Java. Cada lugar tem um papel definido:
+
+| Local | Papel |
+|-------|-------|
+| Raiz do modulo | Entidade JPA e seu repository (modelo persistido). |
+| `domain/` | Tipos de dominio: enums, records, value objects, ports (interfaces) e servicos puros. |
+| `application/` | Casos de uso e seu apoio: `*Validacao`, `*Resultado` e handlers de constraint. |
+| `http/` | Resource, interface OpenAPI (`*ResourceApi`), mapper MapStruct, `dto/request`, `dto/response` e validacoes ou handlers exclusivos de HTTP. |
+| `adapter/` | Integracao com biblioteca externa atras de um port (ver ADR 0009). |
+
+Regras:
+
+- Subpackages agrupam por papel, nunca por tipo de construcao Java: nao criar `enums/`, `records/`, `interfaces/` ou `exceptions/` dentro de modulos.
+- `domain/` e criado quando a raiz do modulo passa a misturar a entidade com cerca de tres ou mais tipos de dominio. Com apenas um tipo, ele permanece na raiz (ex.: `SituacaoTransferencia`).
+- `persistence/` so e criado quando o modulo tiver multiplas entidades ou consultas proprias que o justifiquem.
+- Em `shared/`, `shared/http/erro/` concentra os ExceptionMappers JAX-RS e o pipeline de respostas RFC 9457 (ADRs 0007 e 0008). O termo "mapper" sozinho fica reservado para mappers MapStruct.
+
 ## Consequencias
 
 - Uma funcionalidade pode atravessar HTTP, aplicacao, dominio e persistencia sem perder a localidade do modulo.

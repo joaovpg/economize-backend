@@ -8,6 +8,7 @@ import com.joaovpg.economize.transferencia.http.dto.request.CriarTransferenciaRe
 import com.joaovpg.economize.transferencia.http.dto.response.TransferenciaResponse;
 import java.util.UUID;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.CDI)
@@ -16,5 +17,6 @@ interface TransferenciaHttpMapper {
 
   AlterarTransferencia.Comando toCommand(UUID usuarioId, AlterarTransferenciaRequest request);
 
+  @Mapping(source = "id", target = "transferenciaId")
   TransferenciaResponse toResponse(TransferenciaResultado resultado);
 }

@@ -194,7 +194,7 @@ Permitir movimentacoes atomicas entre duas Contas financeiras do mesmo Usuario.
 
 ### 5. Motor de recorrencia
 
-**Estado:** em implementacao.
+**Estado:** concluido.
 
 #### Objetivo
 
@@ -214,16 +214,16 @@ Validar, persistir e expandir o subconjunto aprovado de repeticao para receitas 
 - Gerar e persistir RRULE canonica a partir de campos estruturados.
 - Expandir ocorrencias em consultas e saldos sem horizonte funcional arbitrario.
 - Efetivar e individualizar ocorrencias de forma idempotente.
-- Editar ou excluir com os escopos `ONLY_THIS` e `THIS_AND_FUTURE`.
+- Editar ou excluir com os escopos `SOMENTE_ESTA` e `ESTA_E_AS_PROXIMAS`.
 - Nao inclui RRULE textual enviada pelo cliente, RFC 5545 completa nem Transferencias recorrentes.
 
 #### Entregue nesta etapa
 
 - Cadastro de Recorrencias nasce planejado, com RRULE canonica gerada pelo backend.
-- Recorrencias e Parcelamentos sao cadastrados no mesmo `POST /api/recorrencias`, diferenciados por `tipoGrupo`; edicao, efetivacao e exclusao tambem usam a mesma familia de rotas.
+- Recorrencias e Parcelamentos sao criados por `POST /api/transacoes` com `repeticao`; edicao, efetivacao e replanejamento usam `PUT /api/transacoes/{chaveEdicao}` com `escopo`, e a exclusao usa `DELETE /api/transacoes/{chaveEdicao}?escopo=`. As rotas `/api/recorrencias` foram removidas, sem alias.
 - Ocorrencias virtuais aparecem em `/api/transacoes`, inclusive no Saldo de abertura, sem materializacao durante a consulta.
-- Efetivacao e `ONLY_THIS` materializam uma Transacao vinculada ao Segmento; `THIS_AND_FUTURE` exige ocorrencia virtual e divide o Segmento no mesmo Grupo.
-- Exclusao individual registra Supressao de recorrencia; `escopo=THIS_AND_FUTURE` encerra o Segmento do corte e os Segmentos ativos posteriores, removendo somente excecoes planejadas.
+- Efetivacao e `SOMENTE_ESTA` materializam uma Transacao vinculada ao Segmento; `ESTA_E_AS_PROXIMAS` divide o Segmento no mesmo Grupo a partir da ocorrencia selecionada.
+- Exclusao com `SOMENTE_ESTA` registra Supressao de recorrencia; `escopo=ESTA_E_AS_PROXIMAS` encerra o Segmento do corte e os Segmentos ativos posteriores, removendo somente excecoes planejadas.
 - A consulta unificada expoe RRULE, DTSTART e politica de datas para o consumidor reproduzir a projecao; a exclusao futura preserva Transacoes materializadas e cancela o Grupo quando elimina toda a projecao virtual, ou o conclui quando preserva ocorrencias virtuais anteriores.
 
 #### Regras criticas e dados
@@ -235,9 +235,9 @@ Validar, persistir e expandir o subconjunto aprovado de repeticao para receitas 
 - Grupo e Segmento de recorrencia preservam a regra; ocorrencias planejadas permanecem virtuais e consultas nunca as materializam como efeito colateral.
 - Uma ocorrencia e persistida quando efetivada, individualizada ou convertida em excecao. Uma Recorrencia criada efetivada persiste apenas a primeira ocorrencia.
 - A identidade logica e imutavel de uma ocorrencia combina Segmento de origem e data original e possui unicidade no banco.
-- `ONLY_THIS` preserva Grupo, Segmento e data original, cria uma excecao completa e nao altera a RRULE.
+- `SOMENTE_ESTA` preserva Grupo, Segmento e data original, cria uma excecao completa e nao altera a RRULE.
 - Excluir somente uma ocorrencia virtual registra uma supressao propria, sem criar uma Transacao financeira.
-- `THIS_AND_FUTURE` encerra o Segmento anterior antes do corte e, quando houver continuidade, cria outro Segmento no mesmo Grupo.
+- `ESTA_E_AS_PROXIMAS` encerra o Segmento anterior antes do corte e, quando houver continuidade, cria outro Segmento no mesmo Grupo.
 - Ocorrencias efetivadas posteriores ao corte sao preservadas como excecoes e suprimem projecoes conflitantes. Excecoes apenas planejadas substituidas podem ser removidas.
 - O schema permitira referencia ao Segmento em excecoes, identidade unica, supressoes e encerramento de Segmentos. A validacao completa da regra permanece no motor, nao em constraint SQL textual.
 
@@ -246,13 +246,13 @@ Validar, persistir e expandir o subconjunto aprovado de repeticao para receitas 
 - Criacao, validacao, canonicalizacao, expansao, materializacao, edicao e exclusao possuem contratos e casos de uso.
 - Consultas e saldos projetam ocorrencias de qualquer periodo solicitado sem grava-las.
 - Identidade de ocorrencia e materializacao sao idempotentes e protegidas no banco.
-- `ONLY_THIS` e `THIS_AND_FUTURE` preservam ocorrencias efetivadas e nao produzem duplicatas.
+- `SOMENTE_ESTA` e `ESTA_E_AS_PROXIMAS` preservam ocorrencias efetivadas e nao produzem duplicatas.
 - Testes de integracao cobrem frequencias, intervalos, terminos, datas inexistentes, horizonte distante, excecoes, supressoes e segmentacao.
 - O glossario e o modelo financeiro registram identidade de ocorrencia, supressao e escopos de edicao.
 
 ### 6. Parcelamentos
 
-**Estado:** em implementacao.
+**Estado:** concluido. O Total atual do parcelamento permanece fora desta etapa.
 
 #### Objetivo
 
@@ -267,7 +267,7 @@ Representar planos financeiros finitos compostos por Parcelas numeradas, reutili
 - Criar Parcelamento mensal.
 - Criar Parcelamento configuravel com frequencia diaria, semanal, mensal ou anual, intervalo e quantidade finita.
 - Projetar, consultar, efetivar, editar e suprimir Parcelas.
-- Aplicar `ONLY_THIS` e `THIS_AND_FUTURE`.
+- Aplicar `SOMENTE_ESTA` e `ESTA_E_AS_PROXIMAS`.
 - Consultar Total contratado original e Total atual do parcelamento.
 
 #### Entregue nesta etapa

@@ -27,10 +27,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
       @Tag(
           name = "Transferências",
           description = "Movimentações entre duas contas na mesma moeda."),
-      @Tag(
-          name = "Recorrências",
-          description =
-              "Recorrências, parcelamentos e operações sobre ocorrências virtuais ou efetivadas.")
     })
 @ApplicationPath("/api")
 @QuarkusMain(name = "api")

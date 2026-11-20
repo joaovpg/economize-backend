@@ -26,13 +26,13 @@ public class EditarCategoria {
       throw new RegraNegocioException("ATIVO_CATEGORIA_INVALIDO", "Ativo da categoria invalido");
     }
 
-    var nome = CategoriaValidation.nome(comando.nome());
-    var cor = CategoriaValidation.cor(comando.cor());
+    var nome = CategoriaValidacao.nome(comando.nome());
+    var cor = CategoriaValidacao.cor(comando.cor());
     var pai = buscarEValidarPai(comando, categoria);
 
     if (categoriaRepository.existeComNomeNoMesmoNivel(
         comando.usuarioId(), comando.categoriaPaiId(), nome, categoria.getId())) {
-      throw CategoriaValidation.nomeDuplicado();
+      throw CategoriaValidacao.nomeDuplicado();
     }
 
     validarAtivo(categoria, pai, comando.ativo());

@@ -33,7 +33,12 @@ quarkus:
     port: ${PORT:8080}
     cors:
       enabled: true
+      # Origens do frontend, definidas no .env (ex.: http://localhost:5173). Em prod, o bloco %prod acrescenta o domínio público.
+      origins: ${CORS_ORIGINS:}
       access-control-allow-credentials: true
+    limits:
+      # Maior corpo aceito. Acima disso, /transacoes e /transferencias respondem 400 DADOS_INVALIDOS.
+      max-body-size: 64K
 
 mp:
   jwt:

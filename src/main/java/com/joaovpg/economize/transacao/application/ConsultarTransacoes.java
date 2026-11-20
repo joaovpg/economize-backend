@@ -6,15 +6,18 @@ import com.joaovpg.economize.conta.ContaFinanceiraRepository;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.SupressaoRecorrenciaRepository;
-import com.joaovpg.economize.recorrencia.application.ResolverOcorrenciasRecorrentes;
-import com.joaovpg.economize.recorrencia.enums.PoliticaDataOcorrencia;
+import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.SerieRecorrencia;
+import com.joaovpg.economize.recorrencia.domain.TipoGrupoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.ValidacaoException;
-import com.joaovpg.economize.transacao.OrigemItemConsulta;
-import com.joaovpg.economize.transacao.SituacaoTransacao;
-import com.joaovpg.economize.transacao.TipoTransacao;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
+import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
+import com.joaovpg.economize.transacao.domain.OrigemItemConsulta;
+import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
+import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.transferencia.Transferencia;
 import com.joaovpg.economize.transferencia.TransferenciaRepository;
 import com.joaovpg.economize.usuario.UsuarioRepository;
@@ -22,6 +25,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -171,31 +175,17 @@ public class ConsultarTransacoes {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     var itens = new ArrayList<Item>();
-    transacoes.stream()
-        .map(
-            transacao ->
-                new Item(
-                    OrigemItemConsulta.TRANSACAO_SIMPLES,
-                    transacao.getId(),
-                    transacao.getSituacao(),
-                    transacao.getDescricao(),
-                    transacao.getObservacoes(),
-                    impacto(transacao.getTipo(), transacao.getValor()),
-                    transacao.getDataFinanceira(),
-                    transacao.getEfetivadoEm(),
-                    transacao.getConta().getId(),
-                    transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
-                    null))
-        .forEach(itens::add);
+    transacoes.stream().map(ConsultarTransacoes::itemTransacaoSimples).forEach(itens::add);
 
     transferencias.forEach(
         transferencia -> {
+          var versao = IdentidadeEdicaoTransacao.versao(transferencia.getVersao());
           if (contaIds.isEmpty() || contaIds.contains(transferencia.getContaOrigem().getId())) {
             var saida = transferencia.getTransacaoSaida();
             itens.add(
-                new Item(
-                    OrigemItemConsulta.TRANSFERENCIA,
+                itemTransferencia(
                     transferencia.getId(),
+                    versao,
                     saida.getSituacao(),
                     saida.getDescricao(),
                     saida.getObservacoes(),
@@ -203,15 +193,14 @@ public class ConsultarTransacoes {
                     saida.getDataFinanceira(),
                     saida.getEfetivadoEm(),
                     transferencia.getContaOrigem().getId(),
-                    null,
                     transferencia.getContaDestino().getId()));
           }
           if (contaIds.isEmpty() || contaIds.contains(transferencia.getContaDestino().getId())) {
             var entrada = transferencia.getTransacaoEntrada();
             itens.add(
-                new Item(
-                    OrigemItemConsulta.TRANSFERENCIA,
+                itemTransferencia(
                     transferencia.getId(),
+                    versao,
                     entrada.getSituacao(),
                     entrada.getDescricao(),
                     entrada.getObservacoes(),
@@ -219,42 +208,26 @@ public class ConsultarTransacoes {
                     entrada.getDataFinanceira(),
                     entrada.getEfetivadoEm(),
                     transferencia.getContaDestino().getId(),
-                    null,
                     transferencia.getContaOrigem().getId()));
           }
         });
 
-    recorrenciasItens.stream().map(this::item).forEach(itens::add);
+    recorrenciasItens.stream().map(ConsultarTransacoes::itemRecorrente).forEach(itens::add);
 
     contas.stream()
         .filter(conta -> !conta.getDataSaldoInicial().isBefore(periodo.primeiroDia()))
         .filter(conta -> !conta.getDataSaldoInicial().isAfter(periodo.ultimoDia()))
         .filter(conta -> conta.getSaldoInicial().signum() != 0)
-        .map(
-            conta ->
-                new Item(
-                    OrigemItemConsulta.SALDO_INICIAL_CONTA,
-                    conta.getId(),
-                    null,
-                    "Saldo inicial",
-                    null,
-                    conta.getSaldoInicial(),
-                    conta.getDataSaldoInicial(),
-                    null,
-                    conta.getId(),
-                    null,
-                    null))
+        .map(ConsultarTransacoes::itemSaldoInicial)
         .forEach(itens::add);
 
     itens.sort(
         Comparator.comparing(Item::dataFinanceira)
             .thenComparingInt(
                 item -> item.origem() == OrigemItemConsulta.SALDO_INICIAL_CONTA ? 0 : 1)
-            .thenComparing(Item::operacaoId, Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(ConsultarTransacoes::identificadorEstavel)
             .thenComparing(
-                Item::segmentoRecorrenciaId, Comparator.nullsFirst(Comparator.naturalOrder()))
-            .thenComparing(
-                Item::dataOriginalRecorrencia, Comparator.nullsFirst(Comparator.naturalOrder()))
+                ConsultarTransacoes::dataOriginal, Comparator.nullsFirst(Comparator.naturalOrder()))
             .thenComparingInt(
                 item ->
                     item.origem() == OrigemItemConsulta.TRANSFERENCIA && item.valor().signum() > 0
@@ -313,7 +286,49 @@ public class ConsultarTransacoes {
         && (categoriaIds.isEmpty() || categoriaIds.contains(resultado.categoriaId()));
   }
 
-  private Item item(ResolverOcorrenciasRecorrentes.Resultado resultado) {
+  public static Item itemTransacaoSimples(Transacao transacao) {
+    return new Item(
+        OrigemItemConsulta.TRANSACAO_SIMPLES,
+        transacao.getId(),
+        transacao.getSituacao(),
+        transacao.getDescricao(),
+        transacao.getObservacoes(),
+        transacao.getTipo() == TipoTransacao.RECEITA
+            ? transacao.getValor()
+            : transacao.getValor().negate(),
+        transacao.getDataFinanceira(),
+        transacao.getEfetivadoEm(),
+        transacao.getConta().getId(),
+        transacao.getCategoria() == null ? null : transacao.getCategoria().getId(),
+        null,
+        IdentidadeEdicaoTransacao.chave(transacao.getId()),
+        IdentidadeEdicaoTransacao.versaoSimples(transacao),
+        transacao.getTipo(),
+        false,
+        transacao.getSegmentoOrigem() != null,
+        serieHistorica(transacao),
+        null,
+        List.of());
+  }
+
+  /** Série de onde uma transação simples foi desligada; nula para simples sem origem. */
+  private static SerieRecorrencia serieHistorica(Transacao transacao) {
+    var segmento = transacao.getSegmentoOrigem();
+    if (segmento == null) {
+      return null;
+    }
+    var grupo = segmento.getGrupo();
+    var parcelado = grupo.getTipo() == TipoGrupoRecorrencia.PARCELAMENTO;
+    return new SerieRecorrencia(
+        grupo.getId(),
+        segmento.getId(),
+        segmento.getInicio(),
+        transacao.getDataOriginalOrigem(),
+        parcelado ? transacao.getNumeroParcelaOrigem() : null,
+        parcelado ? segmento.getQuantidadeTotalOriginal() : null);
+  }
+
+  public static Item itemRecorrente(ResolverOcorrenciasRecorrentes.Resultado resultado) {
     return new Item(
         resultado.origem(),
         resultado.operacaoId(),
@@ -325,15 +340,89 @@ public class ConsultarTransacoes {
         resultado.efetivadoEm(),
         resultado.contaId(),
         resultado.categoriaId(),
-        resultado.contaContraparteId(),
-        resultado.grupoRecorrenciaId(),
-        resultado.segmentoRecorrenciaId(),
-        resultado.dataOriginalRecorrencia(),
-        resultado.numeroParcela(),
-        resultado.totalParcelas(),
-        resultado.rrule(),
-        resultado.inicioRecorrencia(),
-        resultado.politicaDataOcorrencia());
+        null,
+        resultado.chaveEdicao(),
+        resultado.versaoEdicao(),
+        resultado.tipo(),
+        resultado.virtual(),
+        resultado.protegida(),
+        resultado.serie(),
+        resultado.repeticao(),
+        resultado.escoposDisponiveis());
+  }
+
+  private static Item itemTransferencia(
+      UUID transferenciaId,
+      String versaoEdicao,
+      SituacaoTransacao situacao,
+      String descricao,
+      String observacoes,
+      BigDecimal valor,
+      LocalDate dataFinanceira,
+      Instant efetivadoEm,
+      UUID contaId,
+      UUID contaContraparteId) {
+    return new Item(
+        OrigemItemConsulta.TRANSFERENCIA,
+        transferenciaId,
+        situacao,
+        descricao,
+        observacoes,
+        valor,
+        dataFinanceira,
+        efetivadoEm,
+        contaId,
+        null,
+        contaContraparteId,
+        null,
+        versaoEdicao,
+        null,
+        false,
+        false,
+        null,
+        null,
+        List.of());
+  }
+
+  private static Item itemSaldoInicial(ContaFinanceira conta) {
+    return new Item(
+        OrigemItemConsulta.SALDO_INICIAL_CONTA,
+        conta.getId(),
+        null,
+        "Saldo inicial",
+        null,
+        conta.getSaldoInicial(),
+        conta.getDataSaldoInicial(),
+        null,
+        conta.getId(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of());
+  }
+
+  /**
+   * Identificador que não muda quando uma ocorrência de série deixa de ser virtual: o segmento para
+   * ocorrências de série e a operação para os demais itens. Assim, efetivar ou editar uma
+   * ocorrência não altera sua posição entre os itens da mesma data.
+   */
+  private static UUID identificadorEstavel(Item item) {
+    return ehOcorrenciaDeSerie(item) ? item.serie().segmentoId() : item.operacaoId();
+  }
+
+  private static LocalDate dataOriginal(Item item) {
+    return ehOcorrenciaDeSerie(item) ? item.serie().dataOriginal() : null;
+  }
+
+  private static boolean ehOcorrenciaDeSerie(Item item) {
+    return item.origem() == OrigemItemConsulta.TRANSACAO_RECORRENTE
+        || item.origem() == OrigemItemConsulta.PARCELA;
   }
 
   private Periodo resolverPeriodo(YearMonth inicio, YearMonth fim) {
@@ -358,10 +447,6 @@ public class ConsultarTransacoes {
 
   private BigDecimal monetario(BigDecimal valor) {
     return valor.setScale(ESCALA_MONETARIA, RoundingMode.UNNECESSARY);
-  }
-
-  private BigDecimal impacto(TipoTransacao tipo, BigDecimal valor) {
-    return tipo == TipoTransacao.RECEITA ? valor : valor.negate();
   }
 
   private RecursoNaoEncontradoException recursoNaoEncontrado() {
@@ -392,6 +477,10 @@ public class ConsultarTransacoes {
   public record Resultado(
       YearMonth inicio, YearMonth fim, BigDecimal saldoAbertura, List<Item> itens) {}
 
+  /**
+   * Item do extrato. Campos de série ficam em {@code serie} e {@code repeticao}; campos de edição
+   * são nulos quando o item não é editável por chave.
+   */
   public record Item(
       OrigemItemConsulta origem,
       UUID operacaoId,
@@ -400,50 +489,28 @@ public class ConsultarTransacoes {
       String observacoes,
       BigDecimal valor,
       LocalDate dataFinanceira,
-      java.time.Instant efetivadoEm,
+      Instant efetivadoEm,
       UUID contaId,
       UUID categoriaId,
       UUID contaContraparteId,
-      UUID grupoRecorrenciaId,
-      UUID segmentoRecorrenciaId,
-      LocalDate dataOriginalRecorrencia,
-      Integer numeroParcela,
-      Integer totalParcelas,
-      String rrule,
-      LocalDate inicioRecorrencia,
-      PoliticaDataOcorrencia politicaDataOcorrencia) {
-    public Item(
-        OrigemItemConsulta origem,
-        UUID operacaoId,
-        SituacaoTransacao situacao,
-        String descricao,
-        String observacoes,
-        BigDecimal valor,
-        LocalDate dataFinanceira,
-        java.time.Instant efetivadoEm,
-        UUID contaId,
-        UUID categoriaId,
-        UUID contaContraparteId) {
-      this(
-          origem,
-          operacaoId,
-          situacao,
-          descricao,
-          observacoes,
-          valor,
-          dataFinanceira,
-          efetivadoEm,
-          contaId,
-          categoriaId,
-          contaContraparteId,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null);
+      String chaveEdicao,
+      String versaoEdicao,
+      TipoTransacao tipo,
+      Boolean virtual,
+      Boolean protegida,
+      SerieRecorrencia serie,
+      RepeticaoRecorrencia repeticao,
+      List<EscopoEdicaoTransacao> escoposDisponiveis) {
+
+    /**
+     * Chave estável e única do item na consulta. Uma ocorrência de série mantém a mesma chave
+     * quando deixa de ser virtual; itens sem chave de edição recebem uma chave por origem, operação
+     * e conta.
+     */
+    public String chaveItem() {
+      return chaveEdicao != null
+          ? chaveEdicao
+          : IdentidadeEdicaoTransacao.chaveItemSemEdicao(origem, operacaoId, contaId);
     }
   }
 }
