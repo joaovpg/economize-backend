@@ -9,15 +9,12 @@ import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
 import com.joaovpg.economize.transacao.application.ExcluirOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.ExcluirTransacao;
-import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
 import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
-import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse.ItemResponse;
-import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
 import java.time.DateTimeException;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -38,7 +35,6 @@ public class TransacaoResource implements TransacaoResourceApi {
   private final ExcluirTransacao excluirTransacao;
   private final ExcluirOcorrenciaSerie excluirOcorrenciaSerie;
   private final ConsultarTransacoes consultarTransacoes;
-  private final PreverAlteracaoTransacao preverAlteracaoTransacao;
   private final TransacaoHttpMapper mapper;
   private final JsonWebToken token;
 
@@ -50,7 +46,6 @@ public class TransacaoResource implements TransacaoResourceApi {
       ExcluirTransacao excluirTransacao,
       ExcluirOcorrenciaSerie excluirOcorrenciaSerie,
       ConsultarTransacoes consultarTransacoes,
-      PreverAlteracaoTransacao preverAlteracaoTransacao,
       TransacaoHttpMapper mapper,
       JsonWebToken token) {
     this.criarTransacao = criarTransacao;
@@ -60,7 +55,6 @@ public class TransacaoResource implements TransacaoResourceApi {
     this.excluirTransacao = excluirTransacao;
     this.excluirOcorrenciaSerie = excluirOcorrenciaSerie;
     this.consultarTransacoes = consultarTransacoes;
-    this.preverAlteracaoTransacao = preverAlteracaoTransacao;
     this.mapper = mapper;
     this.token = token;
   }
@@ -114,19 +108,6 @@ public class TransacaoResource implements TransacaoResourceApi {
     var comando = mapper.toCommand(usuarioId, request);
     var resultado = alterarTransacao.executar(id, comando);
     return mapper.toResponse(resultado);
-  }
-
-  @Override
-  public PreviaEdicaoTransacaoResponse previaEdicao(
-      String chaveEdicao, PreviaEdicaoTransacaoRequest request) {
-    var usuarioId = UUID.fromString(token.getSubject());
-    var comando = mapper.toCommandPrevia(usuarioId, request);
-    if (IdentidadeEdicaoTransacao.ehChaveDeOcorrencia(chaveEdicao)) {
-      var chave = IdentidadeEdicaoTransacao.identificarOcorrencia(chaveEdicao);
-      return mapper.toResponse(preverAlteracaoTransacao.executarOcorrencia(chave, comando));
-    }
-    var id = IdentidadeEdicaoTransacao.identificar(chaveEdicao);
-    return mapper.toResponse(preverAlteracaoTransacao.executarSimples(id, comando));
   }
 
   @Override

@@ -13,7 +13,6 @@ import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transacao.domain.EscopoEdicaoTransacao;
 import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
-import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;
@@ -31,18 +30,21 @@ public class ExcluirOcorrenciaSerie {
   private final TransacaoRepository transacaoRepository;
   private final SupressaoRecorrenciaRepository supressaoRepository;
   private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
+  private final RegrasEdicaoTransacao regras;
 
   public ExcluirOcorrenciaSerie(
       SegmentoRecorrenciaRepository segmentoRepository,
       GrupoRecorrenciaRepository grupoRepository,
       TransacaoRepository transacaoRepository,
       SupressaoRecorrenciaRepository supressaoRepository,
-      LocalizarOcorrenciaRecorrente localizarOcorrencia) {
+      LocalizarOcorrenciaRecorrente localizarOcorrencia,
+      RegrasEdicaoTransacao regras) {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
     this.transacaoRepository = transacaoRepository;
     this.supressaoRepository = supressaoRepository;
     this.localizarOcorrencia = localizarOcorrencia;
+    this.regras = regras;
   }
 
   @Transactional
@@ -112,7 +114,7 @@ public class ExcluirOcorrenciaSerie {
 
   private void encerrarAPartirDe(
       SegmentoRecorrencia segmento, LocalDate dataOriginal, UUID usuarioId) {
-    removerPlanejadasAPartirDe(segmento, dataOriginal, usuarioId);
+    regras.removerPlanejadasAPartirDe(segmento, dataOriginal, usuarioId, null);
     if (dataOriginal.isEqual(segmento.getInicio())) {
       segmento.setStatus(StatusRecorrencia.CANCELADO);
     } else {
@@ -125,7 +127,7 @@ public class ExcluirOcorrenciaSerie {
         segmentoRepository.listarAtivosDoGrupoAPartirDe(
             grupoId, segmento.getId(), usuarioId, dataOriginal);
     for (var futuro : segmentosFuturos) {
-      removerPlanejadasAPartirDe(futuro, futuro.getInicio(), usuarioId);
+      regras.removerPlanejadasAPartirDe(futuro, futuro.getInicio(), usuarioId, null);
       futuro.setStatus(StatusRecorrencia.CANCELADO);
     }
 
@@ -139,15 +141,6 @@ public class ExcluirOcorrenciaSerie {
           .setStatus(
               possuiHistoricoVirtual ? StatusRecorrencia.CONCLUIDO : StatusRecorrencia.CANCELADO);
     }
-  }
-
-  private void removerPlanejadasAPartirDe(
-      SegmentoRecorrencia segmento, LocalDate inicio, UUID usuarioId) {
-    transacaoRepository
-        .listarOcorrenciasDoSegmentoAPartirDe(segmento.getId(), inicio, usuarioId)
-        .stream()
-        .filter(transacao -> transacao.getSituacao() == SituacaoTransacao.PLANEJADA)
-        .forEach(transacaoRepository::delete);
   }
 
   private static RecursoNaoEncontradoException naoEncontrada() {

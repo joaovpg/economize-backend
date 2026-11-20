@@ -367,23 +367,21 @@ class AlterarOcorrenciaSerieResourceTest {
   }
 
   @Test
-  void ocorrenciaFisicaSobreviveAEsterAsProximasIniciadoAntesDela() {
+  void ocorrenciaFisicaPlanejadaEhSubstituidaPorEsterAsProximasIniciadoAntesDela() {
     var token = autenticar();
     criarSerie(token, "PLANEJADA", INICIO, MENSAL_DIA_10);
     var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-    var fisica =
-        alterar(
-                token,
-                (String) outubro.get("chaveEdicao"),
-                alteracao(
-                    (String) outubro.get("versaoEdicao"),
-                    SOMENTE_ESTA,
-                    MENSAL_DIA_10,
-                    "PLANEJADA",
-                    "2026-10-12",
-                    "80"))
-            .statusCode(200);
-    String operacaoId = fisica.extract().path("operacaoId");
+    alterar(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            alteracao(
+                (String) outubro.get("versaoEdicao"),
+                SOMENTE_ESTA,
+                MENSAL_DIA_10,
+                "PLANEJADA",
+                "2026-10-12",
+                "80"))
+        .statusCode(200);
 
     var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
     alterar(
@@ -394,12 +392,7 @@ class AlterarOcorrenciaSerieResourceTest {
 
     consultar(token, "2026-10", "2026-10")
         .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-10-12' }", hasSize(1))
-        .body("itens.find { it.dataFinanceira == '2026-10-12' }.operacaoId", equalTo(operacaoId))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-10-12' }.valor",
-            equalTo(new BigDecimal("-80.0000")))
-        .body("itens.find { it.dataFinanceira == '2026-10-12' }.protegida", equalTo(true))
+        .body("itens.findAll { it.dataFinanceira == '2026-10-12' }", empty())
         .body(
             "itens.find { it.dataFinanceira == '2026-10-10' }.valor",
             equalTo(new BigDecimal("-200.0000")));
@@ -781,8 +774,7 @@ class AlterarOcorrenciaSerieResourceTest {
     return """
     {"escopo":"ESTA_E_AS_PROXIMAS","repeticao":%s,"contaId":"%s","categoriaId":null,
      "situacao":"PLANEJADA","tipo":"DESPESA","descricao":"Mercado","observacoes":null,
-     "valor":%s,"dataFinanceira":"%s","versaoEdicao":"%s",
-     "politicaSobreposicao":"MANTER_SOMENTE_PRESERVADA","resolucoesSobreposicao":[]}
+     "valor":%s,"dataFinanceira":"%s","versaoEdicao":"%s"}
     """
         .formatted(repeticao, contaId, valor, dataFinanceira, versao);
   }

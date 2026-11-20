@@ -4,26 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.joaovpg.economize.recorrencia.domain.FrequenciaRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.SerieRecorrencia;
-import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.application.AlterarEstaEAsProximas;
 import com.joaovpg.economize.transacao.application.AlterarOcorrenciaSerie;
 import com.joaovpg.economize.transacao.application.AlterarTransacao;
 import com.joaovpg.economize.transacao.application.ConsultarTransacoes;
 import com.joaovpg.economize.transacao.application.CriarTransacao;
-import com.joaovpg.economize.transacao.application.PreverAlteracaoTransacao;
 import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
-import com.joaovpg.economize.transacao.domain.ResolucaoSobreposicao;
 import com.joaovpg.economize.transacao.http.dto.request.AlterarTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.ConsultaTransacoesRequest;
 import com.joaovpg.economize.transacao.http.dto.request.CriarTransacaoRequest;
-import com.joaovpg.economize.transacao.http.dto.request.PreviaEdicaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.request.RepeticaoTransacaoRequest;
 import com.joaovpg.economize.transacao.http.dto.response.ConsultaTransacoesResponse;
-import com.joaovpg.economize.transacao.http.dto.response.PreviaEdicaoTransacaoResponse;
-import java.time.DateTimeException;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -33,12 +24,9 @@ import org.mapstruct.ValueMappings;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.CDI)
 interface TransacaoHttpMapper {
-  int MAXIMO_ESCOLHAS_SOBREPOSICAO = 256;
-
   CriarTransacao.Comando toCommand(UUID usuarioId, CriarTransacaoRequest request);
 
   @Mapping(target = "escopoInformado", expression = "java(request.escopoInformado())")
-  @Mapping(target = "resolucaoInformada", expression = "java(request.resolucaoInformada())")
   AlterarTransacao.Comando toCommand(UUID usuarioId, AlterarTransacaoRequest request);
 
   /**
@@ -55,7 +43,6 @@ interface TransacaoHttpMapper {
         chave.dataOriginal(),
         request.versaoEdicao(),
         escopoTexto(request.escopo()),
-        request.resolucaoInformada(),
         request.contaId(),
         request.categoriaId(),
         request.situacao(),
@@ -67,10 +54,7 @@ interface TransacaoHttpMapper {
         toRepeticao(request.repeticao()));
   }
 
-  /**
-   * Converte a alteração com ESTA_E_AS_PROXIMAS. Política e escolhas chegam como nós JSON para que
-   * a presença explícita de {@code null} seja distinguida de omissão; valores malformados são 400.
-   */
+  /** Converte a alteração com ESTA_E_AS_PROXIMAS; as regras de corte são do caso de uso. */
   default AlterarEstaEAsProximas.Comando toCommandEstaEAsProximas(
       UUID usuarioId,
       IdentidadeEdicaoTransacao.ChaveOcorrencia chave,
@@ -88,68 +72,7 @@ interface TransacaoHttpMapper {
         request.observacoes(),
         request.valor(),
         request.dataFinanceira(),
-        toRepeticao(request.repeticao()),
-        converterPolitica(request.politicaSobreposicao()),
-        converterEscolhas(request.resolucoesSobreposicao()),
-        request.resolucaoInformada());
-  }
-
-  default ResolucaoSobreposicao converterPolitica(JsonNode politica) {
-    if (politica == null || politica.isNull()) {
-      return null;
-    }
-    try {
-      if (politica.isTextual()) {
-        return ResolucaoSobreposicao.valueOf(politica.asText());
-      }
-    } catch (IllegalArgumentException exception) {
-      // Valor fora do domínio é tratado abaixo como dado inválido.
-    }
-    throw new ValidacaoException("politicaSobreposicao", "Politica de sobreposicao invalida");
-  }
-
-  /** Converte as escolhas, rejeitando campos desconhecidos e listas acima do limite sem truncar. */
-  default List<AlterarEstaEAsProximas.Comando.Escolha> converterEscolhas(JsonNode escolhas) {
-    if (escolhas == null || escolhas.isNull()) {
-      return null;
-    }
-    if (!escolhas.isArray()) {
-      throw new ValidacaoException("resolucoesSobreposicao", "Lista de escolhas invalida");
-    }
-    if (escolhas.size() > MAXIMO_ESCOLHAS_SOBREPOSICAO) {
-      throw new ValidacaoException(
-          "resolucoesSobreposicao",
-          "A lista de escolhas excede o limite de " + MAXIMO_ESCOLHAS_SOBREPOSICAO + " itens");
-    }
-    var convertidas = new ArrayList<AlterarEstaEAsProximas.Comando.Escolha>();
-    for (var escolha : escolhas) {
-      convertidas.add(converterEscolha(escolha));
-    }
-    return convertidas;
-  }
-
-  private AlterarEstaEAsProximas.Comando.Escolha converterEscolha(JsonNode escolha) {
-    var invalida = new ValidacaoException("resolucoesSobreposicao", "Escolha invalida");
-    if (!escolha.isObject()) {
-      throw invalida;
-    }
-    var data = escolha.get("dataOriginalCandidata");
-    var resolucao = escolha.get("resolucao");
-    var campos = new java.util.HashSet<String>();
-    escolha.fieldNames().forEachRemaining(campos::add);
-    if (!campos.equals(java.util.Set.of("dataOriginalCandidata", "resolucao"))
-        || data == null
-        || !data.isTextual()
-        || resolucao == null
-        || !resolucao.isTextual()) {
-      throw invalida;
-    }
-    try {
-      return new AlterarEstaEAsProximas.Comando.Escolha(
-          LocalDate.parse(data.asText()), resolucao.asText());
-    } catch (DateTimeException exception) {
-      throw invalida;
-    }
+        toRepeticao(request.repeticao()));
   }
 
   default String escopoTexto(JsonNode escopo) {
@@ -157,57 +80,6 @@ interface TransacaoHttpMapper {
       return null;
     }
     return escopo.isTextual() ? escopo.asText() : escopo.toString();
-  }
-
-  /** Converte a prévia; a política e o período são validados pelo caso de uso. */
-  default PreverAlteracaoTransacao.Comando toCommandPrevia(
-      UUID usuarioId, PreviaEdicaoTransacaoRequest request) {
-    var alteracao = request.alteracao();
-    return new PreverAlteracaoTransacao.Comando(
-        usuarioId,
-        alteracao.versaoEdicao(),
-        escopoTexto(alteracao.escopo()),
-        alteracao.escopoInformado(),
-        alteracao.contaId(),
-        alteracao.categoriaId(),
-        alteracao.situacao(),
-        alteracao.tipo(),
-        alteracao.descricao(),
-        alteracao.observacoes(),
-        alteracao.valor(),
-        alteracao.dataFinanceira(),
-        toRepeticao(alteracao.repeticao()),
-        request.periodo().inicio(),
-        request.periodo().fim(),
-        request.politicaSobreposicao());
-  }
-
-  default PreviaEdicaoTransacaoResponse toResponse(PreverAlteracaoTransacao.Resultado resultado) {
-    return new PreviaEdicaoTransacaoResponse(
-        resultado.versaoEdicao(),
-        new PreviaEdicaoTransacaoResponse.PeriodoResponse(resultado.inicio(), resultado.fim()),
-        resultado.politicaSobreposicao(),
-        resultado.itensPreservados().stream().map(item -> toResponse(item)).toList(),
-        resultado.ocorrenciasNovas().stream()
-            .map(
-                candidata ->
-                    new PreviaEdicaoTransacaoResponse.CandidataResponse(
-                        candidata.dataOriginal(),
-                        candidata.dataFinanceira(),
-                        candidata.valor(),
-                        candidata.numeroParcela()))
-            .toList(),
-        resultado.sobreposicoes().stream()
-            .map(
-                sobreposicao ->
-                    new PreviaEdicaoTransacaoResponse.SobreposicaoResponse(
-                        sobreposicao.dataOriginalCandidata(),
-                        sobreposicao.dataFinanceira(),
-                        sobreposicao.chavesPreservadas(),
-                        sobreposicao.resolucaoSugerida(),
-                        sobreposicao.resolucoesPermitidas()))
-            .toList(),
-        resultado.quantidadeSobreposicoesForaPeriodo());
   }
 
   ConsultarTransacoes.Comando toCommand(UUID usuarioId, ConsultaTransacoesRequest request);

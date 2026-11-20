@@ -6,7 +6,6 @@ import com.joaovpg.economize.recorrencia.application.RevisarSerieRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
@@ -160,14 +159,6 @@ public class AlterarTransacao {
       throw new RegraNegocioException(
           "ESCOPO_INVALIDO", "Escopo nao se aplica a transacao simples");
     }
-    if (comando.resolucaoInformada()) {
-      if (comando.repeticao() != null) {
-        throw new ValidacaoException(
-            "resolucoesSobreposicao", "Conversao em serie nao aceita decisoes de sobreposicao");
-      }
-      throw new RegraNegocioException(
-          "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao nao se aplica a transacao simples");
-    }
     regras.validarCamposComuns(
         comando.contaId(),
         comando.situacao(),
@@ -187,7 +178,6 @@ public class AlterarTransacao {
       String versaoEdicao,
       RepeticaoRecorrencia repeticao,
       boolean escopoInformado,
-      boolean resolucaoInformada,
       UUID contaId,
       UUID categoriaId,
       SituacaoTransacao situacao,

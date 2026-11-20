@@ -54,40 +54,29 @@ public class TransacaoRepository implements PanacheRepositoryBase<Transacao, UUI
         .firstResultOptional();
   }
 
-  /** Leitura sem bloqueio para prévias; não autoriza gravação sem nova comparação. */
-  public Optional<Transacao> buscarOcorrenciaDoUsuario(
-      UUID segmentoId, LocalDate identificador, UUID usuarioId) {
-    return find(
-            "segmentoRecorrencia.id = ?1 and identificadorRecorrencia = ?2 and usuario.id = ?3",
-            segmentoId,
-            identificador,
-            usuarioId)
-        .firstResultOptional();
-  }
-
   /**
-   * Registros protegidos de um grupo com data original igual ou posterior à data informada, na
-   * ordem da data financeira: materializados do grupo (individualizados ou efetivados) e transações
-   * desligadas da série cuja origem pertence ao grupo.
+   * Indica se o grupo tem realizado a partir da data original: uma materialização do grupo com
+   * situação EFETIVADA, ou uma transação desligada da série cuja origem pertence ao grupo, em
+   * qualquer situação.
    */
-  public List<Transacao> listarProtegidasDoGrupoAPartirDe(
+  public boolean existeEfetivadaOuDestacadaDoGrupoAPartirDe(
       UUID grupoId, UUID usuarioId, LocalDate dataOriginal) {
     return getEntityManager()
-        .createQuery(
-            "select t from Transacao t"
-                + " left join fetch t.segmentoRecorrencia s"
-                + " left join fetch t.segmentoOrigem o"
-                + " where t.usuario.id = :usuarioId and ("
-                + " (s.grupo.id = :grupoId and t.identificadorRecorrencia >= :dataOriginal"
-                + " and (t.excecaoRecorrencia = true or t.situacao = :efetivada))"
-                + " or (o.grupo.id = :grupoId and t.dataOriginalOrigem >= :dataOriginal))"
-                + " order by t.dataFinanceira, t.id",
-            Transacao.class)
-        .setParameter("grupoId", grupoId)
-        .setParameter("usuarioId", usuarioId)
-        .setParameter("dataOriginal", dataOriginal)
-        .setParameter("efetivada", SituacaoTransacao.EFETIVADA)
-        .getResultList();
+            .createQuery(
+                "select count(t) from Transacao t"
+                    + " left join t.segmentoRecorrencia s"
+                    + " left join t.segmentoOrigem o"
+                    + " where t.usuario.id = :usuarioId and ("
+                    + " (s.grupo.id = :grupoId and t.identificadorRecorrencia >= :dataOriginal"
+                    + " and t.situacao = :efetivada)"
+                    + " or (o.grupo.id = :grupoId and t.dataOriginalOrigem >= :dataOriginal))",
+                Long.class)
+            .setParameter("grupoId", grupoId)
+            .setParameter("usuarioId", usuarioId)
+            .setParameter("dataOriginal", dataOriginal)
+            .setParameter("efetivada", SituacaoTransacao.EFETIVADA)
+            .getSingleResult()
+        > 0;
   }
 
   public List<Transacao> listarOcorrenciasDoSegmentoAPartirDe(

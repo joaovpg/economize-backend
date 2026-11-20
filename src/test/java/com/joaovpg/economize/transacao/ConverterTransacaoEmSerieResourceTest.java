@@ -277,7 +277,7 @@ class ConverterTransacaoEmSerieResourceTest {
   }
 
   @Test
-  void rejeitaEscopoEDecisoesDeSobreposicaoNaConversaoSimples() {
+  void rejeitaEscopoECamposDeSobreposicaoNaConversaoSimples() {
     var token = autenticar();
     var criada = criarSimples(token, "PLANEJADA", "2026-11-10");
     var chave = criada.path("chaveEdicao").toString();

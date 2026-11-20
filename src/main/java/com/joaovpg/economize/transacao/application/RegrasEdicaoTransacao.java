@@ -11,6 +11,7 @@ import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
 import com.joaovpg.economize.transacao.Transacao;
+import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
 import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
@@ -21,11 +22,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Regras comuns de edição de transações simples e de ocorrências de série: campos, conta, categoria
- * e datas. Usadas pelas alterações e pela prévia, para que as duas apliquem as mesmas validações.
+ * e datas, além da remoção das exceções planejadas de um corte. Usadas pelas alterações e pela
+ * exclusão de ocorrências de série, para que apliquem as mesmas regras.
  */
 @ApplicationScoped
 public class RegrasEdicaoTransacao {
@@ -34,14 +37,17 @@ public class RegrasEdicaoTransacao {
   private final ContaFinanceiraRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
   private final SupressaoRecorrenciaRepository supressaoRepository;
+  private final TransacaoRepository transacaoRepository;
 
   public RegrasEdicaoTransacao(
       ContaFinanceiraRepository contaRepository,
       CategoriaRepository categoriaRepository,
-      SupressaoRecorrenciaRepository supressaoRepository) {
+      SupressaoRecorrenciaRepository supressaoRepository,
+      TransacaoRepository transacaoRepository) {
     this.contaRepository = contaRepository;
     this.categoriaRepository = categoriaRepository;
     this.supressaoRepository = supressaoRepository;
+    this.transacaoRepository = transacaoRepository;
   }
 
   /**
@@ -82,6 +88,24 @@ public class RegrasEdicaoTransacao {
     supressao.setSegmento(segmento);
     supressao.setIdentificadorRecorrencia(dataOriginal);
     supressaoRepository.persist(supressao);
+  }
+
+  /**
+   * Remove as materializações planejadas do segmento com data original a partir de {@code inicio},
+   * exceto {@code preservada}, que a alteração reaproveita. Efetivadas não entram aqui: a alteração
+   * as recusa antes, e a exclusão as preserva.
+   */
+  public void removerPlanejadasAPartirDe(
+      SegmentoRecorrencia segmento, LocalDate inicio, UUID usuarioId, Transacao preservada) {
+    transacaoRepository
+        .listarOcorrenciasDoSegmentoAPartirDe(segmento.getId(), inicio, usuarioId)
+        .stream()
+        .filter(transacao -> transacao.getSituacao() == SituacaoTransacao.PLANEJADA)
+        .filter(
+            transacao ->
+                preservada == null || !Objects.equals(transacao.getId(), preservada.getId()))
+        .forEach(transacaoRepository::delete);
+    transacaoRepository.flush();
   }
 
   public void validarCamposComuns(

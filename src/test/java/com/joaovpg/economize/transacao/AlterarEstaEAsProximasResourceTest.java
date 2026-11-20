@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.config.JsonConfig.jsonConfig;
 import static io.restassured.config.RestAssuredConfig.config;
 import static io.restassured.path.json.config.JsonPathConfig.NumberReturnType.BIG_DECIMAL;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -35,8 +34,6 @@ import jakarta.inject.Inject;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,7 +46,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Contratos HTTP de PUT com escopo ESTA_E_AS_PROXIMAS: cortes para simples, repetição ou
- * parcelamento, preservação de protegidas, resoluções de sobreposição e conversões.
+ * parcelamento, bloqueio de realizado posterior ao corte e substituição de exceções planejadas.
  */
 @QuarkusTest
 class AlterarEstaEAsProximasResourceTest {
@@ -59,12 +56,9 @@ class AlterarEstaEAsProximasResourceTest {
   private static final String INICIO = "2026-09-10";
   // Acima do limite de corpo configurado em application.yaml (quarkus.http.limits.max-body-size).
   private static final int TAMANHO_CORPO_ACIMA_DO_LIMITE = 70_000;
-  private static final String MANTER_PRESERVADA = "MANTER_SOMENTE_PRESERVADA";
-  private static final String MANTER_AMBAS = "MANTER_AMBAS";
-  private static final String SEM_ESCOPO = null;
+  private static final String EFETIVADA_APOS_CORTE =
+      "urn:economize:problem:OCORRENCIA_EFETIVADA_APOS_CORTE";
   private static final String MENSAL_DIA_10 =
-      repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
-  private static final String MENSAL_DIA_5 =
       repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
   private static final String MENSAL_DIA_15 =
       repeticao("MENSAL", "DIA_DO_MES", "{\"tipo\":\"INDEFINIDO\"}");
@@ -127,9 +121,7 @@ class AlterarEstaEAsProximasResourceTest {
                 "null",
                 "PLANEJADA",
                 "2026-11-12",
-                "80",
-                null,
-                null))
+                "80"))
         .statusCode(200)
         .body("origem", equalTo("TRANSACAO_SIMPLES"))
         .body("repeticao", nullValue())
@@ -156,7 +148,7 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void preservaIndividualizadaPosteriorAoCorte() {
+  void substituiExcecaoPlanejadaPosteriorAoCorteNaConversaoSimples() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     moverOcorrencia(token, "2026-12-10", "2026-12-10", "90");
@@ -171,55 +163,37 @@ class AlterarEstaEAsProximasResourceTest {
                 "null",
                 "PLANEJADA",
                 "2026-11-10",
-                "80",
-                null,
-                null))
+                "80"))
         .statusCode(200);
 
-    consultar(token, "2026-12", "2026-12")
-        .statusCode(200)
-        .body(
-            "itens.find { it.dataFinanceira == '2026-12-10' }.valor",
-            equalTo(new BigDecimal("-90.0000")))
-        .body("itens.find { it.dataFinanceira == '2026-12-10' }.protegida", equalTo(true))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-12-10' }.origem",
-            equalTo("TRANSACAO_RECORRENTE"));
+    consultar(token, "2026-12", "2026-12").statusCode(200).body("itens", empty());
   }
 
   @Test
-  void preservaEfetivadaPosteriorAoCorte() {
+  void substituiExcecaoPlanejadaPosteriorAoCorteNoNovoTrecho() {
     var token = autenticar();
-    var criada = criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    var segmentoId = criada.extract().path("serie.segmentoId");
-    efetivarOcorrencia(token, segmentoId, "2026-10-10")
-        .statusCode(anyOf(equalTo(200), equalTo(201)));
-    var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    moverOcorrencia(token, "2026-11-10", "2026-11-12", "70");
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
 
     alterar(
             token,
-            (String) setembro.get("chaveEdicao"),
+            (String) outubro.get("chaveEdicao"),
             alteracao(
-                (String) setembro.get("versaoEdicao"),
+                (String) outubro.get("versaoEdicao"),
                 ESTA,
-                "null",
+                MENSAL_DIA_15,
                 "PLANEJADA",
-                INICIO,
-                "60",
-                null,
-                null))
-        .statusCode(200);
-
-    consultar(token, "2026-10", "2026-10")
+                "2026-10-15",
+                "100"))
         .statusCode(200)
-        .body(
-            "itens.find { it.dataFinanceira == '2026-10-10' }.origem",
-            equalTo("TRANSACAO_RECORRENTE"))
-        .body("itens.find { it.dataFinanceira == '2026-10-10' }.situacao", equalTo("EFETIVADA"))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-10-10' }.valor",
-            equalTo(new BigDecimal("-100.0000")))
-        .body("itens.find { it.dataFinanceira == '2026-10-10' }.protegida", equalTo(true));
+        .body("serie.dataOriginal", equalTo("2026-10-15"));
+
+    consultar(token, "2026-11", "2026-11")
+        .statusCode(200)
+        .body("itens", hasSize(1))
+        .body("itens[0].dataFinanceira", equalTo("2026-11-15"))
+        .body("itens[0].valor", equalTo(new BigDecimal("-100.0000")));
   }
 
   @Test
@@ -238,9 +212,7 @@ class AlterarEstaEAsProximasResourceTest {
                 MENSAL_DIA_15,
                 "PLANEJADA",
                 "2026-11-15",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("origem", equalTo("TRANSACAO_RECORRENTE"))
         .body("serie.grupoId", equalTo(grupoId))
@@ -257,47 +229,76 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void exigePoliticaEEscolhasSomenteAoCriarNovoTrecho() {
+  void camposDeSobreposicaoRemovidosRespondemDadosInvalidosSemGravar() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
+    var versao = (String) novembro.get("versaoEdicao");
+    var chave = (String) novembro.get("chaveEdicao");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+    var base = alteracao(versao, ESTA, MENSAL_DIA_15, "PLANEJADA", "2026-11-15", "100");
 
-    alterar(
-            token,
-            (String) novembro.get("chaveEdicao"),
-            alteracao(
-                (String) novembro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_15,
-                "PLANEJADA",
-                "2026-11-15",
-                "100",
-                null,
-                "[]"))
+    alterar(token, chave, comCampo(base, "\"politicaSobreposicao\":\"MANTER_SOMENTE_PRESERVADA\""))
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
-    alterar(
-            token,
-            (String) novembro.get("chaveEdicao"),
-            alteracao(
-                (String) novembro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_15,
-                "PLANEJADA",
-                "2026-11-15",
-                "100",
-                MANTER_PRESERVADA,
-                null))
+    alterar(token, chave, comCampo(base, "\"resolucoesSobreposicao\":[]"))
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
   }
 
   @Test
-  void rejeitaEscolhasDeSobreposicaoEmDestinoSimples() {
+  void bloqueiaNovoTrechoQuandoOcorrenciaSelecionadaEstaEfetivada() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    efetivarOcorrencia(token, "2026-10-10").statusCode(200);
+    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+
+    alterar(
+            token,
+            (String) outubro.get("chaveEdicao"),
+            alteracao(
+                (String) outubro.get("versaoEdicao"),
+                ESTA,
+                MENSAL_DIA_15,
+                "PLANEJADA",
+                "2026-10-15",
+                "100"))
+        .statusCode(422)
+        .body("type", equalTo(EFETIVADA_APOS_CORTE));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
+  }
+
+  @Test
+  void bloqueiaConversaoSimplesQuandoOcorrenciaPosteriorEstaEfetivadaSemGravar() {
+    var token = autenticar();
+    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
+    efetivarOcorrencia(token, "2026-10-10").statusCode(200);
+    var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+
+    alterar(
+            token,
+            (String) setembro.get("chaveEdicao"),
+            alteracao(
+                (String) setembro.get("versaoEdicao"), ESTA, "null", "PLANEJADA", INICIO, "60"))
+        .statusCode(422)
+        .body("type", equalTo(EFETIVADA_APOS_CORTE));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
+  }
+
+  @Test
+  void bloqueiaCorteQuandoPosteriorFoiDestacadaComoTransacaoSimplesSemGravar() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
-
     alterar(
             token,
             (String) novembro.get("chaveEdicao"),
@@ -307,174 +308,63 @@ class AlterarEstaEAsProximasResourceTest {
                 "null",
                 "PLANEJADA",
                 "2026-11-10",
-                "80",
-                MANTER_PRESERVADA,
-                "[]"))
+                "80"))
+        .statusCode(200);
+    var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
+    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
+
+    alterar(
+            token,
+            (String) setembro.get("chaveEdicao"),
+            alteracao(
+                (String) setembro.get("versaoEdicao"),
+                ESTA,
+                MENSAL_DIA_15,
+                "PLANEJADA",
+                "2026-09-15",
+                "100"))
         .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:RESOLUCAO_SOBREPOSICAO_INVALIDA"));
+        .body("type", equalTo(EFETIVADA_APOS_CORTE));
+
+    assertEquals(
+        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
   }
 
   @Test
-  void politicaGeralSuprimeCandidataColidindoComDataFinanceiraDeslocada() {
+  void cortaAposRealizadaQuandoNadaPosteriorEstaRealizado() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
+    efetivarOcorrencia(token, "2026-10-10").statusCode(200);
+    var setembro = itemDe(token, "2026-09", "2026-09", INICIO);
 
     alterar(
             token,
-            (String) outubro.get("chaveEdicao"),
+            (String) setembro.get("chaveEdicao"),
             alteracao(
-                (String) outubro.get("versaoEdicao"),
+                (String) setembro.get("versaoEdicao"),
                 ESTA,
                 MENSAL_DIA_10,
                 "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
-        .statusCode(200);
+                INICIO,
+                "60"))
+        .statusCode(422);
 
-    consultar(token, "2026-12", "2026-12")
+    var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
+    alterar(
+            token,
+            (String) novembro.get("chaveEdicao"),
+            alteracao(
+                (String) novembro.get("versaoEdicao"),
+                ESTA,
+                "null",
+                "PLANEJADA",
+                "2026-11-10",
+                "80"))
         .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' }", hasSize(1))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-12-10' }.valor",
-            equalTo(new BigDecimal("-70.0000")))
-        .body("itens.find { it.dataFinanceira == '2026-12-10' }.protegida", equalTo(true));
-    consultar(token, "2026-11", "2026-11")
+        .body("origem", equalTo("TRANSACAO_SIMPLES"));
+    consultar(token, "2026-10", "2026-10")
         .statusCode(200)
-        .body(
-            "itens.find { it.dataFinanceira == '2026-11-10' }.valor",
-            equalTo(new BigDecimal("-120.0000")));
-  }
-
-  @Test
-  void escolhaEspecificaPrevaleceSobrePoliticaGeral() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_AMBAS,
-                escolhas(escolha("2026-12-10", MANTER_PRESERVADA))))
-        .statusCode(200);
-
-    consultar(token, "2026-12", "2026-12")
-        .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' }", hasSize(1))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-12-10' }.valor",
-            equalTo(new BigDecimal("-70.0000")));
-  }
-
-  @Test
-  void manterAmbasDuasImpactosNaMesmaData() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_AMBAS,
-                escolhas(escolha("2026-12-10", MANTER_AMBAS))))
-        .statusCode(200);
-
-    consultar(token, "2026-12", "2026-12")
-        .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' }", hasSize(2));
-  }
-
-  @Test
-  void escolhasInvalidasRespondemSemAlterarNada() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-    var versao = (String) outubro.get("versaoEdicao");
-    var chave = (String) outubro.get("chaveEdicao");
-
-    alterar(
-            token,
-            chave,
-            alteracao(
-                versao,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                escolhas(escolha("2026-12-10", MANTER_AMBAS), escolha("2026-12-10", MANTER_AMBAS))))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:RESOLUCAO_SOBREPOSICAO_INVALIDA"));
-    alterar(
-            token,
-            chave,
-            alteracao(
-                versao,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                escolhas(escolha("2026-12-10", "FOO"))))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:RESOLUCAO_SOBREPOSICAO_INVALIDA"));
-    alterar(
-            token,
-            chave,
-            alteracao(
-                versao,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                escolhas(escolha("2026-11-10", MANTER_AMBAS))))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:RESOLUCAO_SOBREPOSICAO_INVALIDA"));
-
-    consultar(token, "2026-12", "2026-12")
-        .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' }", hasSize(2))
-        .body(
-            "itens.find { it.dataFinanceira == '2026-12-10' && it.protegida }.valor",
-            equalTo(new BigDecimal("-70.0000")));
-    alterar(
-            token,
-            chave,
-            alteracao(
-                versao,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
-        .statusCode(200);
+        .body("itens.find { it.dataFinanceira == '2026-10-10' }.situacao", equalTo("EFETIVADA"));
   }
 
   @Test
@@ -489,15 +379,7 @@ class AlterarEstaEAsProximasResourceTest {
     alterar(
             token,
             chave,
-            alteracao(
-                versaoAntiga,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "999",
-                MANTER_PRESERVADA,
-                "[]"))
+            alteracao(versaoAntiga, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "999"))
         .statusCode(409)
         .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"))
         .body("valor", nullValue())
@@ -505,41 +387,16 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void previaComVersaoAnteriorAoPutRespondeConflitoSemGravarParcialmente() {
+  void versaoAnteriorAoPutRespondeConflitoSemGravarParcialmente() {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
     var versao = (String) outubro.get("versaoEdicao");
     var chave = (String) outubro.get("chaveEdicao");
-    previa(
-            token,
-            chave,
-            previaCorpo(
-                versao,
-                MENSAL_DIA_10,
-                ESTA,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                "2026-10",
-                "2026-12"))
-        .statusCode(200)
-        .body("versaoEdicao", equalTo(versao));
     moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
     var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
 
-    alterar(
-            token,
-            chave,
-            alteracao(
-                versao,
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
+    alterar(token, chave, alteracao(versao, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "120"))
         .statusCode(409)
         .body("type", equalTo("urn:economize:problem:VERSAO_DESATUALIZADA"))
         .body("valor", nullValue())
@@ -566,9 +423,7 @@ class AlterarEstaEAsProximasResourceTest {
                 semanal,
                 "PLANEJADA",
                 "2026-09-14",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("repeticao.frequencia", equalTo("SEMANAL"))
         .body("serie.dataOriginal", equalTo("2026-09-14"));
@@ -605,9 +460,7 @@ class AlterarEstaEAsProximasResourceTest {
                 new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(lida),
                 "PLANEJADA",
                 "2026-12-04",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("repeticao.ancoragem", equalTo("DIA_UTIL"))
         .body("repeticao.numeroDiaUtil", equalTo(4));
@@ -636,9 +489,7 @@ class AlterarEstaEAsProximasResourceTest {
                     + "\"parcelamento\":null}",
                 "PLANEJADA",
                 "2026-10-10",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
   }
@@ -666,45 +517,12 @@ class AlterarEstaEAsProximasResourceTest {
             MENSAL_DIA_10,
             "PLANEJADA",
             "2026-10-10",
-            "120",
-            MANTER_PRESERVADA,
-            "[]");
+            "120");
     var acimaDoLimite = "{" + " ".repeat(TAMANHO_CORPO_ACIMA_DO_LIMITE) + corpo.substring(1);
 
     alterar(token, (String) outubro.get("chaveEdicao"), acimaDoLimite)
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
-
-    assertEquals(
-        antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
-  }
-
-  @Test
-  void listaDeEscolhasAcimaDoLimiteRetornaDadosInvalidosSemGravar() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-    var antes = consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString();
-    var acimaDoLimite =
-        escolhas(
-            Collections.nCopies(257, escolha("2026-12-10", MANTER_AMBAS)).toArray(String[]::new));
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                acimaDoLimite))
-        .statusCode(400)
-        .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"))
-        .body("errors[0].field", equalTo("resolucoesSobreposicao"));
 
     assertEquals(
         antes, consultar(token, "2026-09", "2026-12").statusCode(200).extract().asString());
@@ -722,12 +540,10 @@ class AlterarEstaEAsProximasResourceTest {
             alteracao(
                 (String) novembro.get("versaoEdicao"),
                 ESTA,
-                MENSAL_DIA_5,
+                MENSAL_DIA_10,
                 "PLANEJADA",
                 "2026-11-05",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
   }
@@ -751,9 +567,7 @@ class AlterarEstaEAsProximasResourceTest {
                     "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-11-10",
-                "50",
-                MANTER_PRESERVADA,
-                "[]"))
+                "50"))
         .statusCode(200)
         .body("serie.numeroParcela", equalTo(1))
         .body("serie.totalParcelas", equalTo(3))
@@ -785,9 +599,7 @@ class AlterarEstaEAsProximasResourceTest {
                     "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":2,\"totalParcelas\":5}"),
                 "PLANEJADA",
                 "2026-10-10",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("serie.numeroParcela", equalTo(2))
         .body("serie.totalParcelas", equalTo(5))
@@ -820,9 +632,7 @@ class AlterarEstaEAsProximasResourceTest {
                     "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":2,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-10-10",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("serie.grupoId", equalTo(grupoOriginal))
         .body("serie.numeroParcela", equalTo(2));
@@ -851,9 +661,7 @@ class AlterarEstaEAsProximasResourceTest {
                     "{\"tipo\":\"PARCELAS\",\"numeroPrimeiraParcela\":1,\"totalParcelas\":3}"),
                 "PLANEJADA",
                 "2026-10-10",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(422)
         .body("type", equalTo("urn:economize:problem:PARCELAMENTO_INVALIDO"));
   }
@@ -873,9 +681,7 @@ class AlterarEstaEAsProximasResourceTest {
                 MENSAL_DIA_10,
                 "PLANEJADA",
                 "2026-10-10",
-                "100",
-                MANTER_PRESERVADA,
-                "[]"))
+                "100"))
         .statusCode(200)
         .body("serie.numeroParcela", nullValue())
         .body("serie.totalParcelas", nullValue());
@@ -889,134 +695,14 @@ class AlterarEstaEAsProximasResourceTest {
   }
 
   @Test
-  void colisaoEmDataFarDaJanelaNaoExpandeRepeticaoInfinita() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2030-01-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
-        .statusCode(200);
-
-    consultar(token, "2030-01", "2030-01")
-        .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2030-01-10' }", hasSize(1))
-        .body(
-            "itens.find { it.dataFinanceira == '2030-01-10' }.valor",
-            equalTo(new BigDecimal("-70.0000")));
-  }
-
-  @Test
-  void previaDeCorteParaSimplesNaoListaCandidatasNemSobreposicoes() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
-
-    previa(
-            token,
-            (String) novembro.get("chaveEdicao"),
-            previaCorpo(
-                (String) novembro.get("versaoEdicao"),
-                "null",
-                ESTA,
-                "PLANEJADA",
-                "2026-11-10",
-                "80",
-                "2026-11",
-                "2026-12"))
-        .statusCode(200)
-        .body("ocorrenciasNovas", empty())
-        .body("sobreposicoes", empty())
-        .body("quantidadeSobreposicoesForaPeriodo", equalTo(0));
-  }
-
-  @Test
-  void previaComDataInicialAnteriorAOriginalRespondeRepeticaoInvalida() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    var novembro = itemDe(token, "2026-11", "2026-11", "2026-11-10");
-
-    previa(
-            token,
-            (String) novembro.get("chaveEdicao"),
-            previaCorpo(
-                (String) novembro.get("versaoEdicao"),
-                MENSAL_DIA_5,
-                ESTA,
-                "PLANEJADA",
-                "2026-11-05",
-                "80",
-                "2026-11",
-                "2026-12"))
-        .statusCode(422)
-        .body("type", equalTo("urn:economize:problem:REPETICAO_INVALIDA"));
-  }
-
-  @Test
-  void agrupaVariasPreservadasDaMesmaDataEmUmaUnicaDecisao() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var dezembro = virtualDe(token, "2026-12", "2026-12-10");
-    alterar(
-            token,
-            (String) dezembro.get("chaveEdicao"),
-            alteracao(
-                (String) dezembro.get("versaoEdicao"),
-                SOMENTE_ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-12-10",
-                "90",
-                null,
-                null))
-        .statusCode(200);
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    alterar(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            alteracao(
-                (String) outubro.get("versaoEdicao"),
-                ESTA,
-                MENSAL_DIA_10,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                MANTER_PRESERVADA,
-                "[]"))
-        .statusCode(200);
-
-    consultar(token, "2026-12", "2026-12")
-        .statusCode(200)
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' }", hasSize(2))
-        .body("itens.findAll { it.dataFinanceira == '2026-12-10' && it.protegida }", hasSize(2));
-  }
-
-  @Test
   void escritoresConcorrentesComMesmaVersaoTemUmSoVencedor() throws Exception {
     var token = autenticar();
     criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
     var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
     var chave = (String) outubro.get("chaveEdicao");
     var versao = (String) outubro.get("versaoEdicao");
-    var corpoA =
-        alteracao(
-            versao, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "110", MANTER_PRESERVADA, "[]");
-    var corpoB =
-        alteracao(
-            versao, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "130", MANTER_PRESERVADA, "[]");
+    var corpoA = alteracao(versao, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "110");
+    var corpoB = alteracao(versao, ESTA, MENSAL_DIA_10, "PLANEJADA", "2026-10-10", "130");
     var largada = new CountDownLatch(1);
     var executor = Executors.newFixedThreadPool(2);
     try {
@@ -1048,17 +734,6 @@ class AlterarEstaEAsProximasResourceTest {
     }
   }
 
-  private Map<String, Object> virtualDe(String token, String mes, String data) {
-    Map<String, Object> item =
-        consultar(token, mes, mes)
-            .statusCode(200)
-            .extract()
-            .jsonPath()
-            .getMap("itens.find { it.dataFinanceira == '" + data + "' && !it.protegida }");
-    assertNotNull(item, "virtual de " + data);
-    return item;
-  }
-
   private void moverOcorrencia(String token, String dataOriginal, String novaData, String valor) {
     var mes = dataOriginal.substring(0, 7);
     var item = itemDe(token, mes, mes, dataOriginal);
@@ -1071,37 +746,8 @@ class AlterarEstaEAsProximasResourceTest {
                 MENSAL_DIA_10,
                 "PLANEJADA",
                 novaData,
-                valor,
-                null,
-                null))
+                valor))
         .statusCode(200);
-  }
-
-  @Test
-  void previaReportaMesmaSobreposicaoQueOPutResolve() {
-    var token = autenticar();
-    criar(token, corpo("PLANEJADA", INICIO, MENSAL_DIA_10)).statusCode(201);
-    moverOcorrencia(token, "2026-11-10", "2026-12-10", "70");
-    var outubro = itemDe(token, "2026-10", "2026-10", "2026-10-10");
-
-    previa(
-            token,
-            (String) outubro.get("chaveEdicao"),
-            previaCorpo(
-                (String) outubro.get("versaoEdicao"),
-                MENSAL_DIA_10,
-                ESTA,
-                "PLANEJADA",
-                "2026-10-10",
-                "120",
-                "2026-10",
-                "2026-12"))
-        .statusCode(200)
-        .body("sobreposicoes", hasSize(1))
-        .body("sobreposicoes[0].dataFinanceira", equalTo("2026-12-10"))
-        .body("sobreposicoes[0].dataOriginalCandidata", equalTo("2026-12-10"))
-        .body("sobreposicoes[0].chavesPreservadas", hasSize(1))
-        .body("sobreposicoes[0].resolucaoSugerida", equalTo(MANTER_PRESERVADA));
   }
 
   private UUID criarSegmentoLegadoMensalSemDias(LocalDate inicio) {
@@ -1133,7 +779,8 @@ class AlterarEstaEAsProximasResourceTest {
             });
   }
 
-  private ValidatableResponse efetivarOcorrencia(String token, Object segmentoId, String data) {
+  /** Efetiva uma ocorrência virtual por SOMENTE_ESTA, relendo a versão vigente antes do PUT. */
+  private ValidatableResponse efetivarOcorrencia(String token, String data) {
     var mes = data.substring(0, 7);
     var item = itemDe(token, mes, mes, data);
     return alterar(
@@ -1141,13 +788,11 @@ class AlterarEstaEAsProximasResourceTest {
         (String) item.get("chaveEdicao"),
         alteracao(
             (String) item.get("versaoEdicao"),
-            "SOMENTE_ESTA",
+            SOMENTE_ESTA,
             MENSAL_DIA_10,
             "EFETIVADA",
             data,
-            "100.00",
-            null,
-            null));
+            "100.00"));
   }
 
   private ValidatableResponse criar(String token, String corpo) {
@@ -1186,18 +831,6 @@ class AlterarEstaEAsProximasResourceTest {
         .then();
   }
 
-  private ValidatableResponse previa(String token, String chave, String corpo) {
-    return given()
-        .config(config().jsonConfig(jsonConfig().numberReturnType(BIG_DECIMAL)))
-        .auth()
-        .oauth2(token)
-        .contentType("application/json")
-        .body(corpo)
-        .when()
-        .post("/api/transacoes/{chave}/previa-edicao", chave)
-        .then();
-  }
-
   private Map<String, Object> itemDe(String token, String inicio, String fim, String data) {
     Map<String, Object> item =
         consultar(token, inicio, fim)
@@ -1225,9 +858,7 @@ class AlterarEstaEAsProximasResourceTest {
       String repeticao,
       String situacao,
       String dataFinanceira,
-      String valor,
-      String politica,
-      String resolucoes) {
+      String valor) {
     var json = new StringBuilder("{");
     if (escopo != null) {
       json.append("\"escopo\":\"").append(escopo).append("\",");
@@ -1245,49 +876,13 @@ class AlterarEstaEAsProximasResourceTest {
         .append(dataFinanceira)
         .append("\",\"versaoEdicao\":\"")
         .append(versao)
-        .append("\"");
-    if (politica != null) {
-      json.append(",\"politicaSobreposicao\":\"").append(politica).append("\"");
-    }
-    if (resolucoes != null) {
-      json.append(",\"resolucoesSobreposicao\":").append(resolucoes);
-    }
-    return json.append("}").toString();
+        .append("\"}");
+    return json.toString();
   }
 
-  private String previaCorpo(
-      String versao,
-      String repeticao,
-      String escopo,
-      String situacao,
-      String dataFinanceira,
-      String valor,
-      String inicio,
-      String fim) {
-    return """
-    {"alteracao":%s,"periodo":{"inicio":"%s","fim":"%s"},
-     "politicaSobreposicao":"MANTER_SOMENTE_PRESERVADA"}
-    """
-        .formatted(
-            alteracao(versao, escopo, repeticao, situacao, dataFinanceira, valor, null, null),
-            inicio,
-            fim);
-  }
-
-  private static String escolha(String dataOriginalCandidata, String resolucao) {
-    return "{\"dataOriginalCandidata\":\""
-        + dataOriginalCandidata
-        + "\",\"resolucao\":\""
-        + resolucao
-        + "\"}";
-  }
-
-  private static String escolhas(String... itens) {
-    var lista = new ArrayList<String>();
-    for (var item : itens) {
-      lista.add(item);
-    }
-    return "[" + String.join(",", lista) + "]";
+  /** Acrescenta um campo ao objeto JSON informado, sem reescrever os demais. */
+  private static String comCampo(String json, String campo) {
+    return json.substring(0, json.length() - 1) + "," + campo + "}";
   }
 
   private static String repeticao(String frequencia, String ancoragem, String termino) {

@@ -78,26 +78,8 @@ public record AlterarTransacaoRequest(
             description =
                 "Obrigatório para ocorrência de série (SOMENTE_ESTA ou ESTA_E_AS_PROXIMAS); deve"
                     + " ser omitido para transação simples.")
-        JsonNode escopo,
-    @Schema(
-            description =
-                "Política geral de sobreposição (MANTER_SOMENTE_PRESERVADA ou MANTER_AMBAS);"
-                    + " obrigatória somente ao criar novo trecho com ESTA_E_AS_PROXIMAS e omitida"
-                    + " nas demais alterações.",
-            nullable = true)
-        JsonNode politicaSobreposicao,
-    @Schema(
-            description =
-                "Escolhas específicas por data original candidata; obrigatória somente ao criar"
-                    + " novo trecho com ESTA_E_AS_PROXIMAS, com [] para aplicar apenas a política"
-                    + " geral.",
-            nullable = true)
-        JsonNode resolucoesSobreposicao) {
+        JsonNode escopo) {
   public boolean escopoInformado() {
     return escopo != null;
-  }
-
-  public boolean resolucaoInformada() {
-    return politicaSobreposicao != null || resolucoesSobreposicao != null;
   }
 }

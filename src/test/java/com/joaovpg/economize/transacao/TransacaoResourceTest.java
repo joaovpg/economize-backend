@@ -366,22 +366,29 @@ class TransacaoResourceTest {
         .then()
         .statusCode(400)
         .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
-    for (var par :
-        java.util.List.of(
-            new String[] {"escopo", "ESCOPO_INVALIDO"},
-            new String[] {"resolucoesSobreposicao", "RESOLUCAO_SOBREPOSICAO_INVALIDA"})) {
-      var invalida =
-          alteracao.replace("\"repeticao\":null", "\"repeticao\":null,\"" + par[0] + "\":null");
+    var comEscopo = alteracao.replace("\"repeticao\":null", "\"repeticao\":null,\"escopo\":null");
+    given()
+        .auth()
+        .oauth2(token)
+        .contentType("application/json")
+        .body(comEscopo)
+        .when()
+        .put("/api/transacoes/" + chave)
+        .then()
+        .statusCode(422)
+        .body("type", equalTo("urn:economize:problem:ESCOPO_INVALIDO"));
+    for (var campo : java.util.List.of("politicaSobreposicao", "resolucoesSobreposicao")) {
       given()
           .auth()
           .oauth2(token)
           .contentType("application/json")
-          .body(invalida)
+          .body(
+              alteracao.replace("\"repeticao\":null", "\"repeticao\":null,\"" + campo + "\":null"))
           .when()
           .put("/api/transacoes/" + chave)
           .then()
-          .statusCode(422)
-          .body("type", equalTo("urn:economize:problem:" + par[1]));
+          .statusCode(400)
+          .body("type", equalTo("urn:economize:problem:DADOS_INVALIDOS"));
     }
     for (var par :
         java.util.List.of(

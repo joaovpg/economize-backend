@@ -277,9 +277,7 @@ class ExcluirTransacaoResourceTest {
                 DIARIA_INDEFINIDA,
                 "PLANEJADA",
                 "2026-01-12",
-                "25",
-                "MANTER_SOMENTE_PRESERVADA",
-                "[]"))
+                "25"))
         .statusCode(200);
 
     var ultimo = itemDe(token, "2026-01", "2026-01", "2026-01-13");
@@ -292,9 +290,7 @@ class ExcluirTransacaoResourceTest {
                 DIARIA_INDEFINIDA,
                 "PLANEJADA",
                 "2026-01-13",
-                "30",
-                "MANTER_SOMENTE_PRESERVADA",
-                "[]"))
+                "30"))
         .statusCode(200);
     var efetivar = itemDe(token, "2026-01", "2026-01", "2026-01-13");
     alterar(
@@ -494,18 +490,6 @@ class ExcluirTransacaoResourceTest {
       String situacao,
       String dataFinanceira,
       String valor) {
-    return alteracao(versao, escopo, repeticao, situacao, dataFinanceira, valor, null, null);
-  }
-
-  private String alteracao(
-      String versao,
-      String escopo,
-      String repeticao,
-      String situacao,
-      String dataFinanceira,
-      String valor,
-      String politica,
-      String resolucoes) {
     var json = new StringBuilder("{");
     if (escopo != null) {
       json.append("\"escopo\":\"").append(escopo).append("\",");
@@ -524,12 +508,6 @@ class ExcluirTransacaoResourceTest {
         .append("\",\"versaoEdicao\":\"")
         .append(versao)
         .append("\"");
-    if (politica != null) {
-      json.append(",\"politicaSobreposicao\":\"").append(politica).append("\"");
-    }
-    if (resolucoes != null) {
-      json.append(",\"resolucoesSobreposicao\":").append(resolucoes);
-    }
     return json.append("}").toString();
   }
 

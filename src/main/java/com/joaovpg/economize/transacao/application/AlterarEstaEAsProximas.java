@@ -8,20 +8,15 @@ import com.joaovpg.economize.recorrencia.SegmentoRecorrencia;
 import com.joaovpg.economize.recorrencia.SegmentoRecorrenciaRepository;
 import com.joaovpg.economize.recorrencia.application.LocalizarOcorrenciaRecorrente;
 import com.joaovpg.economize.recorrencia.application.RepeticaoValidacao;
-import com.joaovpg.economize.recorrencia.domain.ExpansorRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.OcorrenciaRecorrencia;
-import com.joaovpg.economize.recorrencia.domain.PoliticaDataOcorrencia;
-import com.joaovpg.economize.recorrencia.domain.RegraRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.RepeticaoRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.StatusRecorrencia;
 import com.joaovpg.economize.recorrencia.domain.TipoGrupoRecorrencia;
 import com.joaovpg.economize.shared.exception.RecursoNaoEncontradoException;
 import com.joaovpg.economize.shared.exception.RegraNegocioException;
-import com.joaovpg.economize.shared.exception.ValidacaoException;
 import com.joaovpg.economize.transacao.Transacao;
 import com.joaovpg.economize.transacao.TransacaoRepository;
 import com.joaovpg.economize.transacao.domain.IdentidadeEdicaoTransacao;
-import com.joaovpg.economize.transacao.domain.ResolucaoSobreposicao;
 import com.joaovpg.economize.transacao.domain.SituacaoTransacao;
 import com.joaovpg.economize.transacao.domain.TipoTransacao;
 import com.joaovpg.economize.usuario.Usuario;
@@ -32,18 +27,17 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.UUID;
 
 /**
  * Altera uma ocorrência de série e as seguintes (escopo ESTA_E_AS_PROXIMAS). O corte usa a data
- * original; protegidas do grupo com data original igual ou posterior ao corte são preservadas. O
- * destino pode ser transação simples, que encerra a projeção, ou um novo trecho, que reaproveita o
- * grupo quando a modalidade e o total não mudam e cria outro grupo caso contrário.
+ * original. A alteração é recusada, sem gravação, quando a ocorrência selecionada ou qualquer
+ * posterior do grupo está efetivada ou destacada; caso contrário, as exceções planejadas a partir
+ * do corte são substituídas pela nova regra. O destino pode ser transação simples, que encerra a
+ * projeção, ou um novo trecho, que reaproveita o grupo quando a modalidade e o total não mudam e
+ * cria outro grupo caso contrário.
  */
 @ApplicationScoped
 public class AlterarEstaEAsProximas {
@@ -55,7 +49,6 @@ public class AlterarEstaEAsProximas {
   private final CriarSerieTransacao criarSerie;
   private final ResolverOcorrenciasRecorrentes resolverOcorrencias;
   private final LocalizarOcorrenciaRecorrente localizarOcorrencia;
-  private final ExpansorRecorrencia expansor;
   private final RegrasEdicaoTransacao regras;
 
   public AlterarEstaEAsProximas(
@@ -65,7 +58,6 @@ public class AlterarEstaEAsProximas {
       CriarSerieTransacao criarSerie,
       ResolverOcorrenciasRecorrentes resolverOcorrencias,
       LocalizarOcorrenciaRecorrente localizarOcorrencia,
-      ExpansorRecorrencia expansor,
       RegrasEdicaoTransacao regras) {
     this.segmentoRepository = segmentoRepository;
     this.grupoRepository = grupoRepository;
@@ -73,7 +65,6 @@ public class AlterarEstaEAsProximas {
     this.criarSerie = criarSerie;
     this.resolverOcorrencias = resolverOcorrencias;
     this.localizarOcorrencia = localizarOcorrencia;
-    this.expansor = expansor;
     this.regras = regras;
   }
 
@@ -87,7 +78,6 @@ public class AlterarEstaEAsProximas {
         comando.descricao(),
         comando.observacoes(),
         comando.dataFinanceira());
-    validarResolucoesInformadas(comando);
 
     var usuarioId = comando.usuarioId();
     var grupoId =
@@ -119,6 +109,13 @@ public class AlterarEstaEAsProximas {
         grupo.getId(), segmento.getId(), usuarioId, comando.dataOriginal())) {
       throw new RegraNegocioException(
           "SEGMENTO_NAO_ATUAL", "A edicao deve partir do segmento mais recente do grupo");
+    }
+    if (transacaoRepository.existeEfetivadaOuDestacadaDoGrupoAPartirDe(
+        grupo.getId(), usuarioId, comando.dataOriginal())) {
+      throw new RegraNegocioException(
+          "OCORRENCIA_EFETIVADA_APOS_CORTE",
+          "Existem ocorrencias efetivadas ou destacadas da serie a partir desta data; edite a"
+              + " partir da proxima nao efetivada ou use SOMENTE_ESTA");
     }
 
     var atual = materializada.orElse(null);
@@ -155,9 +152,9 @@ public class AlterarEstaEAsProximas {
     var usuarioId = contexto.comando().usuarioId();
     var dataOriginal = contexto.comando().dataOriginal();
     var segmento = contexto.segmento();
-    var historico = !listarProtegidasAPartirDe(contexto).isEmpty();
 
     encerrarProjecao(segmento, dataOriginal);
+    regras.removerPlanejadasAPartirDe(segmento, dataOriginal, usuarioId, contexto.atual());
     var transacao = contexto.atual();
     if (transacao == null) {
       transacao = new Transacao();
@@ -178,7 +175,7 @@ public class AlterarEstaEAsProximas {
     }
 
     regras.registrarSupressao(segmento, dataOriginal, usuarioId);
-    encerrarGrupoSemProjecao(contexto.grupo(), segmento, dataOriginal, usuarioId, historico);
+    encerrarGrupoSemProjecao(contexto.grupo(), segmento, dataOriginal, usuarioId);
     contexto.grupo().setRevisaoSerie(contexto.grupo().getRevisaoSerie() + 1);
     transacaoRepository.flush();
     return ConsultarTransacoes.itemTransacaoSimples(transacao);
@@ -213,14 +210,10 @@ public class AlterarEstaEAsProximas {
                     repeticao.termino().totalParcelas(), segmento.getQuantidadeTotalOriginal()));
 
     var regra = RepeticaoValidacao.validar(repeticao, inicio);
-    var protegidas = listarProtegidasAPartirDe(contexto);
-    var colisoes = colisoes(regra, regra.politicaData(), protegidas);
-    var decisoes = decidirSobreposicoes(comando, colisoes);
 
     encerrarProjecao(segmento, dataOriginal);
-    if (contexto.atual() != null) {
-      transacaoRepository.delete(contexto.atual());
-    }
+    // Inclui a ocorrência selecionada, quando ela ainda estiver planejada.
+    regras.removerPlanejadasAPartirDe(segmento, dataOriginal, usuarioId, null);
     grupo.setRevisaoSerie(grupo.getRevisaoSerie() + 1);
 
     var grupoDestino = grupo;
@@ -232,7 +225,7 @@ public class AlterarEstaEAsProximas {
               destinoParcelado
                   ? TipoGrupoRecorrencia.PARCELAMENTO
                   : TipoGrupoRecorrencia.RECORRENCIA);
-      encerrarGrupoSemProjecao(grupo, segmento, dataOriginal, usuarioId, !protegidas.isEmpty());
+      encerrarGrupoSemProjecao(grupo, segmento, dataOriginal, usuarioId);
     }
 
     var dados = contexto.dados();
@@ -264,14 +257,6 @@ public class AlterarEstaEAsProximas {
       materializadas.add(primeira);
     }
 
-    decisoes.forEach(
-        (data, decisao) -> {
-          // A primeira ocorrência é a escrita explícita e não é suprimida pela resolução.
-          if (decisao == ResolucaoSobreposicao.MANTER_SOMENTE_PRESERVADA && !data.equals(inicio)) {
-            regras.registrarSupressao(novoSegmento, data, usuarioId);
-          }
-        });
-
     transacaoRepository.flush();
     return resolverOcorrencias
         .resolver(List.of(novoSegmento), materializadas, List.of(), inicio, inicio)
@@ -297,14 +282,12 @@ public class AlterarEstaEAsProximas {
       GrupoRecorrencia grupo,
       SegmentoRecorrencia segmento,
       LocalDate dataOriginal,
-      UUID usuarioId,
-      boolean historicoProtegido) {
+      UUID usuarioId) {
     if (segmentoRepository.existeSegmentoAtivoDoGrupo(grupo.getId(), usuarioId)) {
       return;
     }
     var possuiHistorico =
-        historicoProtegido
-            || dataOriginal.isAfter(segmento.getInicio())
+        dataOriginal.isAfter(segmento.getInicio())
             || segmentoRepository.existeSegmentoAnteriorDoGrupo(
                 grupo.getId(), usuarioId, segmento.getInicio());
     grupo.setStatus(possuiHistorico ? StatusRecorrencia.CONCLUIDO : StatusRecorrencia.CANCELADO);
@@ -318,89 +301,6 @@ public class AlterarEstaEAsProximas {
     grupo.setStatus(StatusRecorrencia.ATIVO);
     grupoRepository.persist(grupo);
     return grupo;
-  }
-
-  /** Protegidas do grupo com data original igual ou posterior ao corte, excluída a selecionada. */
-  private List<Transacao> listarProtegidasAPartirDe(Contexto contexto) {
-    var atual = contexto.atual();
-    return transacaoRepository
-        .listarProtegidasDoGrupoAPartirDe(
-            contexto.grupo().getId(),
-            contexto.comando().usuarioId(),
-            contexto.comando().dataOriginal())
-        .stream()
-        .filter(protegida -> atual == null || !Objects.equals(protegida.getId(), atual.getId()))
-        .toList();
-  }
-
-  /**
-   * Datas financeiras da nova regra que coincidem com protegidas. A verificação usa a regra
-   * inteira, sem expandir além das protegidas, que são finitas.
-   */
-  private Map<LocalDate, List<Transacao>> colisoes(
-      RegraRecorrencia regra, PoliticaDataOcorrencia politica, List<Transacao> protegidas) {
-    var colisoes = new TreeMap<LocalDate, List<Transacao>>();
-    for (var protegida : protegidas) {
-      var data = protegida.getDataFinanceira();
-      if (!data.isBefore(regra.inicio()) && ocorre(regra, politica, data)) {
-        colisoes.computeIfAbsent(data, ignorada -> new ArrayList<>()).add(protegida);
-      }
-    }
-    return colisoes;
-  }
-
-  private boolean ocorre(RegraRecorrencia regra, PoliticaDataOcorrencia politica, LocalDate data) {
-    return expansor.expandir(regra, data, data, politica).stream()
-        .anyMatch(ocorrencia -> ocorrencia.dataOriginal().equals(data));
-  }
-
-  /** Escolha específica prevalece sobre a política geral; a data deve ser colisão da versão. */
-  private static Map<LocalDate, ResolucaoSobreposicao> decidirSobreposicoes(
-      Comando comando, Map<LocalDate, List<Transacao>> colisoes) {
-    var especificas = new HashMap<LocalDate, ResolucaoSobreposicao>();
-    for (var escolha : comando.resolucoes()) {
-      var resolucao = interpretar(escolha.resolucao());
-      var data = escolha.dataOriginalCandidata();
-      if (!colisoes.containsKey(data) || especificas.putIfAbsent(data, resolucao) != null) {
-        throw new RegraNegocioException(
-            "RESOLUCAO_SOBREPOSICAO_INVALIDA",
-            "Decisao duplicada ou para data que nao e candidata sobreposta");
-      }
-    }
-    var decisoes = new TreeMap<LocalDate, ResolucaoSobreposicao>();
-    for (var data : colisoes.keySet()) {
-      decisoes.put(data, especificas.getOrDefault(data, comando.politicaSobreposicao()));
-    }
-    return decisoes;
-  }
-
-  private static ResolucaoSobreposicao interpretar(String valor) {
-    try {
-      return ResolucaoSobreposicao.valueOf(valor);
-    } catch (IllegalArgumentException exception) {
-      throw new RegraNegocioException(
-          "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao de sobreposicao desconhecida");
-    }
-  }
-
-  private static void validarResolucoesInformadas(Comando comando) {
-    if (comando.repeticao() == null) {
-      if (comando.resolucaoInformada()) {
-        throw new RegraNegocioException(
-            "RESOLUCAO_SOBREPOSICAO_INVALIDA",
-            "Resolucao nao se aplica a alteracao que resulta em transacao simples");
-      }
-      return;
-    }
-    if (comando.politicaSobreposicao() == null) {
-      throw new ValidacaoException(
-          "politicaSobreposicao", "Politica de sobreposicao obrigatoria ao criar novo trecho");
-    }
-    if (comando.resolucoes() == null) {
-      throw new ValidacaoException(
-          "resolucoesSobreposicao",
-          "Escolhas de sobreposicao obrigatorias ao criar novo trecho; use [] para nenhuma");
-    }
   }
 
   private static void preencherSimples(Transacao transacao, Dados dados) {
@@ -440,8 +340,7 @@ public class AlterarEstaEAsProximas {
 
   /**
    * Comando da alteração de série com escopo ESTA_E_AS_PROXIMAS. {@code repeticao} é nula quando o
-   * destino é transação simples; {@code politicaSobreposicao} e {@code resolucoes} são obrigatórios
-   * somente quando há novo trecho.
+   * destino é transação simples.
    */
   public record Comando(
       UUID usuarioId,
@@ -456,12 +355,5 @@ public class AlterarEstaEAsProximas {
       String observacoes,
       BigDecimal valor,
       LocalDate dataFinanceira,
-      RepeticaoRecorrencia repeticao,
-      ResolucaoSobreposicao politicaSobreposicao,
-      List<Escolha> resolucoes,
-      boolean resolucaoInformada) {
-
-    /** Decisão textual recebida; a validação do valor ocorre no caso de uso. */
-    public record Escolha(LocalDate dataOriginalCandidata, String resolucao) {}
-  }
+      RepeticaoRecorrencia repeticao) {}
 }

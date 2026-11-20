@@ -176,10 +176,6 @@ public class AlterarOcorrenciaSerie {
       throw new RegraNegocioException(
           "ESCOPO_INVALIDO", "Escopo nao aplicavel a esta ocorrencia de serie");
     }
-    if (comando.resolucaoInformada()) {
-      throw new RegraNegocioException(
-          "RESOLUCAO_SOBREPOSICAO_INVALIDA", "Resolucao nao se aplica a esta alteracao");
-    }
     regras.validarCamposComuns(
         comando.contaId(),
         comando.situacao(),
@@ -216,7 +212,6 @@ public class AlterarOcorrenciaSerie {
       LocalDate dataOriginal,
       String versaoEdicao,
       String escopo,
-      boolean resolucaoInformada,
       UUID contaId,
       UUID categoriaId,
       SituacaoTransacao situacao,
